@@ -28,7 +28,7 @@ class TaskExecutionTests(unittest.TestCase):
         return {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
 
     def remove_diagnostics(self):
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path)
         del workflow['artifacts'][self.chapter]['diagnostics']
         write_json(path, workflow)
@@ -59,10 +59,10 @@ class TaskExecutionTests(unittest.TestCase):
         self.assertTrue(any('POV' in row['reason'] for row in result['skipped']))
 
     def test_missing_semantic_inputs_are_named_and_top_level_fails(self):
-        source = read_json(self.root/'.gnovel/structure.json')
+        source = read_json(self.root/'.govel/structure.json')
         plan = next(f for f in source['fragments'] if f['ownerId'] == self.chapter)
         plan['chapterContract'].pop('mode', None); plan['chapterContract'].pop('intensityLevel', None)
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         from scripts.core.source_plan import chapter_plan
         from tests.fixtures_workflow import register_and_approve
         register_and_approve(self.root, self.chapter, 'stage_a_review', {'decision': 'adopt', 'activeSeats': list(range(1, 11)),
@@ -89,7 +89,7 @@ class TaskExecutionTests(unittest.TestCase):
 
     def test_real_diagnostics_receives_explicit_parameters_and_refreshes_prepare(self):
         self.remove_diagnostics()
-        approvals = read_json(self.root / '.gnovel/workflow.json')['approvals']
+        approvals = read_json(self.root / '.govel/workflow.json')['approvals']
         result = call_operation('task.execute', self.root, {
             'task': 'editor', 'chapterId': self.chapter, 'authorization': 'candidate',
             'diagnostics': {'mode': 'plot', 'intensityLevel': 1, 'register': True}})
@@ -102,7 +102,7 @@ class TaskExecutionTests(unittest.TestCase):
         self.assertNotIn('evidence', diagnostic['result'])
         prepared = next(row for row in result['executed'] if row['operation'] == 'task.prepare')
         self.assertTrue(prepared['refreshedAfterRegistration'])
-        self.assertEqual(read_json(self.root / '.gnovel/workflow.json')['approvals'], approvals)
+        self.assertEqual(read_json(self.root / '.govel/workflow.json')['approvals'], approvals)
 
     def test_handler_false_is_not_reported_as_success(self):
         from scripts.core import tool_plan

@@ -54,13 +54,13 @@ class SourceFinalizationTests(unittest.TestCase):
     def test_source_state_changes_must_use_source_transaction(self):
         from scripts.core.artifact_pack import pack_artifact
         from scripts.core.jsonio import read_json
-        before = (self.root/'.gnovel/workflow.json').read_bytes()
+        before = (self.root/'.govel/workflow.json').read_bytes()
         with self.assertRaises(ValueError) as caught:
             pack_artifact(self.root, chapterId=self.cid, artifactType='state_candidate', payload={
                 'changes': [{'op': 'append', 'collection': 'decisions',
                              'value': {'decisionId': 'D-OLD', 'decision': '越过源事务'}}]})
         self.assertEqual(caught.exception.code, 'SOURCE_STATE_CHANGE_REQUIRES_TRANSACTION')
-        self.assertEqual((self.root/'.gnovel/workflow.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/workflow.json').read_bytes(), before)
 
 
 if __name__ == '__main__':

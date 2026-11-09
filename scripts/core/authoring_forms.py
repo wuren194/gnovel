@@ -74,7 +74,7 @@ def _review_form(root: Path, *, chapterId: str, artifactType: str, repairRef: st
     root = root.expanduser().resolve()
     with project_lock_reentrant(root), observe_reads(root) as observed:
         dependencies = capture_dependencies(root, chapter_id=chapterId)
-        guards = capture_guards(root, ['.gnovel/structure.json', '.gnovel/workflow.json'])
+        guards = capture_guards(root, ['.govel/structure.json', '.govel/workflow.json'])
         structure, workflow = load_structure(root), _load_workflow(root)
         if artifactType == 'stage_b_review' and repairRef is None:
             from copy import deepcopy

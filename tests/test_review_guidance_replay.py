@@ -34,7 +34,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         self.directory = Path(temporary.name).resolve()
         self.root = self.directory / 'book'
         self.cid = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
-        environment = patch.dict(os.environ, {'GNOVEL_LOG_MODE': 'off',
+        environment = patch.dict(os.environ, {'GOVEL_LOG_MODE': 'off',
                                               'PYTHONDONTWRITEBYTECODE': '1'})
         environment.start()
         self.addCleanup(environment.stop)
@@ -46,7 +46,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
 
     def cli(self, *arguments):
         process = subprocess.run([sys.executable, str(ROOT / 'scripts/novelctl.py'), 'project', *arguments],
-                                 cwd=ROOT, env=dict(os.environ, GNOVEL_LOG_MODE='off',
+                                 cwd=ROOT, env=dict(os.environ, GOVEL_LOG_MODE='off',
                                                     PYTHONDONTWRITEBYTECODE='1'),
                                  capture_output=True, text=True, timeout=30)
         self.assertEqual(process.stderr, '', process.stderr)
@@ -90,7 +90,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         return self.full(response['structuredContent'], root=root)
 
     def commit_changes(self, changes, request_id):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         preview = call_operation('source.change-preview', self.root, {
             'changes': changes, 'requestId': request_id, 'baseRevision': source['revision'],
             'reason': '合成夹具通过公开源事务改变测试材料。'})
@@ -122,7 +122,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         return recovery, results
 
     def test_cli_and_mcp_form_share_current_bindings_and_actual_empty_seats(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         chapter = deepcopy(source['chapters'][0])
         chapter.update(reviewClass='ordinary', newLocation=True)
         self.commit_changes([{'action': 'put', 'collection': 'chapters', 'record': chapter}], 'seat-scope')
@@ -132,8 +132,8 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         self.assertEqual(status, 0, cli)
         cli = self.full(cli)
         mcp = self.form()
-        source = read_json(self.root / '.gnovel/structure.json')
-        expected = resolve_effective_review_plan('gnovel-planner', 'chapter', chapter=source['chapters'][0])
+        source = read_json(self.root / '.govel/structure.json')
+        expected = resolve_effective_review_plan('govel-planner', 'chapter', chapter=source['chapters'][0])
         self.assertEqual(cli['payload'], mcp['payload'])
         self.assertEqual(mcp['payload']['sourcePlanHash'], chapter_plan(source, self.cid)['sourcePlanHash'])
         self.assertEqual(mcp['payload']['activeSeats'], expected['activeSeats'])
@@ -164,7 +164,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
 
     def test_old_plan_form_is_rejected_with_current_read_actions_and_no_reapproval(self):
         old_form = self.form()
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         plan = deepcopy(next(row for row in source['fragments'] if row['ownerId'] == self.cid))
         plan['text'] += '值班员交还钥匙，登记交班结果。'
         self.commit_changes([{'action': 'put', 'collection': 'fragments', 'record': plan}], 'changed-plan')
@@ -227,7 +227,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         self.assertEqual(self.inventory(), before)
 
     def test_existing_chapter_without_plan_gets_read_only_recovery_not_duplicate_creation(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         plan = next(row for row in source['fragments'] if row['ownerId'] == self.cid)
         self.commit_changes([{'action': 'delete', 'collection': 'fragments', 'id': plan['fragmentId']}], 'remove-plan')
         before = self.inventory()
@@ -244,7 +244,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
 
     def test_corrupt_source_guidance_keeps_schema_readable_without_repairing_project(self):
         # Corrupt only this disposable fixture to replay the observed rejection.
-        valid_source = read_json(self.root / '.gnovel/structure.json')
+        valid_source = read_json(self.root / '.govel/structure.json')
         valid_plan = deepcopy(next(row for row in valid_source['fragments'] if row['ownerId'] == self.cid))
         valid_payload = self.form()['payload']
         for bad_field, expected_code in [('contentBindings', 'SOURCE_BINDINGS_REQUIRED'),
@@ -256,7 +256,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
                     plan['contentBindings'] = []
                 else:
                     plan['chapterContract']['mode'] = 'not-a-mode'
-                write_json(self.root / '.gnovel/structure.json', source)
+                write_json(self.root / '.govel/structure.json', source)
                 before = self.inventory()
                 for operation, extra in [('workflow.review-form', {}),
                                          ('workflow.artifact-pack', {'payload': valid_payload})]:
@@ -296,7 +296,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
                 self.assertEqual(self.inventory(), before)
 
     def test_unassessed_plan_coverage_requires_plan_review_before_another_form(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         plan = deepcopy(next(row for row in source['fragments'] if row['ownerId'] == self.cid))
         plan['chapterContract']['behaviorCoverage']['relationship'] = 'unassessed'
         self.commit_changes([{'action': 'put', 'collection': 'fragments', 'record': plan}], 'unassessed-plan')
@@ -315,12 +315,12 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         self.assertNotIn('workflow.review-form', {action['operation'] for action in recovery['readActions']})
         self.assertEqual(recovery['afterPlanReady'], {'operation': 'workflow.review-form',
             'arguments': {'chapterId': self.cid, 'artifactType': 'stage_a_review'}})
-        self.assertEqual(read_json(self.root / '.gnovel/structure.json')['fragments'][0]
+        self.assertEqual(read_json(self.root / '.govel/structure.json')['fragments'][0]
                          ['chapterContract']['behaviorCoverage']['relationship'], 'unassessed')
         self.assertEqual(self.inventory(), before)
 
     def test_coverage_without_items_requires_assessment_not_blank_form_retry(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         plan = deepcopy(next(row for row in source['fragments'] if row['ownerId'] == self.cid))
         plan['chapterContract']['behaviorCoverage']['relationship'] = 'applicable'
         self.assertEqual(plan['chapterContract'].get('relationshipCausality', []), [])
@@ -360,15 +360,15 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
                      'planField': 'plot.plan', 'dependsOn': [],
                      'chapterContract': {'targetRange': [10, 80], 'mode': 'plot', 'intensityLevel': 1,
                                          'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}}
-        source_before = (root / '.gnovel/structure.json').read_bytes()
+        source_before = (root / '.govel/structure.json').read_bytes()
         result = self.mcp('workflow.chapter-preview', arguments, root=root)
         self.assertFalse(result['isError'], result)
         preview = result['structuredContent']
-        self.assertEqual((root / '.gnovel/structure.json').read_bytes(), source_before)
+        self.assertEqual((root / '.govel/structure.json').read_bytes(), source_before)
         action = preview['nextAction']
         committed = self.mcp(action['operation'], action['arguments'], root=root)
         self.assertFalse(committed['isError'], committed)
-        current = read_json(root / '.gnovel/structure.json')
+        current = read_json(root / '.govel/structure.json')
         self.assertEqual(len(current['chapters']), 1)
         cid = current['chapters'][0]['chapterId']
         plans = [row for row in current['fragments'] if row['ownerId'] == cid and row['contentRole'] == 'plan']
@@ -386,7 +386,7 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         for row in edits['seatReviews'].values():
             row.update(conclusion='合成交班计划仅一次钥匙交接，没有承重关系或长期生活安排。',
                        evidence=[{'text': outline}])
-        approvals = read_json(root / '.gnovel/workflow.json')['approvals']
+        approvals = read_json(root / '.govel/workflow.json')['approvals']
         submitted = self.mcp(form['submitAction']['operation'], {
             'requestId': 'review-first', 'chapterId': cid,
             'artifacts': [{'artifactType': 'stage_a_review', 'formRef': form['formRef'], 'edits': edits}]}, root=root)
@@ -394,8 +394,8 @@ class ReviewGuidanceReplayTests(unittest.TestCase):
         result = self.full(submitted['structuredContent'], root=root)
         self.assertTrue(result['submissionComplete'], result)
         self.assertFalse(result['approvalsPerformed'])
-        self.assertEqual(read_json(root / '.gnovel/workflow.json')['approvals'], approvals)
-        self.assertEqual(read_json(root / '.gnovel/structure.json')['chapters'][0]['status'], 'planning_required')
+        self.assertEqual(read_json(root / '.govel/workflow.json')['approvals'], approvals)
+        self.assertEqual(read_json(root / '.govel/structure.json')['chapters'][0]['status'], 'planning_required')
         self.assertTrue(all(row['status'] == 'registered' for row in result['stages']))
 
     def test_documented_authoring_flow_reaches_shared_cli_and_mcp_definitions(self):

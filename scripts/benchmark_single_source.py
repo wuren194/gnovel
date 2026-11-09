@@ -50,8 +50,8 @@ def _source_fixture(root: Path, target_bytes: int) -> dict:
             'text': chunk, 'order': 100 + index, 'contentBindings': ['AT-LIFE'],
             'dependsOn': [], 'contentRole': 'fact',
         })
-    root.joinpath('.gnovel').mkdir(parents=True); root.joinpath('工作台').mkdir()
-    write_json(root / '.gnovel/structure.json', source)
+    root.joinpath('.govel').mkdir(parents=True); root.joinpath('工作台').mkdir()
+    write_json(root / '.govel/structure.json', source)
     return source
 
 
@@ -59,7 +59,7 @@ def benchmark_source(megabytes: float) -> dict:
     with tempfile.TemporaryDirectory(prefix='single-source-scale-') as directory:
         root = Path(directory); target = int(megabytes * 1024 * 1024)
         _, generate = _now(lambda: _source_fixture(root, target))
-        actual = (root / '.gnovel/structure.json').stat().st_size
+        actual = (root / '.govel/structure.json').stat().st_size
         loaded, cold = _now(lambda: load_structure(root))
         selection = {'ownerIds': ['C-ALPHA']}
         overview, overview_time = _now(lambda: query_source(root, selection=selection, view='overview', limit=20))
@@ -94,7 +94,7 @@ def _prose_fixture(root: Path, characters: int) -> tuple[dict, list[str], int]:
     source = source_fixture(); volume_id = source['volumes'][0]['volumeId']; arc_id = source['arcs'][0]['arcId']
     per_chapter = 4000; chapter_count = max(1, (characters + per_chapter - 1) // per_chapter)
     ids, actual = [], 0
-    (root / '.gnovel').mkdir(parents=True); (root / '正文').mkdir()
+    (root / '.govel').mkdir(parents=True); (root / '正文').mkdir()
     base = ('他沿着长廊向前，记住每一扇门的位置。' * 250)[:per_chapter]
     for ordinal in range(1, chapter_count + 1):
         cid = f'CH-SCALE-{ordinal:06d}'; ids.append(cid)
@@ -109,7 +109,7 @@ def _prose_fixture(root: Path, characters: int) -> tuple[dict, list[str], int]:
             'storyTimeStartId': None, 'storyTimeEndId': None})
         source['chapterArcLinks'].append({'chapterId': cid, 'arcId': arc_id, 'role': 'primary'})
         (root / f'正文/{cid}.md').write_text(text, encoding='utf-8')
-    write_json(root / '.gnovel/structure.json', source)
+    write_json(root / '.govel/structure.json', source)
     return source, ids, actual
 
 

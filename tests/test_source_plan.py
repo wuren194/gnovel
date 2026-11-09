@@ -33,7 +33,7 @@ def planning_source(root: Path):
                                'chapterContract': {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                                    'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
     validate_structure(source)
-    write_json(root / '.gnovel/structure.json', source)
+    write_json(root / '.govel/structure.json', source)
     return source, source['chapters'][0]
 
 
@@ -55,7 +55,7 @@ class SourcePlanTests(unittest.TestCase):
         record_artifact(workflow, self.cid, artifact, structure=self.source, artifact_path=str(path),
                         project_id=self.source['projectId'], project_root=self.root)
         approve_artifacts(workflow, self.cid, artifact_hashes={'stage_a_review': artifact['artifactSha256']}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         return path
 
     def test_stage_a_advances_without_any_outline_export(self):
@@ -119,7 +119,7 @@ class SourcePlanTests(unittest.TestCase):
         changed['fragments'][3]['text'] = '他曾独自守过城门。'
         impact = source_impact(self.source, changed)
         self.assertNotIn(self.cid, impact['approvalInvalidations'])
-        self.assertNotIn('.gnovel/workflow.json', review_outputs(self.root, self.source, changed, impact))
+        self.assertNotIn('.govel/workflow.json', review_outputs(self.root, self.source, changed, impact))
 
     def test_old_markdown_approval_cannot_be_reused_as_source_approval(self):
         with self.assertRaises(ReviewArtifactError) as error:
@@ -137,7 +137,7 @@ class SourcePlanTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 'ARTIFACT_APPROVAL_HASH_MISMATCH')
         write_json(path, data)
         self.source['fragments'][-1]['text'] = '甲离开城门。'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(WorkflowError) as error: advance_chapter_status(self.root, self.cid, 'planned')
         self.assertEqual(error.exception.code, 'STAGE_A_OUTLINE_MISMATCH')
 
@@ -171,21 +171,21 @@ class SourcePlanTests(unittest.TestCase):
         from scripts.core.finalization_preflight import preflight_finalization
         self.approve()
         self.source['chapters'][0]['status'] = 'review'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         result = preflight_finalization(self.root, self.cid, skip_title=True)
         codes = {row['code'] for row in result.blockers}
         self.assertNotIn('OUTLINE_MISSING', codes)
         self.assertNotIn('STAGE_A_OUTLINE_MISMATCH', codes)
         self.assertIn('FINAL_ARTIFACTS_MISSING', codes, 'source binding must not bypass other publishing gates')
         self.source['fragments'][-1]['text'] = '甲弃门而去。'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         changed = preflight_finalization(self.root, self.cid, skip_title=True)
         self.assertIn('STAGE_A_OUTLINE_MISMATCH', {row['code'] for row in changed.blockers})
 
     def test_cache_snapshot_ignores_reading_files_in_source_mode(self):
         from scripts import state_cache
         from scripts.core.structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION
-        write_json(self.root / '.gnovel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
+        write_json(self.root / '.govel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
             'workflowVersion': WORKFLOW_VERSION, 'projectId': self.source['projectId']})
         before = state_cache._source_snapshots(self.root)
         reading = self.root / '规划/推演阅读.md'; reading.parent.mkdir()
@@ -197,17 +197,17 @@ class SourcePlanTests(unittest.TestCase):
     def test_missing_current_plan_cannot_advance_even_with_old_approval(self):
         self.approve()
         self.source['fragments'][-1]['status'] = 'archived'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(WorkflowError) as error: advance_chapter_status(self.root, self.cid, 'planned')
         self.assertEqual(error.exception.code, 'SOURCE_CHAPTER_PLAN_MISSING')
 
     def test_corrupt_source_cache_status_returns_diagnostics(self):
         from scripts import state_cache
         from scripts.core.structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION
-        write_json(self.root / '.gnovel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
+        write_json(self.root / '.govel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
             'workflowVersion': WORKFLOW_VERSION, 'projectId': self.source['projectId']})
         self.source['fragments'][-1]['contentBindings'] = ['AT-MISSING']
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         status = state_cache.status(self.root)
         self.assertEqual(status['status'], 'invalid')
         self.assertTrue(status['problems'])

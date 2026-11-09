@@ -23,12 +23,12 @@ def assemble_review(root, chapter_id, payload, *, completed_hash=None):
     dependencies = deepcopy(saved['dependencies'])
     if completed_hash is not None:
         from .jsonio import read_json
-        workflow = read_json(root / '.gnovel/workflow.json')
+        workflow = read_json(root / '.govel/workflow.json')
         entries = workflow.get('artifacts', {}).get(chapter_id, {})
         current = entries.get('stage_b_review', {})
         if (current.get('artifactSha256') == completed_hash and not current.get('invalidatedBy')
                 and entries.get('candidate_prose', {}).get('artifactSha256') == saved['candidateSha256']):
-            dependencies['files'].pop('.gnovel/workflow.json', None)
+            dependencies['files'].pop('.govel/workflow.json', None)
     validate_dependencies(root, dependencies, code='REPAIR_REVIEW_STALE')
     rows = {row['id']: row for row in saved['rows'] if row['source'] in {'diagnostics', 'stage_b_review'}}
     supplied = payload.get('repairDecisions', [])
@@ -98,7 +98,7 @@ def assemble_review(root, chapter_id, payload, *, completed_hash=None):
     from .write_sets import capture_guards
     guards = capture_guards(root, list(dependencies['files']))
     validate_dependencies(root, dependencies, code='REPAIR_REVIEW_STALE')
-    dependencies['files'].pop('.gnovel/workflow.json', None)
+    dependencies['files'].pop('.govel/workflow.json', None)
     return result, guards, dependencies
 
 

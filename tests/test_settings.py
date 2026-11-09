@@ -26,7 +26,7 @@ class SourceSettingsTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = source_fixture(self.root)
-        write_json(self.root/'.gnovel/project.json', {
+        write_json(self.root/'.govel/project.json', {
             'schemaVersion': current_schema_version(), 'workflowVersion': WORKFLOW_VERSION,
             'projectId': self.source['projectId'], 'bookName': self.source['bookName'], 'approvalMode': 'manual'})
 
@@ -34,21 +34,21 @@ class SourceSettingsTests(unittest.TestCase):
         before = inventory(self.root)
         report = check_settings(self.root)
         self.assertTrue(report['valid'])
-        self.assertEqual(report['sources'], ['.gnovel/structure.json'])
+        self.assertEqual(report['sources'], ['.govel/structure.json'])
         self.assertFalse(report['coverage']['semanticReviewComplete'])
         self.assertEqual(inventory(self.root), before)
         self.assertFalse((self.root/'设定').exists())
 
     def test_source_selectors_and_field_projection_are_stable(self):
         self.source['entities'][0]['aliases'] = ['守门人']
-        write_json(self.root/'.gnovel/structure.json', self.source)
+        write_json(self.root/'.govel/structure.json', self.source)
         for selector in ('C-ALPHA', '人物甲', '守门人'):
             with self.subTest(selector=selector):
                 report = query_settings(self.root, selector=selector, fields=['肤色'])
                 self.assertEqual(report['matchedCount'], 1)
                 row = report['matches'][0]
                 self.assertEqual(row['entityId'], 'C-ALPHA')
-                self.assertEqual(row['valueSource'], '.gnovel/structure.json')
+                self.assertEqual(row['valueSource'], '.govel/structure.json')
                 self.assertEqual(row['fields']['appearance.skin'], '白皙\nsource-fragment:SF-LOOK')
                 self.assertEqual([f['id'] for f in row['fragments']], ['SF-LOOK'])
 
@@ -68,7 +68,7 @@ class SourceSettingsTests(unittest.TestCase):
         result = query_settings(self.root, selector='C-ALPHA', fields=['肤色'])
         self.assertNotIn('绿色', json.dumps(result, ensure_ascii=False))
         self.assertEqual(inventory(self.root), before)
-        source_path = self.root/'.gnovel/structure.json'; source_path.unlink()
+        source_path = self.root/'.govel/structure.json'; source_path.unlink()
         with self.assertRaises(StructureError): query_settings(self.root)
         self.assertEqual(path.read_text(), '# 人物甲\n\n肤色：绿色。\n')
 
@@ -76,7 +76,7 @@ class SourceSettingsTests(unittest.TestCase):
         for version in (1, 2, 3, 4, 999):
             with self.subTest(version=version):
                 source = deepcopy(self.source); source['schemaVersion'] = version
-                write_json(self.root/'.gnovel/structure.json', source)
+                write_json(self.root/'.govel/structure.json', source)
                 before = inventory(self.root)
                 for operation in (check_settings, query_settings):
                     with self.assertRaises(StructureError) as caught: operation(self.root)

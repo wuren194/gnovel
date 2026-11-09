@@ -33,7 +33,7 @@ class TransactionRecoveryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             create_schema5_project(root, chapter_count=1)
-            lock = root / '.gnovel/structure.lock'
+            lock = root / '.govel/structure.lock'
             original = lock.stat().st_ino
             with project_lock(root):
                 self.assertTrue(project_lock_observation(root)['locked'])

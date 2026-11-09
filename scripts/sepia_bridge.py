@@ -26,7 +26,7 @@ except ImportError:  # 作为 scripts 包模块被导入（如 tests）时走包
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Connective and slop words from zh.md and gnovel text-patterns
+# Connective and slop words from zh.md and govel text-patterns
 ZH_CONNECTIVES = ("和", "以及", "并且", "同时", "此外", "因此", "然而", "不仅如此", "与此同时")
 ZH_DISYLLABIC_PADDING = ("进行", "加以", "予以", "做出")
 ZH_AI_TEMPLATES = (
@@ -192,7 +192,7 @@ def run_review(file_path: Path) -> str:
 
 
 def main() -> int:
-    parser = FailClosedArgumentParser(description="Sepia De-AI Bridge for gnovel")
+    parser = FailClosedArgumentParser(description="Sepia De-AI Bridge for govel")
     parser.add_argument("operation", choices=["review", "diagnose", "json"], help="Operation to run")
     parser.add_argument("file", type=Path, help="Target markdown file")
     args = parser.parse_args()

@@ -48,7 +48,7 @@ def _path(root, request_id):
         raise StructureError('SUBMISSION_REQUEST_INVALID', 'requestId must be a nonempty string')
     source = load_structure(root)
     identity = sha256_json({'projectId': source['projectId'], 'requestId': request_id})
-    return safe_project_path(root, f'.gnovel/artifact-submissions/{identity}.json'), identity
+    return safe_project_path(root, f'.govel/artifact-submissions/{identity}.json'), identity
 
 
 def _basis(root, chapter_id, advance):
@@ -59,12 +59,12 @@ def _basis(root, chapter_id, advance):
     if chapter is None or chapter['status'] == 'archived':
         raise StructureError('ARTIFACT_CHAPTER_UNKNOWN', 'submission requires an active chapter')
     sources = source_files(root)
-    sources.pop('.gnovel/structure.json', None)
+    sources.pop('.govel/structure.json', None)
     # Single-source source_files covers prose citations; these other consumed
     # inputs must also remain fixed while a multi-stage submission is resumed.
-    for relative in ('AGENTS.md', '.gnovel/project.json', '.gnovel/aux/story-summary.json',
-                     '.gnovel/source-review.json', '.gnovel/source-review-receipts.json',
-                     '.gnovel/source-rule-issues.json', chapter['filePath']):
+    for relative in ('AGENTS.md', '.govel/project.json', '.govel/aux/story-summary.json',
+                     '.govel/source-review.json', '.govel/source-review-receipts.json',
+                     '.govel/source-rule-issues.json', chapter['filePath']):
         sources[relative] = file_state(safe_project_path(root, relative))
     return {'projectId': source['projectId'],
             'structure': candidate_structure_identity(source, chapter_id) if advance else sha256_json(source),
@@ -160,7 +160,7 @@ def _dependencies(root, chapter_id, kinds, diagnostics):
 
 def _assert_current(root, record):
     args = record['arguments']
-    original_guards = capture_guards(root, ['.gnovel/structure.json', '.gnovel/workflow.json'])
+    original_guards = capture_guards(root, ['.govel/structure.json', '.govel/workflow.json'])
     _assert_form_inputs(root, record)
     current = _basis(root, args['chapterId'], args['advanceLifecycle'])
     if current != record['basis']:
@@ -181,7 +181,7 @@ def _assert_current(root, record):
                              {'artifactTypes': changed})
     from .finalization import _load_workflow
     workflow = _load_workflow(root)
-    relatives = [*current['sources'], '.gnovel/structure.json', '.gnovel/workflow.json',
+    relatives = [*current['sources'], '.govel/structure.json', '.govel/workflow.json',
                  *(row['path'] for row in record.get('formGuards', []))]
     for kind in record['dependencies']:
         entry = workflow.get('artifacts', {}).get(args['chapterId'], {}).get(kind, {})
@@ -403,7 +403,7 @@ def submit_artifacts(root: Path, *, requestId: str, chapterId: str | None = None
                     # formRef+edits identity is a digest, not a second copy of
                     # the station's judgments. Cache eviction cannot rebind it.
                     record['callerArgumentsSha256'] = caller_hash
-                    covered = {*record['basis']['sources'], '.gnovel/structure.json', '.gnovel/workflow.json'}
+                    covered = {*record['basis']['sources'], '.govel/structure.json', '.govel/workflow.json'}
                     record['formGuards'] = [row for row in form_guards if row['path'] not in covered]
                     record['formQueries'] = []
                     for snapshot in forms:

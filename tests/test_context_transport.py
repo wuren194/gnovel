@@ -122,7 +122,7 @@ class ContextTransportTests(unittest.TestCase):
         health = run_cli('source', 'context-health', '--project-root', str(self.root),
                          '--chapter-id', 'CH-AAA', '--task', 'writer')
         self.assertEqual(self.inventory(), before, 'Context read 入口不得写任何项目文件（含派生缓存）')
-        self.assertFalse([key for key in self.inventory() if '.gnovel/cache' in key],
+        self.assertFalse([key for key in self.inventory() if '.govel/cache' in key],
                          '只读入口不得发布派生缓存')
         for payload in (json.loads(legacy.stdout), task, mcp):
             self.assertEqual(payload['contextHash'], mcp['contextHash'],
@@ -138,10 +138,10 @@ class ContextTransportTests(unittest.TestCase):
 
     def test_state_rebuild_is_the_only_cache_publishing_entry(self):
         """显式维护操作仍然发布派生缓存——只读收口不能把它一起关掉。"""
-        self.assertFalse([key for key in self.inventory() if '.gnovel/cache' in key])
+        self.assertFalse([key for key in self.inventory() if '.govel/cache' in key])
         proc = in_process_cli(['project', 'state', 'rebuild', '--project-root', str(self.root)])
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertTrue([key for key in self.inventory() if '.gnovel/cache' in key],
+        self.assertTrue([key for key in self.inventory() if '.govel/cache' in key],
                         'state rebuild 仍应发布派生缓存')
         after = self.inventory()
         read = run_cli('context', '--project-root', str(self.root), '--chapter-id', 'CH-AAA', '--view', 'station')

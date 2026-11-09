@@ -124,7 +124,7 @@ class CandidateAnchorTests(unittest.TestCase):
         self.assert_eof_location_stays_readable('\r\n')
 
     def test_pure_anchor_batch_uses_one_baseline_without_transferring_approvals(self):
-        before = read_json(self.root / '.gnovel/workflow.json')
+        before = read_json(self.root / '.govel/workflow.json')
         patches = [self.repair('book', '乙放下笔。'), self.repair()]
         with patch('scripts.core.mechanical_evidence.run_diagnostics', side_effect=AssertionError('not requested')):
             result = call_operation('workflow.patch-candidate', self.root, {'patches': patches})
@@ -134,7 +134,7 @@ class CandidateAnchorTests(unittest.TestCase):
         self.assertEqual([row['start'] for row in result['patches']], sorted(row['start'] for row in result['patches']))
         self.assertFalse(result['approvalPerformed']); self.assertFalse(result['semanticReviewComplete'])
         self.assertTrue(result['mechanicalChecksRequired'])
-        after = read_json(self.root / '.gnovel/workflow.json')
+        after = read_json(self.root / '.govel/workflow.json')
         self.assertEqual(after['approvals'], before['approvals'])
         for kind in ('diagnostics', 'stage_b_review', 'state_candidate'):
             self.assertIsNone(registered_artifact(after, self.chapter, kind))
@@ -274,7 +274,7 @@ class CandidateAnchorTests(unittest.TestCase):
 
     def test_workflow_change_during_resolution_is_not_overwritten(self):
         from scripts.core.edit_anchors import resolve_anchor
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         workflow = read_json(workflow_path)
         workflow['externalMarker'] = 'preserve this edit'
         expected = None
@@ -289,13 +289,13 @@ class CandidateAnchorTests(unittest.TestCase):
             with self.assertRaises(StructureError) as caught:
                 patch_candidate(self.root, patches=[self.repair()])
         self.assertEqual(caught.exception.code, 'PATCH_BASE_STALE')
-        self.assertEqual(self.files(), {**before, '.gnovel/workflow.json': expected})
+        self.assertEqual(self.files(), {**before, '.govel/workflow.json': expected})
 
     def test_anchor_request_resumes_full_diagnostics_without_cache_or_semantic_credit(self):
         row = self.repair()
         arguments = {'patches': [row], 'requestId': 'anchor-retry', 'advanceLifecycle': True,
                      'diagnostics': {'mode': 'plot', 'intensityLevel': 1}}
-        approvals = deepcopy(read_json(self.root / '.gnovel/workflow.json')['approvals'])
+        approvals = deepcopy(read_json(self.root / '.govel/workflow.json')['approvals'])
         with patch('scripts.core.mechanical_evidence.subprocess.run', side_effect=OSError('injected diagnostics failure')):
             first = call_operation('workflow.patch-candidate', self.root, arguments)
         self.assertEqual(first['code'], 'ARTIFACT_PACK_DIAGNOSTICS_INCOMPLETE')
@@ -312,7 +312,7 @@ class CandidateAnchorTests(unittest.TestCase):
         self.assertEqual(set(report['evidence']['checksPresent']),
                          {'ai_cliche_linter', 'validate_text', 'check_voice_lexicon', 'check_degeneration'})
         self.assertFalse(resumed['semanticReviewComplete']); self.assertFalse(resumed['approvalPerformed'])
-        self.assertEqual(read_json(self.root / '.gnovel/workflow.json')['approvals'], approvals)
+        self.assertEqual(read_json(self.root / '.govel/workflow.json')['approvals'], approvals)
         self.assertEqual(resumed['lifecycleStatus'], 'review')
         with patch('scripts.core.mechanical_evidence.subprocess.run', side_effect=AssertionError('must reuse')):
             again = call_operation('workflow.patch-candidate', self.root, arguments)

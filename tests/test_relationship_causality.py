@@ -68,10 +68,10 @@ class RelationshipCausalityTests(unittest.TestCase):
         self.save_source()
 
     def save_source(self):
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def workflow(self):
-        return read_json(self.root / '.gnovel/workflow.json')
+        return read_json(self.root / '.govel/workflow.json')
 
     def files(self):
         return {path.relative_to(self.root).as_posix(): path.read_bytes()
@@ -116,7 +116,7 @@ class RelationshipCausalityTests(unittest.TestCase):
         workflow = self.workflow()
         approve_artifacts(workflow, self.cid,
                           artifact_hashes={kind: result['artifactSha256']}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
 
     def prepare_current_candidate(self, *, text=None):
         result = pack_artifact(self.root, chapterId=self.cid, artifactType='stage_a_review',
@@ -441,7 +441,7 @@ class RelationshipCausalityTests(unittest.TestCase):
         write_json(path, changed)
         entry.update(artifactSha256=changed['artifactSha256'], artifactFileSha256=file_sha256(path))
         workflow['approvals'][self.cid]['artifactHashes']['stage_b_review'] = changed['artifactSha256']
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         before = self.files()
         result = preflight_finalization(self.root, self.cid, skip_title=True)
         self.assertFalse(result.ready)

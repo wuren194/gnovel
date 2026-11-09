@@ -1,9 +1,9 @@
-# gnovel 工具箱规则 ID 注册表（SSOT）
+# govel 工具箱规则 ID 注册表（SSOT）
 # mechanical:true 必须有 validate-text 检查器；建议配套 fixture（建议性，未强制落实）
 # source 标明正文定义位置；alias_of 合并重复表述
 
 version: 1
-skills: [gnovel-router, gnovel-composer, gnovel-planner, gnovel-writer, gnovel-editor, gnovel-titler]
+skills: [govel-router, govel-composer, govel-planner, govel-writer, govel-editor, govel-titler]
 
 params:
   intensityLevel: {default: 5, min: 1, max: 10}

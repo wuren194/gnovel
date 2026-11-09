@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gnovel.local/schemas/artifacts.json",
-  "title": "gnovel artifact envelopes",
+  "$id": "https://govel.local/schemas/artifacts.json",
+  "title": "Govel artifact envelopes",
   "type": "object",
   "required": [
     "artifactType",

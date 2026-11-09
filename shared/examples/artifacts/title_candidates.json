@@ -5,7 +5,7 @@
   "chapterId": "CHAPTER",
   "sourceSha256": null,
   "createdAt": "2026-08-29T08:11:18.337641+00:00",
-  "producer": "gnovel",
+  "producer": "govel",
   "payload": {
     "candidates": [
       {
@@ -14,5 +14,5 @@
       }
     ]
   },
-  "artifactSha256": "d8e8a85390f418c9654a0293c2e2f03d16c670f1b5f92f8f4250bf09fb0cfabb"
+  "artifactSha256": "88d9bbf4faecd5a46c4cba98c61330b3782ccbf243a873c3339bbcd3ad3e8abe"
 }

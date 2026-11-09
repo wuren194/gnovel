@@ -30,7 +30,7 @@ class SourcePresetAndCandidateScanTests(unittest.TestCase):
             })
             self.source['chapterArcLinks'].append({'chapterId': chapter_id, 'arcId': arc_id, 'role': 'primary'})
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         (self.root / '正文').mkdir()
         (self.root / '正文/CH-SCAN-A.md').write_text('他先救了甲。后来又救了乙。', encoding='utf-8')
 

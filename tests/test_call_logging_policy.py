@@ -20,10 +20,10 @@ class CallLoggingPolicyTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
         self.logs = self.directory / "logs"
-        environment = patch.dict(os.environ, {"GNOVEL_LOG_DIR": str(self.logs)})
+        environment = patch.dict(os.environ, {"GOVEL_LOG_DIR": str(self.logs)})
         environment.start()
         self.addCleanup(environment.stop)
-        os.environ.pop("GNOVEL_LOG_MODE", None)
+        os.environ.pop("GOVEL_LOG_MODE", None)
         self.policy = project.call_logging_policy()
 
     def test_registry_default_changes_capture_without_creating_a_project(self):
@@ -36,7 +36,7 @@ class CallLoggingPolicyTests(unittest.TestCase):
         with call_logging.call_scope("cli", {"body": "保留正文。"}, name="sample") as recorder:
             recorder.observe("response", {"ok": True})
         self.assertEqual(call_logging.logging_status()["storage"]["callCount"], 1)
-        self.assertFalse((self.directory / ".gnovel").exists())
+        self.assertFalse((self.directory / ".govel").exists())
 
     def test_policy_rejects_bad_limits_schema_patterns_and_pseudo_config(self):
         changes = [
@@ -187,8 +187,8 @@ class CallLoggingPolicyTests(unittest.TestCase):
         self.assertEqual(sanitize({"secret": "credential-value-only"}, self.policy)["value"]["secret"], "[REDACTED]")
 
     def test_local_ci_separates_test_calls_from_personal_history(self):
-        with patch.dict(os.environ, {"GNOVEL_LOG_MODE": "full"}):
-            self.assertEqual(local_ci._subprocess_env()["GNOVEL_LOG_MODE"], "off")
+        with patch.dict(os.environ, {"GOVEL_LOG_MODE": "full"}):
+            self.assertEqual(local_ci._subprocess_env()["GOVEL_LOG_MODE"], "off")
 
     def test_known_credential_never_reappears_in_derived_name_or_parser_error(self):
         secret = "LOCAL-REVIEW-CREDENTIAL-NOT-REAL"

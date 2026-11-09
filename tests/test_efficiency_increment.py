@@ -36,7 +36,7 @@ class IncrementTests(unittest.TestCase):
                 if path.is_file() and path.is_relative_to(TOOLBOX_ROOT / 'knowledge/assets'):
                     meta, _ = _parse(path.read_bytes(), str(path))
                     self.assertEqual(meta['status'], 'active', alias)
-                    self.assertIn(station.removeprefix('gnovel-'), meta['stations'], alias)
+                    self.assertIn(station.removeprefix('govel-'), meta['stations'], alias)
 
     def test_shared_reference_is_readable_for_planner_and_writer(self):
         for task, suffix in [('planner', 'chapter-outline-review-template.md'), ('writer', 'mechanical-baseline.md')]:
@@ -88,7 +88,7 @@ class IncrementTests(unittest.TestCase):
         plan = next(f for f in source['fragments'] if f['ownerId'] == self.chapter)
         plan['chapterContract'] = {'targetRange': [low, high], 'pov': character, 'mode': 'plot', 'intensityLevel': 1,
                                    'beats': [{'id': 'B01', 'budget': low}], 'slowdownReserve': '取钥匙的阻力可展开'}
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         facts = call_operation('task.outline-check', self.root, {'chapterId': self.chapter})
         self.assertTrue(facts['valid'], facts)
         self.assertEqual(facts['beatBudgetSum'], low)
@@ -96,13 +96,13 @@ class IncrementTests(unittest.TestCase):
         self.assertEqual(prepared['outlineFacts']['pov'], character)
         self.assertEqual(prepared['outlineFacts']['intensityLevel'], 1)
         plan['chapterContract']['beats'][0]['budget'] = 1
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         bad = call_operation('task.outline-check', self.root, {'chapterId': self.chapter})
         self.assertIn('OUTLINE_BEAT_BUDGET_OUTSIDE_RANGE', bad['issues'])
 
     def test_skeleton_does_not_approve_or_replace_existing_files(self):
         from scripts.core.review_artifacts import STAGE_B_SLOTS, AUXILIARY_GATES
-        before = (self.root / '.gnovel/workflow.json').read_bytes()
+        before = (self.root / '.govel/workflow.json').read_bytes()
         for kind in ('stage_a_review', 'stage_b_review'):
             result = call_operation('workflow.review-skeleton', self.root, {'chapterId': self.chapter, 'artifactType': kind, 'output': f'工作台/{kind}-input.json'})
             payload = read_json(self.root / result['path'])
@@ -112,13 +112,13 @@ class IncrementTests(unittest.TestCase):
                 self.assertTrue(all(v['conclusion'] == '' for v in payload['slots'].values()))
             with self.assertRaises(StructureError):
                 call_operation('workflow.review-skeleton', self.root, {'chapterId': self.chapter, 'artifactType': kind, 'output': result['path']})
-        self.assertEqual(before, (self.root / '.gnovel/workflow.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/workflow.json').read_bytes())
 
     def test_skeleton_does_not_overwrite_a_file_created_during_preparation(self):
         from scripts.core import write_sets
         original = write_sets.inventory
         output = self.root / '工作台/review-input.json'
-        before = (self.root / '.gnovel/workflow.json').read_bytes()
+        before = (self.root / '.govel/workflow.json').read_bytes()
 
         def create_external(root, outputs, **kwargs):
             output.write_text('authored while preparing')
@@ -129,12 +129,12 @@ class IncrementTests(unittest.TestCase):
                 'chapterId': self.chapter, 'artifactType': 'stage_b_review', 'output': '工作台/review-input.json'})
         self.assertEqual(caught.exception.code, 'ARTIFACT_INPUT_OVERWRITE')
         self.assertEqual(output.read_text(), 'authored while preparing')
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), before)
 
     def test_candidate_diagnostics_advances_only_to_review_and_evidence_is_fresh(self):
         from scripts.core.mechanical_evidence import evidence_current
         source = load_structure(self.root); source['chapters'][0]['status'] = 'planned'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         (self.root / '工作台/input.txt').write_text('甲推开了门。乙退开半步。显然，他还想开口。')
         result = call_operation('workflow.artifact-pack', self.root, {'chapterId': self.chapter,
             'artifactType': 'candidate_prose', 'input': '工作台/input.txt', 'advanceLifecycle': True,
@@ -153,12 +153,12 @@ class IncrementTests(unittest.TestCase):
 
     def test_advance_failure_does_not_publish_candidate(self):
         source = load_structure(self.root); source['chapters'][0]['status'] = 'stable'
-        write_json(self.root / '.gnovel/structure.json', source)
-        before = (self.root / '.gnovel/workflow.json').read_bytes()
+        write_json(self.root / '.govel/structure.json', source)
+        before = (self.root / '.govel/workflow.json').read_bytes()
         (self.root / '工作台/input.txt').write_text('未登记正文。')
         with self.assertRaises(StructureError):
             pack_artifact(self.root, chapterId=self.chapter, artifactType='candidate_prose', input='工作台/input.txt', advanceLifecycle=True)
-        self.assertEqual(before, (self.root / '.gnovel/workflow.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/workflow.json').read_bytes())
 
 
 class RecordPatchTests(unittest.TestCase):
@@ -236,7 +236,7 @@ class RecordPatchTests(unittest.TestCase):
     def test_relation_patch_preserves_endpoints_and_author_declaration(self):
         source = load_structure(self.root)
         source['relations'] = [{'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA', 'toEntity': 'C-BETA', 'kind': 'protects'}]
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         resolved = call_operation('source.relation-resolve', self.root, {'relationId': 'REL-ALPHA-BETA'})
         args = {'sessionRef': resolved['sessionRef'], 'expectedRecordHash': resolved['recordHash'],
                 'patch': [{'op': 'set', 'path': ['kind'], 'value': 'trusts'}],

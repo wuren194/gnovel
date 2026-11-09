@@ -79,7 +79,7 @@ def make_card_project(root: Path) -> dict:
          'status': 'archived'},
     ])
     validate_structure(source)
-    write_json(root / '.gnovel/structure.json', source)
+    write_json(root / '.govel/structure.json', source)
     return source
 
 
@@ -90,14 +90,14 @@ def inventory(root: Path) -> dict:
 
 class CardFixture:
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix='gnovel-card-test-')
+        temp = tempfile.TemporaryDirectory(prefix='govel-card-test-')
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = make_card_project(self.root)
 
     def save(self):
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
 
 class EntityCardProjectionTests(CardFixture, unittest.TestCase):
@@ -110,13 +110,13 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
         self.assertEqual(result['references'], self.source['references'])
         self.assertEqual(projection['fields'], queried['fields'])
         self.assertEqual(projection['fragments'], queried['fragments'])
-        self.assertEqual(projection['valueSource'], '.gnovel/structure.json')
+        self.assertEqual(projection['valueSource'], '.govel/structure.json')
         self.assertEqual(projection['knowledgeMode'], 'author')
         self.assertEqual(projection['timeScope'], 'all')
         self.assertNotIn('fields', result['entity'])
         self.assertEqual(inventory(self.root), before)
         self.assertTrue(all('fields' not in row for row in read_json(
-            self.root / '.gnovel/structure.json')['entities']))
+            self.root / '.govel/structure.json')['entities']))
 
     def test_typed_states_empty_fields_and_validity_are_not_flattened(self):
         projection = get_entity(self.root, 'C-ALPHA')['sourceProjection']
@@ -197,7 +197,7 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
         self.assertTrue(all(row['kind'] == 'fragment' for row in result['items']))
 
     def test_pending_transaction_blocks_entity_projection_without_writes(self):
-        write_json(self.root / '.gnovel/transactions/TX-PENDING.json', {'phase': 'prepared'})
+        write_json(self.root / '.govel/transactions/TX-PENDING.json', {'phase': 'prepared'})
         before = inventory(self.root)
         with self.assertRaises(StructureError) as caught:
             get_entity(self.root, 'C-ALPHA')

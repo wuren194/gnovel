@@ -12,12 +12,12 @@ from .project import TOOLBOX_ROOT
 from .tool_catalog import list_capabilities
 
 STATIONS = {
-    "composer": "gnovel-composer",
-    "router": "gnovel-router",
-    "planner": "gnovel-planner",
-    "writer": "gnovel-writer",
-    "editor": "gnovel-editor",
-    "titler": "gnovel-titler",
+    "composer": "govel-composer",
+    "router": "govel-router",
+    "planner": "govel-planner",
+    "writer": "govel-writer",
+    "editor": "govel-editor",
+    "titler": "govel-titler",
 }
 RELATIVE = "{station}/references/tool-capabilities.md"
 

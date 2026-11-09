@@ -16,10 +16,10 @@ class DiagnosticDependencyTests(unittest.TestCase):
         self.root = Path(temp.name).resolve()
         self.fixture = review_ready_project(self.root, chapter_count=3)
         self.cid = self.fixture['chapterIds'][0]
-        self.source_path = self.root / '.gnovel/structure.json'
+        self.source_path = self.root / '.govel/structure.json'
 
     def test_unrelated_status_preserves_original_report_and_semantic_credit(self):
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         entry = workflow['artifacts'][self.cid]['diagnostics']
         path = Path(entry['artifactPath']); before = path.read_bytes()
         payload = read_json(path)['payload']
@@ -56,7 +56,7 @@ class DiagnosticDependencyTests(unittest.TestCase):
 
     def test_missing_or_modified_original_proof_is_not_refreshed(self):
         from scripts.core.diagnostic_inputs import stored_input_proof
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         original = read_json(Path(workflow['artifacts'][self.cid]['diagnostics']['artifactPath']))['payload']
         self.assertTrue(stored_input_proof(original))
         for field in ('runInputs', 'semanticInputs'):
@@ -73,7 +73,7 @@ class DiagnosticDependencyTests(unittest.TestCase):
         source = read_json(self.source_path)
         source['chapters'][0]['status'] = 'draft'
         write_json(self.source_path, source)
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         workflow = read_json(workflow_path)
         workflow['chapterStates'][self.cid] = {'status': 'draft'}
         write_json(workflow_path, workflow)
@@ -98,7 +98,7 @@ class DiagnosticDependencyTests(unittest.TestCase):
         from scripts.core import mechanical_evidence
         source = read_json(self.source_path); source['chapters'][0]['status'] = 'draft'
         write_json(self.source_path, source)
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path); workflow['chapterStates'][self.cid] = {'status': 'draft'}
         write_json(path, workflow)
         publish = mechanical_evidence._publish

@@ -37,8 +37,8 @@ class CallLoggingEntrypointTests(unittest.TestCase):
         self.logs = self.directory / "diagnostics"
         self.fixture = create_schema5_project(self.project, chapter_count=1)
         environment = patch.dict(os.environ, {
-            "GNOVEL_LOG_DIR": str(self.logs),
-            "GNOVEL_LOG_MODE": "full",
+            "GOVEL_LOG_DIR": str(self.logs),
+            "GOVEL_LOG_MODE": "full",
             "PYTHONDONTWRITEBYTECODE": "1",
         })
         environment.start()
@@ -46,11 +46,11 @@ class CallLoggingEntrypointTests(unittest.TestCase):
 
     def _env(self, mode="full", log_root=None):
         env = dict(os.environ)
-        env["GNOVEL_LOG_DIR"] = str(log_root or self.logs)
+        env["GOVEL_LOG_DIR"] = str(log_root or self.logs)
         if mode is None:
-            env.pop("GNOVEL_LOG_MODE", None)
+            env.pop("GOVEL_LOG_MODE", None)
         else:
-            env["GNOVEL_LOG_MODE"] = mode
+            env["GOVEL_LOG_MODE"] = mode
         return env
 
     def _cli(self, *args, mode="full", log_root=None):
@@ -195,7 +195,7 @@ class CallLoggingEntrypointTests(unittest.TestCase):
             structure["projectId"], chapter["chapterId"], chapter["filePath"], state="managed",
             generation=1, expected_content_digest="sha256:" + sha256_text(prose),
         )
-        write_json(self.project / ".gnovel/structure.json", structure)
+        write_json(self.project / ".govel/structure.json", structure)
         before = self._project_snapshot()
         process = self._cli("project", "prose", "--chapter-id", chapter["chapterId"],
                             "--project-root", str(self.project))

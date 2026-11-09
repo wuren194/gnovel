@@ -25,7 +25,7 @@ def _load(name: str, relative: str):
 
 
 checker = _load("check_mcp_registration", "scripts/check_mcp_registration.py")
-ADD = f"claude mcp add -s local gnovel -- python3 {shlex.quote(str(checker.SERVER_SCRIPT))}"
+ADD = f"claude mcp add -s local govel -- python3 {shlex.quote(str(checker.SERVER_SCRIPT))}"
 
 
 class McpRegistrationCheckTests(unittest.TestCase):
@@ -40,14 +40,14 @@ class McpRegistrationCheckTests(unittest.TestCase):
         return {"type": "stdio", "command": sys.executable, "args": [str(script)], "env": {}}
 
     def write_claude(self, user: dict | None = None, local: dict | None = None) -> None:
-        data = {"projects": {path: {"mcpServers": {"gnovel": entry}} for path, entry in (local or {}).items()}}
+        data = {"projects": {path: {"mcpServers": {"govel": entry}} for path, entry in (local or {}).items()}}
         if user is not None:
-            data["mcpServers"] = {"gnovel": user}
+            data["mcpServers"] = {"govel": user}
         self.claude.write_text(json.dumps(data), encoding="utf-8")
 
     def write_codex(self, script: Path | None, extra: str = "") -> None:
         table = "" if script is None else (
-            f'[mcp_servers.gnovel]\ntype = "stdio"\ncommand = {json.dumps(sys.executable)}\n'
+            f'[mcp_servers.govel]\ntype = "stdio"\ncommand = {json.dumps(sys.executable)}\n'
             f"args = [{json.dumps(str(script))}]\n{extra}")
         self.codex.write_text('model = "x"\n\n' + table, encoding="utf-8")
 
@@ -63,7 +63,7 @@ class McpRegistrationCheckTests(unittest.TestCase):
         report = self.run_check()
         self.assertFalse(report["ok"])
         self.assertEqual(sum("入口文件不存在" in p for p in report["problems"]), 2)
-        self.assertIn(f"claude mcp remove -s user gnovel && {ADD.replace('-s local', '-s user')}", report["fixes"])
+        self.assertIn(f"claude mcp remove -s user govel && {ADD.replace('-s local', '-s user')}", report["fixes"])
         self.assertTrue(any(json.dumps(str(checker.SERVER_SCRIPT)) in fix for fix in report["fixes"]))
         self.assertEqual([(row["client"], row["usable"]) for row in report["coverage"]],
                          [("claude", False), ("codex", False)])
@@ -99,7 +99,7 @@ class McpRegistrationCheckTests(unittest.TestCase):
         report = self.run_check(book, other)
         rows = {row["dir"]: (row["scope"], row["usable"]) for row in report["coverage"]}
         self.assertEqual(rows, {str(book): ("local", False), str(other): ("user", True)})
-        self.assertIn(f"cd {shlex.quote(os.path.realpath(book))} && claude mcp remove -s local gnovel && {ADD}",
+        self.assertIn(f"cd {shlex.quote(os.path.realpath(book))} && claude mcp remove -s local govel && {ADD}",
                       report["fixes"])
 
     def test_uncovered_directory_and_missing_codex_entry_are_problems(self) -> None:
@@ -108,8 +108,8 @@ class McpRegistrationCheckTests(unittest.TestCase):
         self.write_claude(local={str(self.home / "deleted"): self.entry(checker.SERVER_SCRIPT)})
         self.write_codex(None)
         report = self.run_check(book)
-        self.assertIn(f"Claude Code 在 {book} 没有 gnovel 注册", report["problems"])
-        self.assertIn("Codex 没有 gnovel 注册", report["problems"])
+        self.assertIn(f"Claude Code 在 {book} 没有 govel 注册", report["problems"])
+        self.assertIn("Codex 没有 govel 注册", report["problems"])
         self.assertIn(f"cd {shlex.quote(str(book))} && {ADD}", report["fixes"])
         self.assertTrue(any("已不存在" in w for w in report["warnings"]), report["warnings"])
 

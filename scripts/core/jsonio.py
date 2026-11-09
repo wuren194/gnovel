@@ -19,13 +19,13 @@ def write_json(path: Path, data: Any, *, atomic: bool = True) -> None:
 
 
 def _new_file_mode(path: Path) -> int:
-    """新文件的权限位：`.gnovel/` 下的机器状态保持 0600，其余项目文件按 umask。
+    """新文件的权限位：`.govel/` 下的机器状态保持 0600，其余项目文件按 umask。
 
     `mkstemp` 一律建 0600，直接 `os.replace` 会让生成的 `正文/`、`设定/`、`工作台/`
     文件比手工创建的同级文件更封闭（0644 → 0600）。机器状态不是交付物，维持 0600；
     作者会读的文件跟随 umask，与 `open()` 建文件的默认一致。
     """
-    if ".gnovel" in path.parts:
+    if ".govel" in path.parts:
         return 0o600
     current = os.umask(0)
     os.umask(current)

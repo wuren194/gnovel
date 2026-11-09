@@ -2,7 +2,7 @@
 
 A receipt on its own is a hand-constructable JSON claim; promoting it to authority is exactly the
 Blocker A forgery (a shape-valid receipt with no committed undo excludes a real hop). Every committed
-schema-4 undo therefore persists ONE undo authority under ``.gnovel/undo-operations/``, inside the
+schema-4 undo therefore persists ONE undo authority under ``.govel/undo-operations/``, inside the
 SAME ``apply_write_set`` as the restored structure, the receipt and the formal undo journal. It binds
 the formal committed undo operation that actually ran (``undoOperationId``, see
 :mod:`scripts.core.undo_journal`), the reversed operation's journal (identity + byte digest +
@@ -31,7 +31,7 @@ from typing import Optional
 from .write_sets import json_bytes
 
 # Relative, canonical (POSIX separators) location of the durable undo authority.
-UNDO_OPERATION_DIR = '.gnovel/undo-operations'
+UNDO_OPERATION_DIR = '.govel/undo-operations'
 
 OPERATION_ID_PATTERN = re.compile(r'OP-[0-9A-F]{16}')
 _HEX64 = re.compile(r'[0-9a-f]{64}')

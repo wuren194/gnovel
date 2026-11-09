@@ -1,4 +1,4 @@
-"""Entity registry helpers for strict gnovel structures."""
+"""Entity registry helpers for strict govel structures."""
 
 from __future__ import annotations
 

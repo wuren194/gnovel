@@ -59,7 +59,7 @@ class EndToEndPipelineTests(unittest.TestCase):
             code, init = self.run_cli(["project", "quick-init", "--project-root", str(root), "--book-name", "端到端", "--no-agents-md"])
             self.assertEqual(code, 0, init)
             self.assertEqual(init["doctor"]["code"], "DOCTOR_OK")
-            code, plan = self.run_cli(["project", "prompt-plan", "--project-root", str(root), "--station", "gnovel-writer"])
+            code, plan = self.run_cli(["project", "prompt-plan", "--project-root", str(root), "--station", "govel-writer"])
             self.assertEqual(code, 0, plan)
             self.assertTrue(plan["planHash"])
             chapter_id, _ = self.insert_chapter(root)

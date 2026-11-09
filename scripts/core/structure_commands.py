@@ -60,9 +60,9 @@ def _safe_path(root: Path, relative: str | Path) -> Path:
 def _operation_paths(root: Path, operation_id: str) -> tuple[Path, Path, Path]:
     _validate_operation_id(operation_id)
     return (
-        _safe_path(root, f".gnovel/plans/{operation_id}.json"),
-        _safe_path(root, f".gnovel/operations/{operation_id}.json"),
-        _safe_path(root, f".gnovel/backups/{operation_id}"),
+        _safe_path(root, f".govel/plans/{operation_id}.json"),
+        _safe_path(root, f".govel/operations/{operation_id}.json"),
+        _safe_path(root, f".govel/backups/{operation_id}"),
     )
 
 
@@ -80,11 +80,11 @@ def _validate_file_paths(root: Path, files: list[Path], backup: Path) -> None:
 
 
 def _plan_dir(root: Path) -> Path:
-    return _safe_path(root, ".gnovel/plans")
+    return _safe_path(root, ".govel/plans")
 
 
 def _journal_dir(root: Path) -> Path:
-    return _safe_path(root, ".gnovel/operations")
+    return _safe_path(root, ".govel/operations")
 
 
 def _plan_hash(payload: dict) -> str:
@@ -96,7 +96,7 @@ def _plan_hash(payload: dict) -> str:
 
 
 def _backup_path(backup: Path, relative: str) -> Path:
-    return backup / "structure.json" if relative == ".gnovel/structure.json" else backup / relative
+    return backup / "structure.json" if relative == ".govel/structure.json" else backup / relative
 
 
 
@@ -373,7 +373,7 @@ def _gc_project_locked(root: Path, *, keep_backups: int) -> dict:
                 path.unlink()
                 removed_plans.append(plan.get("operationId", path.stem))
     removed_backups = []
-    backup_root = root / ".gnovel" / "backups"
+    backup_root = root / ".govel" / "backups"
     if backup_root.is_dir():
         # 只回收已不能撤销的备份：被更新操作覆盖后，旧备份对 undo 无用。
         #

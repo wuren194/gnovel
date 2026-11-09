@@ -68,7 +68,7 @@ class MaintenanceResumeTests(unittest.TestCase):
         write_json(self.root / '工作台/草稿.json', report['checklistDraft'])
         self.assertTrue(check_maintenance(self.root, checklistPath='工作台/草稿.json')['summary']['needsMapping'])
         source = load_structure(self.root); source['schemaVersion'] = 2
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError) as caught:
             prepare_maintenance(self.root, sourcePath='工作台/方案.md')
         self.assertEqual(caught.exception.code, 'UNSUPPORTED_PROJECT_VERSION')
@@ -134,28 +134,28 @@ class MaintenanceResumeTests(unittest.TestCase):
 
     def test_guard_rechecks_late_changes_and_rolls_back_only_transaction(self):
         plan = preview_fact_patch(self.root, **self.args)
-        source_bytes = (self.root / '.gnovel/structure.json').read_bytes()
+        source_bytes = (self.root / '.govel/structure.json').read_bytes()
         original = self.document.read_bytes()
         def mutate(stage, *_args):
             if stage == 'prepared': self.document.write_bytes(original + b'\nchanged externally')
         with patch('scripts.core.write_sets.checkpoint', side_effect=mutate), self.assertRaises(StructureError):
             self.commit(plan)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), source_bytes)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), source_bytes)
         self.assertEqual(self.document.read_bytes(), original + b'\nchanged externally')
-        self.assertFalse((self.root / f'.gnovel/operations/{plan["operationId"]}.json').exists())
+        self.assertFalse((self.root / f'.govel/operations/{plan["operationId"]}.json').exists())
 
     def test_guard_rechecks_after_structure_write(self):
         plan = preview_fact_patch(self.root, **self.args)
-        source_bytes = (self.root / '.gnovel/structure.json').read_bytes()
+        source_bytes = (self.root / '.govel/structure.json').read_bytes()
         original = self.document.read_bytes()
         def mutate(stage, *args):
-            if stage == 'write' and args == ('.gnovel/structure.json',):
+            if stage == 'write' and args == ('.govel/structure.json',):
                 self.document.write_bytes(original + b'\nchanged after write')
         with patch('scripts.core.write_sets.checkpoint', side_effect=mutate), self.assertRaises(StructureError):
             self.commit(plan)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), source_bytes)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), source_bytes)
         self.assertEqual(self.document.read_bytes(), original + b'\nchanged after write')
-        self.assertFalse((self.root / f'.gnovel/operations/{plan["operationId"]}.json').exists())
+        self.assertFalse((self.root / f'.govel/operations/{plan["operationId"]}.json').exists())
 
     def test_expired_request_is_read_only_until_exact_preview_is_renewed(self):
         plan = preview_fact_patch(self.root, **self.args)
@@ -180,7 +180,7 @@ class MaintenanceResumeTests(unittest.TestCase):
 
     def test_rehashed_plan_cannot_omit_input_guards(self):
         plan = preview_fact_patch(self.root, **self.args)
-        path = self.root / f'.gnovel/plans/{plan["operationId"]}.json'
+        path = self.root / f'.govel/plans/{plan["operationId"]}.json'
         saved = read_json(path); saved.pop('maintenanceGuards')
         saved['planHash'] = _plan_hash({k: v for k, v in saved.items() if k != 'planHash'})
         write_json(path, saved)
@@ -247,7 +247,7 @@ class MaintenanceResumeTests(unittest.TestCase):
         for mutate in (False, True):
             if mutate:
                 source = load_structure(self.root); source['fragments'][0]['text'] += '外部变动。'
-                write_json(self.root / '.gnovel/structure.json', source)
+                write_json(self.root / '.govel/structure.json', source)
             expected = {row['recordId']: row['status'] for row in query_reviews(self.root)['items']}
             selected = {row['id']: row['reviewStatus'] for row in select_project_content(self.root)['records'] if row['kind'] == 'fragment'}
             self.assertEqual(selected, expected)

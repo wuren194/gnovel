@@ -234,7 +234,7 @@ class ToolIntentDiscoveryTests(unittest.TestCase):
     def test_default_mcp_client_uses_field_preview_and_manuscript_operations(self):
         from scripts.core.structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION
         from tests.fixtures_source import single_source_chapter
-        write_json(self.root / '.gnovel/project.json', {
+        write_json(self.root / '.govel/project.json', {
             'schemaVersion': PROJECT_SCHEMA_VERSION, 'workflowVersion': WORKFLOW_VERSION,
             'projectId': self.source['projectId'], 'bookName': self.source['bookName'], 'approvalMode': 'manual'})
         self.source['volumes'] = [{'volumeId': 'VOL-EXPORT', 'title': '卷一', 'ordinal': 1, 'status': 'planned'}]
@@ -247,7 +247,7 @@ class ToolIntentDiscoveryTests(unittest.TestCase):
                                                expected_content_digest='sha256:' + hashlib.sha256('已入库的章节正文。'.encode()).hexdigest())
         self.source['chapters'].append(chapter)
         self.source['chapterArcLinks'] = [{'chapterId': 'CH-EXPORT', 'arcId': 'ARC-EXPORT', 'role': 'primary'}]
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         (self.root / '正文').mkdir()
         (self.root / chapter['filePath']).write_text('已入库的章节正文。', encoding='utf-8')
         visible = {row['name'] for row in handle({'id': 1, 'method': 'tools/list'})['result']['tools']}
@@ -311,7 +311,7 @@ class ToolIntentDiscoveryTests(unittest.TestCase):
 
     def test_export_bridge_retains_archive_review_path_and_overwrite_guards(self):
         self.source['fragments'][0]['status'] = 'archived'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         base = {'projectRoot': str(self.root), 'operation': 'source.export'}
         first = self.call('export_discovered_operation', {**base, 'arguments': {'output': '工作台/first.md'}})
         self.assertFalse(first['isError'], first)

@@ -13,7 +13,7 @@ def require_no_pending(root: Path) -> None:
     允许看见中间状态的位置。
     """
     root = root.expanduser().resolve()
-    pending = root / ".gnovel" / "transactions"
+    pending = root / ".govel" / "transactions"
     if not pending.is_dir() or not any(pending.glob("*.json")):
         return
     from .locks import current_thread_owns_lock

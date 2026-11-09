@@ -149,7 +149,7 @@ description: 多身份审校契约。十身份两阶段流程：决策点分头�
 【verdict】：REPAIR_REQUIRED / POLISH_READY / INCOMPLETE
 ```
 
-> **输出骨架复制纪律**：阶段 A/B 的骨架直接复制本契约上述两段，不再经任何模板文件中转。Planner 章节 `plan` 片段的内容骨架（定位表/节奏段/篇幅合同等推演内容）见 `gnovel-router/references/chapter-outline-review-template.md`，其中十身份讨论节只引用本契约，不复写席位规则；模板或阅读快照不取得源计划或审批权威。
+> **输出骨架复制纪律**：阶段 A/B 的骨架直接复制本契约上述两段，不再经任何模板文件中转。Planner 章节 `plan` 片段的内容骨架（定位表/节奏段/篇幅合同等推演内容）见 `govel-router/references/chapter-outline-review-template.md`，其中十身份讨论节只引用本契约，不复写席位规则；模板或阅读快照不取得源计划或审批权威。
 
 <!-- /prompt:stage-b -->
 

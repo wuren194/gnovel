@@ -50,8 +50,8 @@ class FactInventoryEvidenceTests(unittest.TestCase):
                 'reason': '按当前B逐条引用登记已经发生的动作。'} for quote in quotes]))
 
     def test_model_receipt_exposes_all_quotes_and_explains_an_incomplete_request(self):
-        source_path = self.root / '.gnovel/structure.json'
-        workflow_path = self.root / '.gnovel/workflow.json'
+        source_path = self.root / '.govel/structure.json'
+        workflow_path = self.root / '.govel/workflow.json'
         before = source_path.read_bytes(), workflow_path.read_bytes()
         result = self.receipt()
         item = result['factInventory']['items'][0]
@@ -97,21 +97,21 @@ class FactInventoryEvidenceTests(unittest.TestCase):
         self.assertTrue(result['readyForContinuation'])
         from scripts.core.finalization import reconcile_workflow
         from scripts.core.jsonio import read_json
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         self.assertEqual(workflow['nextAction']['action'], 'planner')
         self.assertNotEqual(workflow['nextAction']['chapterId'], self.cid)
         self.assertFalse(workflow['approvals'][self.cid]['approved'])
         self.assertTrue(reconcile_workflow(self.root)['ok'])
         continued = self.op('task.prepare', task='continue')
         self.assertEqual(continued['chapter']['chapterId'], workflow['nextAction']['chapterId'])
-        self.assertEqual(continued['station'], 'gnovel-planner')
+        self.assertEqual(continued['station'], 'govel-planner')
 
     def test_fact_completion_preserves_a_different_explicit_next_action(self):
         from scripts.core.jsonio import read_json, write_json
         preview = self.preview(self.receipt()['factInventory']['items'][0]['requiredEvidence'])
         args = dict(preview['nextAction']['arguments']); args.pop('projectRoot', None)
         self.op('source.commit', **args)
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         workflow = read_json(workflow_path)
         selected = {'chapterId': self.cid, 'action': 'editor',
                     'reason': '作者另行要求复查本章。', 'needsApproval': False}
@@ -128,7 +128,7 @@ class FactInventoryEvidenceTests(unittest.TestCase):
         preview = self.preview(self.receipt()['factInventory']['items'][0]['requiredEvidence'])
         args = dict(preview['nextAction']['arguments']); args.pop('projectRoot', None)
         self.op('source.commit', **args)
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         workflow = read_json(workflow_path)
         workflow['approvedChapterIds'] = [self.cid]
         explicit = {'chapterId': self.cid, 'action': 'editor',
@@ -163,8 +163,8 @@ class FactInventoryEvidenceTests(unittest.TestCase):
             'factChange': {'status': 'pending', 'requestId': 'handover',
                            'reason': '测试较多精确引文的交付。', 'evidence': quotes}}]
         self.record(payload)
-        source_path = self.root / '.gnovel/structure.json'
-        workflow_path = self.root / '.gnovel/workflow.json'
+        source_path = self.root / '.govel/structure.json'
+        workflow_path = self.root / '.govel/workflow.json'
         before = source_path.read_bytes(), workflow_path.read_bytes()
         result = self.receipt()
         budget = query_policy()['maxBytes']['detail']

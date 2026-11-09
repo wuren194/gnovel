@@ -72,7 +72,7 @@ class CandidateVersionTests(unittest.TestCase):
         row = read_candidate_version(self.root, self.chapter_id, 1)
         self.assertEqual(row["body"], self.prose)
         # 直接篡改版本文件必须被 hash 校验拦下（不可变性可验证，不只是约定）。
-        index_dir = self.root / ".gnovel/workbench/candidates" / self.chapter_id
+        index_dir = self.root / ".govel/workbench/candidates" / self.chapter_id
         body_file = next(path for path in index_dir.glob("v0001-*.md"))
         body_file.write_text("被外部篡改的字节", encoding="utf-8")
         with self.assertRaises(StructureError) as ctx:
@@ -82,14 +82,14 @@ class CandidateVersionTests(unittest.TestCase):
     # ---- Case 1：保存 v2 不激活，v1 的批准纹丝不动（§61 Case 1） ------------------
 
     def test_saved_not_active_keeps_v1_review_and_formal_prose(self) -> None:
-        prose_path = self.root / ".gnovel/workflow.json"
+        prose_path = self.root / ".govel/workflow.json"
         before = prose_path.read_bytes()
         save(self.root, self.chapter_id, self.prose, "R1", None)
         v2 = save(self.root, self.chapter_id, self.prose + "\n他吹灭了灯。", "R2", 1)
         # v2 可读
         self.assertEqual(read_candidate_version(self.root, self.chapter_id, v2["version"])["body"], self.prose + "\n他吹灭了灯。")
         # v1 的审校仍然有效：批准闸门对 v1 工件链照常通过
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         approved = require_approved_artifact(workflow, self.chapter_id, "stage_b_review")
         self.assertTrue(approved)
         # 正式正文字节不变（首章此时没有正式文件，workflow.json 也未被触碰）
@@ -115,7 +115,7 @@ class CandidateVersionTests(unittest.TestCase):
         activation = self._activate_v2()
         self.assertTrue(activation["changed"])
         self.assertEqual(sorted(activation["invalidatedArtifacts"]), ["diagnostics", "stage_b_review", "state_candidate"])
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         entries = workflow["artifacts"][self.chapter_id]
         for kind in ("diagnostics", "stage_b_review", "state_candidate"):
             self.assertTrue(entries[kind].get("invalidatedBy"), f"{kind} must carry invalidatedBy")
@@ -164,7 +164,7 @@ class CandidateVersionTests(unittest.TestCase):
         self.assertTrue(status["savedNotActive"])
         self.assertTrue(status["consistent"])
         # 模拟激活写集中断留下的未完成事务
-        tx_dir = self.root / ".gnovel/transactions"
+        tx_dir = self.root / ".govel/transactions"
         tx_dir.mkdir(parents=True, exist_ok=True)
         write_json(tx_dir / "TX-TESTPENDING.json", {
             "schemaVersion": 2, "transactionId": "TX-TESTPENDING", "operation": "candidate_activate",

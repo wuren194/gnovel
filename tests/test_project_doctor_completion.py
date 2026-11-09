@@ -48,7 +48,7 @@ class DoctorCompletionTests(unittest.TestCase):
 
     def test_completed_chapter_does_not_become_default_writer_task(self):
         self.finalize()
-        self.assertIsNone(read_json(self.root / '.gnovel/workflow.json')['nextAction'])
+        self.assertIsNone(read_json(self.root / '.govel/workflow.json')['nextAction'])
         receipt = chapter_receipt(self.root, self.cid)
         self.assertTrue(receipt['readyForContinuation'])
         before = self.inventory()
@@ -67,10 +67,10 @@ class DoctorCompletionTests(unittest.TestCase):
         self.assertTrue(board['readyForContinuation'])
         self.assertEqual(board['nextActions'], [])
         self.assertEqual(board['evidencePurpose'], 'historical publication evidence; rerun before a new revision')
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['nextAction'] = {'chapterId': self.cid, 'action': 'continuity',
                                   'reason': '残留的确认建议', 'needsApproval': True}
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         before = self.inventory()
         self.assertIsNone(chapter_status(self.root, self.cid)['nextAction'])
         self.assertIsNone(self.assess()['scopedChapterId'])
@@ -105,9 +105,9 @@ class DoctorCompletionTests(unittest.TestCase):
         report = self.assess()
         self.assertIn('PROSE_EXTERNAL_MODIFICATION', self.codes(report))
         self.assertEqual(report['domains']['writerReadiness']['status'], 'not_applicable')
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['continuity'][self.cid]['confirmationHash'] = 'corrupt'
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         self.assertIn('CONTINUITY_STATE_INVALID', self.codes(self.assess()))
 
     def test_known_fact_handoff_remains_pending_after_confirmation_and_clears_with_evidence(self):
@@ -135,7 +135,7 @@ class DoctorCompletionTests(unittest.TestCase):
         call_operation('source.chapter-facts-complete', self.root, {'requestId': 'doctor-key-fact', 'registerEvidence': True})
         self.assertTrue(self.assess()['healthy'], self.assess()['issues'])
         self.assertTrue(chapter_receipt(self.root, self.cid)['readyForContinuation'])
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         self.assertFalse(workflow['approvals'][self.cid]['approved'])
         self.assertTrue(workflow['approvals'][self.cid]['finalized'])
 
@@ -155,7 +155,7 @@ class DoctorCompletionTests(unittest.TestCase):
         self.finalize()
         source = load_structure(self.root)
         source['chapters'][0]['status'] = 'stale'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         report = self.assess()
         self.assertEqual(report['scopedChapterId'], self.cid)
         self.assertTrue(report['domains']['writerReadiness']['applicable'])

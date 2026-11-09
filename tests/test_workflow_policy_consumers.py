@@ -183,7 +183,7 @@ class SingleSourceDeclarationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "book"
             init_project(root)
-            structure = json.loads((root / ".gnovel/structure.json").read_text(encoding="utf-8"))
+            structure = json.loads((root / ".govel/structure.json").read_text(encoding="utf-8"))
             # 通过结构事务插入三章，再把中间章从批准列表中省略。
             volume_id = structure["volumes"][0]["volumeId"]
             arc_id = structure["arcs"][0]["arcId"]

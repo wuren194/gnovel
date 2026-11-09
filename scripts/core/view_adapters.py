@@ -24,7 +24,7 @@ from .static_cache import signature
 from .structure_store import StructureError, load_structure, ordered_chapters, structure_hash
 
 SUMMARY_COUNTS_SCHEMA_VERSION = 1
-COUNTS_CACHE_PATH = ".gnovel/workbench/summary-counts.json"
+COUNTS_CACHE_PATH = ".govel/workbench/summary-counts.json"
 
 
 def _units_index(structure: dict[str, Any]) -> dict[str, list[str]]:

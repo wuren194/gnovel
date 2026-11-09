@@ -25,8 +25,8 @@ class PostFinalizationApprovalTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.cid, self.artifacts = ready_project(self.root)
-        self.workflow_path = self.root / '.gnovel/workflow.json'
-        self.source_path = self.root / '.gnovel/structure.json'
+        self.workflow_path = self.root / '.govel/workflow.json'
+        self.source_path = self.root / '.govel/structure.json'
         for domain in ('_tooling_domain', '_knowledge_domain'):
             probe = patch('scripts.core.project_doctor.' + domain,
                           return_value=({'applicable': False}, []))

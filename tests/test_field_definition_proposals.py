@@ -45,7 +45,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         # side effects. Rejected previews may acquire this same idle inode.
         with project_lock(self.root):
             self.assertTrue(project_lock_observation(self.root)['ownedByCurrentThread'])
-        self.lock_inode = (self.root / '.gnovel/structure.lock').stat().st_ino
+        self.lock_inode = (self.root / '.govel/structure.lock').stat().st_ino
         self.arguments = {'sourceHash': snapshot_hash(self.source), 'items': [metadata_item()],
                           'requestId': 'field-metadata-1', 'approvalActor': '测试作者',
                           'approvalEvidence': '已确认字段名称与说明更正'}
@@ -60,17 +60,17 @@ class FieldDefinitionProposalTests(unittest.TestCase):
     def inventory(self):
         self.assertEqual(project_lock_observation(self.root),
                          {'locked': False, 'ownedByCurrentThread': False, 'protocol': 'stable-flock-v1'})
-        self.assertEqual((self.root / '.gnovel/structure.lock').stat().st_ino, self.lock_inode)
+        self.assertEqual((self.root / '.govel/structure.lock').stat().st_ino, self.lock_inode)
         return {str(path.relative_to(self.root)): path.read_bytes()
                 for path in self.root.rglob('*') if path.is_file()}
 
     def plan(self, preview):
-        return read_json(self.root / '.gnovel/plans' / (preview['operationId'] + '.json'))
+        return read_json(self.root / '.govel/plans' / (preview['operationId'] + '.json'))
 
     def test_metadata_commit_preserves_all_values_and_identity_and_records_diff(self):
-        source_bytes = (self.root / '.gnovel/structure.json').read_bytes()
+        source_bytes = (self.root / '.govel/structure.json').read_bytes()
         preview = self.preview()
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), source_bytes)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), source_bytes)
         self.assertEqual(preview['diffSummary']['recordCount'], 1)
         self.assertEqual({tuple(row['path']) for row in preview['diff']}, {('label',), ('description',)})
         proposal = self.plan(preview)['parameters']['proposals'][0]
@@ -181,7 +181,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         changed = deepcopy(self.source)
         changed['fragments'][0]['text'] += '另一次修改。'
         # Deliberate external edit after preview, not a legitimate Canon write.
-        write_json(self.root / '.gnovel/structure.json', changed)
+        write_json(self.root / '.govel/structure.json', changed)
         before = self.inventory()
         with self.assertRaises(StructureError) as caught:
             self.preview(requestId='new-request')
@@ -193,7 +193,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
 
     def test_commit_rechecks_semantic_scope_even_after_plan_hash_is_recomputed(self):
         preview = self.preview()
-        path = self.root / '.gnovel/plans' / (preview['operationId'] + '.json')
+        path = self.root / '.govel/plans' / (preview['operationId'] + '.json')
         plan = self.plan(preview)
         plan['proposedStructure']['fieldDefinitions'][0]['key'] = 'appearance.other'
         proposal = plan['parameters']['proposals'][0]['proposal']
@@ -210,14 +210,14 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         preview = self.preview()
         plan = self.plan(preview)
         plan['parameters']['proposals'][0]['proposal']['reason'] = 'changed'
-        write_json(self.root / '.gnovel/plans' / (preview['operationId'] + '.json'), plan)
+        write_json(self.root / '.govel/plans' / (preview['operationId'] + '.json'), plan)
         with self.assertRaises(StructureError) as caught:
             self.commit(preview)
         self.assertEqual(caught.exception.code, 'PLAN_HASH_MISMATCH')
 
     def test_commit_rejects_forged_proposal_context_even_with_recomputed_hash(self):
         preview = self.preview()
-        path = self.root / '.gnovel/plans' / (preview['operationId'] + '.json')
+        path = self.root / '.govel/plans' / (preview['operationId'] + '.json')
         original = self.plan(preview)
         for extra in ({'sourceChapterId': 'CH-NONEXISTENT'},
                       {'evidence': [{'fragmentId': 'SF-MISSING', 'quote': '不存在的引文'}]},
@@ -324,7 +324,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
                                     'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
         # Complete the neutral current-format fixture before its first operation.
         validate_structure(source)
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         source = load_structure(self.root)
         workflow = default_workflow()
         workflow['approvedChapterIds'] = ['CH-HEIGHT', 'CH-SKIN']
@@ -338,7 +338,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
             record_artifact(workflow, cid, artifact, structure=source, artifact_path=str(path),
                             project_id=source['projectId'], project_root=self.root)
             approve_artifacts(workflow, cid, artifact_hashes={'stage_a_review': artifact['artifactSha256']}, approval_mode='manual', project_root=self.root)
-        write_json(self.root/'.gnovel/workflow.json', workflow)
+        write_json(self.root/'.govel/workflow.json', workflow)
         originals = {row['recordId']: row for row in query_reviews(self.root)['items']}
         reviews = []
         texts = {row['fragmentId']: row['text'] for row in source['fragments']}
@@ -358,7 +358,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         self.assertEqual(statuses['SF-LIFE'], 'pending')
         self.assertEqual(statuses['SF-CH-HEIGHT'], 'pending')
         self.assertEqual(statuses['SF-CH-SKIN'], 'compatible')
-        current_workflow = read_json(self.root/'.gnovel/workflow.json')
+        current_workflow = read_json(self.root/'.govel/workflow.json')
         self.assertFalse(current_workflow['approvals']['CH-HEIGHT']['approved'])
         self.assertEqual(current_workflow['approvals']['CH-SKIN'], workflow['approvals']['CH-SKIN'])
         self.assertEqual(current_workflow['artifacts']['CH-SKIN'], workflow['artifacts']['CH-SKIN'])

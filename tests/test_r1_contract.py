@@ -60,9 +60,9 @@ class CurrentOwnershipContractTests(unittest.TestCase):
 
     def test_transaction_paths_and_prepared_recovery_exception_are_explicit(self):
         recovery = self.section('代次、撤销与恢复')
-        for path in ('.gnovel/transactions/<TX-ID>.json',
-                     '.gnovel/transactions/<TX-ID>/before/',
-                     '.gnovel/transactions/<TX-ID>/after/'):
+        for path in ('.govel/transactions/<TX-ID>.json',
+                     '.govel/transactions/<TX-ID>/before/',
+                     '.govel/transactions/<TX-ID>/after/'):
             self.assertIn(path, recovery)
         for value in ('`phase != committed`', '`phase == committed`', 'COMPLETE OLD', 'COMPLETE NEW',
                       '未提交事务恢复可恢复当时 revision',

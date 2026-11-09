@@ -96,9 +96,9 @@ class PlanningReadinessTests(unittest.TestCase):
 
     def test_board_and_prepare_share_writing_blockers(self):
         source = load_structure(self.root); source['chapters'][0]['status'] = 'draft'; source['chapters'][1]['status'] = 'planning_required'
-        write_json(self.root / '.gnovel/structure.json', source)
-        workflow = read_json(self.root / '.gnovel/workflow.json'); workflow['approvedChapterIds'] = [self.first]
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/structure.json', source)
+        workflow = read_json(self.root / '.govel/workflow.json'); workflow['approvedChapterIds'] = [self.first]
+        write_json(self.root / '.govel/workflow.json', workflow)
         board = chapter_status(self.root, self.second)
         prepare = prepare_task(self.root, 'planner', chapter_id=self.second)
         codes = {'PREDECESSOR_UNSTABLE', 'CHAPTER_OUTSIDE_APPROVED_RANGE'}
@@ -108,12 +108,12 @@ class PlanningReadinessTests(unittest.TestCase):
     def test_board_distinguishes_file_bytes_from_evidence_freshness(self):
         run_diagnostics(self.root, chapter_id=self.first, mode='plot', intensity_level=1, register=True)
         source = load_structure(self.root); source['revision'] += 1
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         board = chapter_status(self.root, self.first)
         row = next(r for r in board['artifacts'] if r['artifactType'] == 'diagnostics')
         self.assertTrue(row['fileFresh']); self.assertTrue(row['fresh'])
         source['entities'][0]['voiceProfile']['bannedPhrasesForRole'].append('新增禁语')
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         expected = evidence_current(self.root, self.first)
         board = chapter_status(self.root, self.first)
         row = next(r for r in board['artifacts'] if r['artifactType'] == 'diagnostics')
@@ -125,7 +125,7 @@ class PlanningReadinessTests(unittest.TestCase):
         paths = {row.get('path') for row in report['readList']}
         source = load_structure(self.root)
         self.assertTrue(any(row.get('kind') == 'source-query' for row in report['readList']))
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         for kind in ('candidate_prose', 'stage_a_review'):
             expected = str(Path(workflow['artifacts'][self.first][kind]['artifactPath']).relative_to(self.root))
             self.assertIn(expected, paths)
@@ -144,7 +144,7 @@ class PlanningReadinessTests(unittest.TestCase):
         source = load_structure(self.root); chapter = source['chapters'][0]
         source['fragments'][0]['text'] = ('## 本章定位\n| 章节 | ' + self.first + ' |\n\n## 十身份讨论\n'
             + ''.join(f'- 身份{seat}（合成测试）：本段因果有原文支持。\n' for seat in range(1, 11)))
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         payload = {'decision': 'adopt', 'activeSeats': list(range(1, 11))}
         stage_a_seats(self.root, source, self.first, payload)
         self.assertEqual(payload['seatReviews']['1']['conclusion'], '本段因果有原文支持。')
@@ -158,13 +158,13 @@ class PlanningReadinessTests(unittest.TestCase):
         source = load_structure(self.root)
         plan = preview_insert_chapter(self.root, title='新章', volume_id=source['volumes'][0]['volumeId'],
                                       primary_arc_id=source['arcs'][0]['arcId'])
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         with patch('scripts.core.structure_transaction.renderer_fingerprint', return_value='different'):
             with self.assertRaises(ValueError) as caught:
                 commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(caught.exception.code, 'PLAN_INPUT_CHANGED')
         self.assertTrue(caught.exception.details['rendererChanged'])
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
 
 
 if __name__ == '__main__': unittest.main()

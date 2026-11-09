@@ -53,7 +53,7 @@ class SourceProposalBatchTests(unittest.TestCase):
         self.source = load_structure(self.root)
         with project_lock(self.root):
             self.assertTrue(project_lock_observation(self.root)['ownedByCurrentThread'])
-        self.lock_inode = (self.root / '.gnovel/structure.lock').stat().st_ino
+        self.lock_inode = (self.root / '.govel/structure.lock').stat().st_ino
         self.arguments = {'sourceHash': snapshot_hash(self.source), 'items': batch_items(),
                           'requestId': 'mixed-1', 'approvalActor': 'author', 'approvalEvidence': '已确认方案'}
 
@@ -63,21 +63,21 @@ class SourceProposalBatchTests(unittest.TestCase):
     def inventory(self):
         self.assertEqual(project_lock_observation(self.root),
                          {'locked': False, 'ownedByCurrentThread': False, 'protocol': 'stable-flock-v1'})
-        self.assertEqual((self.root / '.gnovel/structure.lock').stat().st_ino, self.lock_inode)
+        self.assertEqual((self.root / '.govel/structure.lock').stat().st_ino, self.lock_inode)
         return {str(path.relative_to(self.root)): path.read_bytes()
                 for path in self.root.rglob('*') if path.is_file()}
 
     def plan_file(self, preview):
-        return self.root / '.gnovel/plans' / (preview['operationId'] + '.json')
+        return self.root / '.govel/plans' / (preview['operationId'] + '.json')
 
     def commit(self, preview, approved=True):
         return commit(self.root, operation_id=preview['operationId'], plan_hash=preview['planHash'],
                       approved=approved, actor='test')
 
     def test_four_kinds_commit_together_preserve_original_proposals_and_undo(self):
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         preview = self.preview()
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
         plan = read_json(self.plan_file(preview))
         self.assertEqual(len(plan['parameters']['proposals']), 4)
         self.assertTrue(all(row['proposal']['approval']['verifiedHuman'] is False for row in plan['parameters']['proposals']))
@@ -89,7 +89,7 @@ class SourceProposalBatchTests(unittest.TestCase):
         self.assertEqual(source['attributes'][0]['values'][0]['value']['number'], 185)
         self.assertIn('一米八五', source['fragments'][0]['text'])
         self.assertEqual(source['relations'][0]['kind'], 'trusts')
-        journal = read_json(self.root / '.gnovel/operations' / (preview['operationId'] + '.json'))
+        journal = read_json(self.root / '.govel/operations' / (preview['operationId'] + '.json'))
         self.assertEqual(journal['proposals'], plan['parameters']['proposals'])
         self.assertEqual(query_change_report(self.root, operationId=preview['operationId'], section='rationale')['items'], before_rationale)
         self.assertEqual(receipt['code'], 'STRUCTURE_COMMITTED')
@@ -157,7 +157,7 @@ class SourceProposalBatchTests(unittest.TestCase):
             self.assertEqual(caught.exception.code, 'SOURCE_REQUEST_REUSED')
         source = load_structure(self.root)
         source['fragments'][1]['text'] += '外部改动。'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         before = self.inventory()
         with self.assertRaises(StructureError) as caught:
             self.preview()
@@ -213,7 +213,7 @@ class SourceProposalBatchTests(unittest.TestCase):
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
         source['references'].append({'sourceId': chapter['chapterId'], 'targetId': 'C-ALPHA', 'kind': 'uses'})
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         source = load_structure(self.root)
         item = {**batch_items()[0], 'chapterId': 'CH001'}
         preview = self.preview(sourceHash=snapshot_hash(source), items=[item])
@@ -243,7 +243,7 @@ class SourceProposalBatchTests(unittest.TestCase):
 
     def test_commit_still_requires_approval_and_replays_every_child_gate(self):
         preview = self.preview()
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         with self.assertRaises(StructureError) as caught:
             self.commit(preview, approved=False)
         self.assertEqual(caught.exception.code, 'APPROVAL_REQUIRED')
@@ -256,7 +256,7 @@ class SourceProposalBatchTests(unittest.TestCase):
             self.commit(plan)
         self.assertEqual(caught.exception.code, 'CONTENT_PROPOSAL_SCOPE_INVALID')
         self.assertEqual(caught.exception.details['itemIndex'], 2)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
 
     def test_rehashed_or_relabelled_batch_cannot_change_unlisted_state(self):
         preview = self.preview()
@@ -295,7 +295,7 @@ class SourceProposalBatchTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'SESSION_REF_STALE')
         source = deepcopy(self.source)
         source['schemaVersion'] = 2
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError) as caught:
             self.preview(sourceHash=snapshot_hash(source))
         self.assertEqual(caught.exception.code, 'UNSUPPORTED_PROJECT_VERSION')
@@ -312,7 +312,7 @@ class SourceProposalBatchTests(unittest.TestCase):
     def test_all_kinds_link_to_maintenance_and_late_external_edit_survives_rollback(self):
         reference = self.checklist()
         preview = self.preview(maintenanceReference=reference)
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         document = self.root / '工作台/方案.md'
         changed = document.read_bytes() + b'\nexternal'
         from scripts.core import write_sets
@@ -325,7 +325,7 @@ class SourceProposalBatchTests(unittest.TestCase):
 
         with patch.object(write_sets, 'validate_guards', side_effect=change_late), self.assertRaises(StructureError):
             self.commit(preview)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
         self.assertEqual(document.read_bytes(), changed)
 
     def test_maintenance_coverage_uses_one_receipt_for_all_selected_targets(self):

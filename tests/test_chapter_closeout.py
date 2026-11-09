@@ -60,7 +60,7 @@ class ChapterCloseoutTests(unittest.TestCase):
         self.assertFalse(result['approvalPerformed'])
         self.assertFalse(result['readyForContinuation'])
         self.assertIn('missingInputs', result)
-        workflow = read_json(self.root/'.gnovel/workflow.json')
+        workflow = read_json(self.root/'.govel/workflow.json')
         self.assertEqual(workflow['continuity'][self.cid]['status'], 'pending')
 
     def test_explicit_summary_disposition_completes_and_prepares_next(self):
@@ -85,7 +85,7 @@ class ChapterCloseoutTests(unittest.TestCase):
         summary = read_json(self.root/SUMMARY_PATH)
         self.assertEqual(summary['storySummary'], self.update()['storySummary'])
         self.assertEqual(summary['plotLine'][0]['chapterId'], self.cid)
-        record = read_json(self.root/'.gnovel/workflow.json')['continuity'][self.cid]
+        record = read_json(self.root/'.govel/workflow.json')['continuity'][self.cid]
         self.assertEqual(record['confirmation']['summary']['reason'], self.update()['reason'])
         self.assertEqual(record['confirmation']['summary']['sha256'], result['receipts']['summary']['summaryVersion'])
 
@@ -135,7 +135,7 @@ class ChapterCloseoutTests(unittest.TestCase):
 
     def test_stale_preparation_and_resume_never_adopt_external_work(self):
         args = self.run_args()
-        path = self.root/'.gnovel/workflow.json'
+        path = self.root/'.govel/workflow.json'
         workflow = read_json(path); workflow['approvedChapterIds'] = []
         write_json(path, workflow)
         before = files(self.root)
@@ -185,7 +185,7 @@ class ChapterCloseoutTests(unittest.TestCase):
             self.assertEqual(files(self.root), before)
 
     def test_missing_artifact_approval_is_not_granted_by_closeout(self):
-        path = self.root/'.gnovel/workflow.json'
+        path = self.root/'.govel/workflow.json'
         workflow = read_json(path)
         del workflow['approvals'][self.cid]['artifactHashes']['state_candidate']
         write_json(path, workflow)
@@ -202,7 +202,7 @@ class ChapterCloseoutTests(unittest.TestCase):
         from scripts.core.write_sets import digest
         closeout_chapter(self.root, **self.run_args(summaryUpdate=self.update()))
         old = (self.root/SUMMARY_PATH).read_bytes()
-        target = self.root/f'.gnovel/aux/story-summary-history/{digest(old)}.json'
+        target = self.root/f'.govel/aux/story-summary-history/{digest(old)}.json'
         update = deepcopy(self.update()); update['plotLine'][0]['op'] = 'replace'
         args = self.run_args(requestId='close-2', summaryUpdate=update)
         def race(root, outputs, **kwargs):
@@ -224,10 +224,10 @@ class ChapterCloseoutTests(unittest.TestCase):
         from scripts.core.write_sets import digest
         closeout_chapter(self.root, **self.run_args(summaryUpdate=self.update()))
         old = (self.root/SUMMARY_PATH).read_bytes()
-        target = self.root/f'.gnovel/aux/story-summary-history/{digest(old)}.json'
+        target = self.root/f'.govel/aux/story-summary-history/{digest(old)}.json'
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(old)
-        workflow_before = (self.root/'.gnovel/workflow.json').read_bytes()
+        workflow_before = (self.root/'.govel/workflow.json').read_bytes()
         update = deepcopy(self.update()); update['plotLine'][0]['op'] = 'replace'
         args = self.run_args(requestId='close-2', summaryUpdate=update)
 
@@ -244,14 +244,14 @@ class ChapterCloseoutTests(unittest.TestCase):
         self.assertEqual(result['error']['code'], 'TRANSACTION_GUARD_DRIFT')
         self.assertEqual(target.read_bytes(), b'external edit after history validation')
         self.assertEqual((self.root/SUMMARY_PATH).read_bytes(), old)
-        self.assertEqual((self.root/'.gnovel/workflow.json').read_bytes(), workflow_before)
+        self.assertEqual((self.root/'.govel/workflow.json').read_bytes(), workflow_before)
         self.assertEqual(result['completedStages'], [])
         self.assertEqual(_load(self.root, 'close-2')['receipts'], {})
 
     def test_approval_withdrawn_after_finalization_preflight_prevents_prose_commit(self):
         from scripts.core.chapter_closeout import receipt_outputs
-        workflow_path = self.root/'.gnovel/workflow.json'
-        source_before = (self.root/'.gnovel/structure.json').read_bytes()
+        workflow_path = self.root/'.govel/workflow.json'
+        source_before = (self.root/'.govel/structure.json').read_bytes()
         chapter = load_structure(self.root)['chapters'][0]
         self.assertFalse((self.root/chapter['filePath']).exists())
         args = self.run_args(summary=self.summary(), approveContinuity=True)
@@ -271,7 +271,7 @@ class ChapterCloseoutTests(unittest.TestCase):
         self.assertEqual(result['error']['code'], 'CLOSEOUT_INPUTS_STALE')
         self.assertEqual(result['completedStages'], [])
         self.assertEqual(_load(self.root, 'close-1')['receipts'], {})
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), source_before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), source_before)
         self.assertFalse((self.root/chapter['filePath']).exists())
         self.assertNotIn('candidate_prose', read_json(workflow_path)['approvals'][self.cid]['artifactHashes'])
 
@@ -285,7 +285,7 @@ class ChapterCloseoutTests(unittest.TestCase):
         self.assertTrue(result['factsAssessed'])
 
     def test_end_of_authorized_range_is_completed_not_a_retry_failure(self):
-        workflow_path = self.root/'.gnovel/workflow.json'
+        workflow_path = self.root/'.govel/workflow.json'
         workflow = read_json(workflow_path); workflow['approvedChapterIds'] = [self.cid]
         write_json(workflow_path, workflow)
         result = closeout_chapter(self.root, **self.run_args(summary=self.summary(), approveContinuity=True,

@@ -38,7 +38,7 @@ def source_files(root: Path) -> dict:
 def derived_outputs(root: Path, structure: dict, *, extras: dict[str, bytes | None] | None = None,
                     current: dict | None = None) -> tuple[dict[str, bytes | None], dict]:
     """Assemble source and explicit domain outputs without maintaining Markdown copies."""
-    outputs = {'.gnovel/structure.json': json_bytes(structure)}
+    outputs = {'.govel/structure.json': json_bytes(structure)}
     for path, data in (extras or {}).items():
         if path in outputs:
             raise StructureError('WRITE_TARGET_CONFLICT', 'multiple producers for one target', {'path': path})

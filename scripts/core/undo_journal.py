@@ -12,8 +12,8 @@ The root is instead an ordinary entry in the shared operation ledger, written by
 producer in the same atomic write set as the restored structure:
 
     receipt / auxiliary authority
-      -> formal committed UNDO operation   (.gnovel/operations/<undoOperationId>.json)
-      -> reversed refactor operation       (.gnovel/operations/<reversedOperationId>.json)
+      -> formal committed UNDO operation   (.govel/operations/<undoOperationId>.json)
+      -> reversed refactor operation       (.govel/operations/<reversedOperationId>.json)
 
 ``operation`` is ``undo``, the operation names itself with its own fresh ``OP-`` id (never the
 reversed operation's, never a ``UNDO-<id>`` marker), and it binds the reversed operation's journal
@@ -25,7 +25,7 @@ by byte digest plus the pre-undo and restored structure hashes:
 
 ``structure_hash`` ignores ``revision`` / ``updatedAt`` / ``lastOperation``, so those two identities
 are exact. ``beforeHash`` is not self-declared: the producer also persists the real pre-undo
-before-image under ``.gnovel/backups/<undoOperationId>/``, so the consumer recomputes it. An
+before-image under ``.govel/backups/<undoOperationId>/``, so the consumer recomputes it. An
 undo is not reversible (``reversible`` is False): this toolbox has no undo-of-undo, and the ledger's
 undo path refuses it rather than silently offering one.
 
@@ -42,8 +42,8 @@ from typing import Optional
 from .write_sets import json_bytes
 
 # Formal undo operations live in the shared ledger; this is the one place that names the shape.
-OPERATIONS_DIR = '.gnovel/operations'
-BACKUPS_DIR = '.gnovel/backups'
+OPERATIONS_DIR = '.govel/operations'
+BACKUPS_DIR = '.govel/backups'
 
 OPERATION_ID_PATTERN = re.compile(r'OP-[0-9A-F]{16}')
 _HEX64 = re.compile(r'[0-9a-f]{64}')

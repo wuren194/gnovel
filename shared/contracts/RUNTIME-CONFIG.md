@@ -21,7 +21,7 @@ Markdown 契约解释行为和责任，不重复可由 JSON 表达的数值。Sk
 ## 配置读取纪律
 
 - 脚本不得在多个模块重复硬编码同一阈值。数值经 `scripts/core/project.py` 的访问器读取（`chapter_length_bounds` / `default_approval_mode` / `protected_paths` / `serial_planning_policy` / `current_schema_version` / `unsupported_error_code` / `gc_keep_backups_default` / `state_compaction_policy`），不在调用点写字面量，也不在 argparse 默认值里写死。
-- **文档常量**（1.3.0 新增）：布局不变量（`.gnovel`、`工作台`、`正文` 等）不是可调配置，而是机制常量。manifest 里的对应字段是文档镜像，由 `project.check_layout_invariants()` 绑定到 `importer.REQUIRED_PROJECT_DIRS`；两者漂移即测试失败。不得把布局不变量做成「可配置路径」——那只会让 50+ 处调用点共享一个被误配的风险面。
+- **文档常量**（1.3.0 新增）：布局不变量（`.govel`、`工作台`、`正文` 等）不是可调配置，而是机制常量。manifest 里的对应字段是文档镜像，由 `project.check_layout_invariants()` 绑定到 `importer.REQUIRED_PROJECT_DIRS`；两者漂移即测试失败。不得把布局不变量做成「可配置路径」——那只会让 50+ 处调用点共享一个被误配的风险面。
 - 文档示例不得成为执行真源。
 - 缺少或无法解析必需配置时 fail closed，退出码为 3（完整退出码契约见下节）。
 - **每个注册表字段必须有真实消费者**：改值不改变任何行为的字段是伪配置——要么被脚本读取并影响输出，要么被 `project doctor` 校验并能拦下问题，要么从注册表移除降级为文档常量。

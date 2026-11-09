@@ -5,10 +5,10 @@
   "chapterId": "CHAPTER",
   "sourceSha256": null,
   "createdAt": "2026-08-29T08:11:18.336596+00:00",
-  "producer": "gnovel",
+  "producer": "govel",
   "payload": {
     "text": "待填写正文",
     "sourcePlanHash": "0000000000000000000000000000000000000000000000000000000000000000"
   },
-  "artifactSha256": "dbc0d42f0d55df6b13f97dce4572f62fec9e4c4096c56efc03f60be4aad0d041"
+  "artifactSha256": "80a0f12d4173b4ced64ffd8f4fe9a1664de428c039d0ffc13badf7c39b2a2d89"
 }

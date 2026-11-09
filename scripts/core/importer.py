@@ -17,8 +17,8 @@ from .jsonio import write_json
 from .structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION, StructureError, empty_structure, validate_structure
 
 REQUIRED_PROJECT_DIRS = (
-    ".gnovel", ".gnovel/cache", ".gnovel/aux", ".gnovel/plans",
-    ".gnovel/operations", ".gnovel/backups", "正文", "规划", "设定", "工作台",
+    ".govel", ".govel/cache", ".govel/aux", ".govel/plans",
+    ".govel/operations", ".govel/backups", "正文", "规划", "设定", "工作台",
 )
 
 
@@ -302,12 +302,12 @@ def create_project_from_candidate(root: Path, candidate: dict, *, approval_mode:
     }
     if selected_provider['providerId'] is not None:
         marker['dataProvider'] = {'providerId': selected_provider['providerId']}
-    write_json(root / ".gnovel" / "project.json", marker)
+    write_json(root / ".govel" / "project.json", marker)
     # sanctioned initial write（实施轮 §42）：ownership-aware 项目的第一次落地只走这里的
     # 明确初始化通道——候选自带 binding 已拒、已有正文已拒、全部 binding 由本函数统一密封
     # 并整体验证。generic save_structure 有意不承担这个角色（§22–§25 的 Option A）。
-    write_json(root / ".gnovel" / "structure.json", structure)
-    write_json(root / ".gnovel" / "workflow.json", {"schemaVersion": 2, "approvedChapterIds": [], "chapterStates": {}, "artifacts": {}, "approvals": {}, "repairRounds": {}, "nextAction": None, "updatedAt": utc_now()})
+    write_json(root / ".govel" / "structure.json", structure)
+    write_json(root / ".govel" / "workflow.json", {"schemaVersion": 2, "approvedChapterIds": [], "chapterStates": {}, "artifacts": {}, "approvals": {}, "repairRounds": {}, "nextAction": None, "updatedAt": utc_now()})
     templates = []
     try:
         from scripts import state_cache

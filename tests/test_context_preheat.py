@@ -28,15 +28,15 @@ class ContextPreheatTests(unittest.TestCase):
 
     def save(self):
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def test_provisional_metadata_requires_stability_and_revalidation(self):
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         first = preheat_next_chapter(self.root, afterChapterId=self.current['chapterId'])
         self.assertFalse(first['reusableMetadata'])
         self.assertFalse(first['coverage']['futurePlotGenerated'])
         self.assertFalse(first['coverage']['proseRead'])
-        self.assertEqual(before, (self.root / '.gnovel/structure.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/structure.json').read_bytes())
         self.current['status'] = 'stable'
         self.save()
         no_prose = preheat_next_chapter(self.root, afterChapterId=self.current['chapterId'],

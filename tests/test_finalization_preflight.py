@@ -26,7 +26,7 @@ def ready_project(root: Path) -> tuple[str, dict]:
     cid = fixture['chapterIds'][0]
     packed = pack_artifact(root, chapterId=cid, artifactType='title_candidates',
                           payload={'candidates': [{'candidateId': 'title-1', 'title': '入库', 'reason': '登记结果'}]})
-    workflow = read_json(root/'.gnovel/workflow.json')
+    workflow = read_json(root/'.govel/workflow.json')
     approve_artifacts(workflow, cid, artifact_hashes={'title_candidates': packed['artifactSha256']}, approval_mode='manual')
     artifacts = {}
     for kind, entry in workflow['artifacts'][cid].items():
@@ -35,7 +35,7 @@ def ready_project(root: Path) -> tuple[str, dict]:
         write_json(path, artifact)
         entry.update(artifactPath=str(path), artifactFileSha256=file_sha256(path))
         artifacts[kind] = artifact
-    write_json(root/'.gnovel/workflow.json', workflow)
+    write_json(root/'.govel/workflow.json', workflow)
     return cid, artifacts
 
 
@@ -55,7 +55,7 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.generation = chapter_receipt(self.root, self.chapter_id)['bindingGeneration']
 
     def workflow_change(self, change) -> None:
-        path = self.root / ".gnovel/workflow.json"
+        path = self.root / ".govel/workflow.json"
         workflow = read_json(path)
         change(workflow)
         write_json(path, workflow)
@@ -115,7 +115,7 @@ class FinalizationPreflightTests(unittest.TestCase):
                             "PROSE_HASH_MISMATCH", "OUTLINE_BASE_MISMATCH")
 
     def test_status_is_a_blocker(self) -> None:
-        path = self.root / ".gnovel/structure.json"
+        path = self.root / ".govel/structure.json"
         structure = read_json(path)
         structure["chapters"][0]["status"] = "draft"
         write_json(path, structure)
@@ -150,21 +150,21 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.assert_blocked("PROSE_PAYLOAD_INVALID")
 
     def test_missing_source_plan(self) -> None:
-        path = self.root/'.gnovel/structure.json'
+        path = self.root/'.govel/structure.json'
         structure = read_json(path)
         structure['fragments'] = [f for f in structure['fragments'] if f['ownerId'] != self.chapter_id]
         write_json(path, structure)
         self.assert_blocked('SOURCE_CHAPTER_PLAN_MISSING')
 
     def test_stale_source_plan(self) -> None:
-        path = self.root/'.gnovel/structure.json'
+        path = self.root/'.govel/structure.json'
         structure = read_json(path)
         next(f for f in structure['fragments'] if f['ownerId'] == self.chapter_id)['text'] = '不同的章节计划。'
         write_json(path, structure)
         self.assert_blocked('OUTLINE_BASE_MISMATCH', 'STAGE_A_OUTLINE_MISMATCH')
 
     def test_missing_cache_is_not_rebuilt(self) -> None:
-        paths = [self.root/f'.gnovel/cache/story-{name}.json' for name in ('state', 'design')]
+        paths = [self.root/f'.govel/cache/story-{name}.json' for name in ('state', 'design')]
         for path in paths:
             if 'missing' == 'missing':
                 path.unlink(missing_ok=True)
@@ -177,7 +177,7 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.assertEqual(snapshot(self.root), before)
 
     def test_modified_cache(self) -> None:
-        paths = [self.root/f'.gnovel/cache/story-{name}.json' for name in ('state', 'design')]
+        paths = [self.root/f'.govel/cache/story-{name}.json' for name in ('state', 'design')]
         for path in paths:
             if 'modified' == 'missing':
                 path.unlink(missing_ok=True)
@@ -190,7 +190,7 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.assertEqual(snapshot(self.root), before)
 
     def test_structure_change_cannot_hide_behind_stale_cache(self) -> None:
-        path = self.root / ".gnovel/structure.json"
+        path = self.root / ".govel/structure.json"
         structure = read_json(path)
         structure['bookName'] = '新书名'
         write_json(path, structure)
@@ -213,13 +213,13 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.assertFalse(finalize_chapter(self.root, self.chapter_id, binding_generation=self.generation, skip_title=True)["titleFinalized"])
 
     def test_other_chapter_pending_transaction_blocks_project(self) -> None:
-        path = self.root / ".gnovel/transactions/TX-OTHER.json"
+        path = self.root / ".govel/transactions/TX-OTHER.json"
         write_json(path, {"transactionId": "TX-OTHER", "chapterId": "CH-OTHER", "phase": "prose"})
         receipt = self.assert_blocked("TRANSACTION_INCOMPLETE")
         self.assertEqual(receipt["transactions"][0]["chapterId"], "CH-OTHER")
 
     def test_unreadable_transaction_blocks_project(self) -> None:
-        path = self.root / ".gnovel/transactions/TX-BROKEN.json"
+        path = self.root / ".govel/transactions/TX-BROKEN.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("bad json", encoding="utf-8")
         self.assert_blocked("TRANSACTION_INCOMPLETE")
@@ -238,7 +238,7 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.assert_blocked("SOURCE_STATE_CHANGE_REQUIRES_TRANSACTION")
 
     def test_transaction_targets_are_checked(self) -> None:
-        source = read_json(self.root/'.gnovel/structure.json')
+        source = read_json(self.root/'.govel/structure.json')
         target = self.root/source['chapters'][0]['filePath']
         target.mkdir()
         self.assert_blocked('TRANSACTION_TARGET_INVALID')
@@ -253,15 +253,15 @@ class FinalizationPreflightTests(unittest.TestCase):
             with self.assertRaises(WorkflowError) as caught:
                 finalize_chapter(self.root, self.chapter_id, binding_generation=self.generation, title_candidate_id="title-1")
         self.assertEqual(caught.exception.code, "CHAPTER_OUTSIDE_APPROVED_RANGE")
-        self.assertEqual(read_json(self.root / ".gnovel/structure.json")["chapters"][0]["status"], "review")
-        self.assertFalse(list((self.root / ".gnovel/transactions").glob("*.json")))
+        self.assertEqual(read_json(self.root / ".govel/structure.json")["chapters"][0]["status"], "review")
+        self.assertFalse(list((self.root / ".govel/transactions").glob("*.json")))
 
     def test_invalid_workflow_is_a_receipt_blocker(self) -> None:
-        (self.root / ".gnovel/workflow.json").write_text("bad json", encoding="utf-8")
+        (self.root / ".govel/workflow.json").write_text("bad json", encoding="utf-8")
         self.assert_blocked("WORKFLOW_STATE_INVALID")
 
     def test_invalid_cache_is_not_repaired(self) -> None:
-        paths = [self.root/f'.gnovel/cache/story-{name}.json' for name in ('state', 'design')]
+        paths = [self.root/f'.govel/cache/story-{name}.json' for name in ('state', 'design')]
         for path in paths:
             if 'invalid' == 'missing':
                 path.unlink(missing_ok=True)

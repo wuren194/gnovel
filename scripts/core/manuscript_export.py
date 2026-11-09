@@ -205,11 +205,11 @@ def export_manuscript(root: Path, *, statuses: tuple[str, ...] = ('stable',), fm
 def _export_locked(root: Path, *, statuses: tuple[str, ...], fmt: str, output: Path | None,
                    overwrite: bool, expected_file_hash: str | None) -> dict:
     _require_ready(root)
-    source_path = '.gnovel/structure.json'
+    source_path = '.govel/structure.json'
     state, source_payload = guard_observation(safe_project_path(root, source_path))
     guards = [{'path': source_path, **state}]
     if source_payload is None:
-        raise StructureError('STRUCTURE_NOT_INITIALIZED', 'missing readable .gnovel/structure.json')
+        raise StructureError('STRUCTURE_NOT_INITIALIZED', 'missing readable .govel/structure.json')
     try:
         structure = json.loads(source_payload)
     except (ValueError, UnicodeDecodeError) as exc:

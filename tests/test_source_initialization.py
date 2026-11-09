@@ -44,4 +44,4 @@ class SourceInitializationTests(unittest.TestCase):
         original = self.root / '旧设定.md'; original.write_text('旧项目原文')
         with self.assertRaises(NovelError): _initialize(self.root, **self.args)
         self.assertEqual(original.read_text(), '旧项目原文')
-        self.assertFalse((self.root / '.gnovel').exists())
+        self.assertFalse((self.root / '.govel').exists())

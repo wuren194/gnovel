@@ -34,7 +34,7 @@ class BatchResolutionHandoffTests(unittest.TestCase):
                                     'contentRole': 'plan', 'contentBindings': ['AT-PLAN'],
                                     'text': 'Alpha guards the gate.\r\n' + 'Original paragraph.\r\n' * 1200}
                                    for i, rid in enumerate(self.ids)]
-        validate_structure(self.source); write_json(self.root / '.gnovel/structure.json', self.source)
+        validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
 
     def resolve(self, **options):
         return call_operation('source.content-resolve-batch', self.root,
@@ -65,13 +65,13 @@ class BatchResolutionHandoffTests(unittest.TestCase):
 
     def test_reference_replaces_revision_and_hash_copying_but_not_approval(self):
         resolved = self.resolve()
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         plan = self.preview(resolved['resolutionRef'])
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         with self.assertRaises(StructureError):
             commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=False)
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
-        for old, new in zip(self.source['fragments'], read_json(self.root / '.gnovel/structure.json')['fragments']):
+        for old, new in zip(self.source['fragments'], read_json(self.root / '.govel/structure.json')['fragments']):
             self.assertEqual(new, {**old, 'text': old['text'].replace('guards', 'leaves')})
 
     def test_retry_after_cache_loss_uses_existing_request_not_a_new_binding(self):
@@ -120,11 +120,11 @@ class BatchResolutionHandoffTests(unittest.TestCase):
             if not changed:
                 changed = True
                 self.source['bookName'] += ' external'
-                write_json(self.root / '.gnovel/structure.json', self.source)
+                write_json(self.root / '.govel/structure.json', self.source)
             return result
         with patch('scripts.core.source_resolution_batch.resolve_record', side_effect=racing), self.assertRaises(StructureError):
             self.resolve()
-        self.assertTrue(read_json(self.root / '.gnovel/structure.json')['bookName'].endswith(' external'))
+        self.assertTrue(read_json(self.root / '.govel/structure.json')['bookName'].endswith(' external'))
 
     def test_batch_bound_is_a_real_policy_consumer(self):
         policy = deepcopy(query_policy()); policy['maxLimit'] = 1
@@ -194,7 +194,7 @@ class BatchResolutionHandoffTests(unittest.TestCase):
                 self.preview(reference, changes=changes)
         with self.assertRaises(StructureError):
             self.preview(reference, changes=self.changes() * 2)
-        self.assertFalse(list((self.root / '.gnovel/plans').glob('OP-*.json')))
+        self.assertFalse(list((self.root / '.govel/plans').glob('OP-*.json')))
 
     def test_cli_reference_can_be_consumed_by_mcp(self):
         from scripts.mcp_server import handle

@@ -81,7 +81,7 @@ def operation_contract() -> dict:
 # ---------------------------------------------------------------------------
 
 def _marker_bytes(root: Path) -> bytes | None:
-    path = root / '.gnovel' / 'project.json'
+    path = root / '.govel' / 'project.json'
     return path.read_bytes() if path.is_file() else None
 
 
@@ -224,10 +224,10 @@ def prepare_refactor_writes(root: Path, current: dict, plan: dict, extras: dict[
         # 中立的，用它来跳过正文审校失效正是 §95 明确禁止的误用。
         from .finalization import accept_external_workflow, _load_workflow
         chapter_id = (plan.get('parameters') or {}).get('chapterId')
-        extras['.gnovel/workflow.json'] = json_bytes(
+        extras['.govel/workflow.json'] = json_bytes(
             accept_external_workflow(_load_workflow(root), chapter_id))
     if plan.get('operation') == 'refactor_rename_book':
-        extras['.gnovel/project.json'] = _renamed_marker(root, plan['proposedStructure']['bookName'])
+        extras['.govel/project.json'] = _renamed_marker(root, plan['proposedStructure']['bookName'])
 
 
 def _in_place_moves(plan: dict) -> list[dict]:
@@ -303,7 +303,7 @@ def revert_locator_renames(root: Path, applied: list[dict], *, failure: BaseExce
 
 def _renamed_marker(root: Path, book_name: str) -> bytes:
     from .jsonio import read_json
-    marker = read_json(root / '.gnovel' / 'project.json')
+    marker = read_json(root / '.govel' / 'project.json')
     marker['bookName'] = book_name
     return json_bytes(marker)
 

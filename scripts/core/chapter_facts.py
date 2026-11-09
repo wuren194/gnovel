@@ -51,7 +51,7 @@ def _formal_chapter(root, source, chapter_id):
             'new chapter facts require committed prose and completed continuity',
             {'chapterId': chapter_id, 'requiredStatus': 'stable',
              'nextAction': _action('project.workflow.chapter-receipt', chapterId=chapter_id)})
-    workflow_path = '.gnovel/workflow.json'
+    workflow_path = '.govel/workflow.json'
     workflow_state, raw = guard_observation(safe_project_path(root, workflow_path))
     try:
         workflow = json.loads(raw) if raw is not None else {}

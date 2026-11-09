@@ -142,7 +142,7 @@ class TransportSmokeTests(unittest.TestCase):
                     # 作者重构操作在收据里保留 refactor_ 前缀，以区分普通结构写入。
                     if not plan["operation"] in (expected_operation, f"refactor_{expected_operation}"):
                         self.fail(f'{plan["operation"]} != {expected_operation}')
-                    self.assertTrue((self.root / f".gnovel/plans/{plan['operationId']}.json").is_file())
+                    self.assertTrue((self.root / f".govel/plans/{plan['operationId']}.json").is_file())
                 self.assertEqual(load_structure(self.root), original)
                 denied, payload = self.http(spec["route"], arguments, authorized=False)
                 # 机制版本 104：无凭据统一 401 SESSION_REQUIRED（旧契约 403）。
@@ -192,7 +192,7 @@ class TransportSmokeTests(unittest.TestCase):
                 for plan in (cli, mcp, http):
                     self.assertTrue(plan["requiresApproval"])
                     self.assertEqual(plan["operation"], "refactor_" + name.removeprefix("preview_"))
-                    self.assertTrue((root / f".gnovel/plans/{plan['operationId']}.json").is_file())
+                    self.assertTrue((root / f".govel/plans/{plan['operationId']}.json").is_file())
                 self.assertEqual(load_structure(root), original)
 
     def test_each_transport_completes_preview_commit_undo(self):
@@ -223,18 +223,18 @@ class TransportSmokeTests(unittest.TestCase):
 
     def test_cli_move_and_entity_rename_use_current_routes(self):
         self.cli('move-preview', {'chapterId': self.fixture['chapterIds'][0]})
-        before = (self.root/'.gnovel/structure.json').read_bytes()
+        before = (self.root/'.govel/structure.json').read_bytes()
         self.cli('entity-rename-preview', {'selector': self.fixture['characterId'],
                  'newName': '新名字', 'keepOldNameAsAlias': True})
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
 
     def test_shared_catalog_schema_rejects_bad_arguments_without_plan(self):
-        before = set((self.root / ".gnovel/plans").iterdir())
+        before = set((self.root / ".govel/plans").iterdir())
         for args in ({"entityType": "character"}, {"entityType": "character", "name": []}, {"entityType": "character", "name": "新名", "unexpected": True}):
             status, payload = self.http("/api/entity/create/preview", args)
             self.assertEqual(status, 400)
             self.assertEqual(payload["code"], "ARGUMENTS_INVALID")
-        self.assertEqual(set((self.root / ".gnovel/plans").iterdir()), before)
+        self.assertEqual(set((self.root / ".govel/plans").iterdir()), before)
     def test_http_receipt_uses_explicit_title_options(self):
         connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=10)
         self.addCleanup(connection.close)

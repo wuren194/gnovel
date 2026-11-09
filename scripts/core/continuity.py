@@ -191,7 +191,7 @@ def new_continuity_record(root: Path, chapter: dict, sync: dict, state_artifact_
         "coversChapterIds": [], "stateArtifactSha256": state_artifact_sha,
         "sourceFiles": [{"path": relative, "sha256": source_hashes[relative]} if source_hashes and relative in source_hashes
                         else _file(root, relative) for relative in
-                        (chapter["filePath"], ".gnovel/structure.json")],
+                        (chapter["filePath"], ".govel/structure.json")],
         "items": items,
         "sourceMode": True,
     }
@@ -296,7 +296,7 @@ def _validate_confirmation(root: Path, preview: dict, confirmation: dict) -> Non
     if summary.get("resolution") == "refreshed":
         if preview["summaryFreshness"]["stale"]:
             raise ContinuityError("CONTINUITY_SUMMARY_STALE", "the story summary still needs refreshing")
-        if summary.get("sha256") != _file(root, ".gnovel/aux/story-summary.json")["sha256"]:
+        if summary.get("sha256") != _file(root, ".govel/aux/story-summary.json")["sha256"]:
             raise ContinuityError("CONTINUITY_SUMMARY_CHANGED", "confirmed story summary has changed")
     elif summary.get("resolution") != "not_required":
         raise ContinuityError("CONTINUITY_SUMMARY_REQUIRED", "summary resolution must be refreshed or not_required")
@@ -330,7 +330,7 @@ def complete_continuity(root: Path, chapter_id: str, *, batch_hash: str, confirm
         }
         workflow["nextAction"] = derive_next_action(structure, workflow, root=root)
         workflow["updatedAt"] = utc_now()
-        outputs = {".gnovel/workflow.json": json_bytes(workflow)}
+        outputs = {".govel/workflow.json": json_bytes(workflow)}
         guards = []
         expected = None
         if _closeout_request is not None:

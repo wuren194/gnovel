@@ -32,7 +32,7 @@ class SourceReportTests(unittest.TestCase):
         source = load_structure(self.root)
         template = source['fragments'][0]
         source['fragments'].extend({**deepcopy(template), 'fragmentId': 'SF-LARGE-' + str(i), 'order': i + 10} for i in range(400))
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         plan = self.preview()
         self.assertTrue(plan['responseCompacted'])
         self.assertLessEqual(_size(plan), query_policy()['maxBytes']['detail'])
@@ -41,7 +41,7 @@ class SourceReportTests(unittest.TestCase):
             page = query_change_report(self.root, operationId=plan['operationId'], limit=50, cursor=cursor)
             rows.extend(page['items']); cursor = page['nextCursor']
             if not cursor: break
-        expected = read_json(self.root / f'.gnovel/plans/{plan["operationId"]}.json')['impact']
+        expected = read_json(self.root / f'.govel/plans/{plan["operationId"]}.json')['impact']
         self.assertEqual(len(rows), sum(len(value) for value in expected.values() if isinstance(value, list)))
         result = self.commit(plan)
         self.assertTrue(result['responseCompacted'])
@@ -81,4 +81,4 @@ class SourceReportTests(unittest.TestCase):
             row = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')
             self.assertEqual(row['status'], 'pending')
         self.assertEqual(load_structure(self.root)['revision'], 6)
-        self.assertEqual(len(list((self.root / '.gnovel/undo-receipts').glob('*.json'))), 3)
+        self.assertEqual(len(list((self.root / '.govel/undo-receipts').glob('*.json'))), 3)

@@ -45,7 +45,7 @@ class TaskPrepareTests(unittest.TestCase):
         source['attributes'].append({'attributeId': 'AT-PREPARE-DETAIL', 'ownerId': entity_id, 'fieldId': 'FD-PREPARE-DETAIL',
                                      'values': [{'valueId': 'FV-PREPARE-DETAIL', 'value': '仓库位于东侧'}]})
         source['references'].append({'sourceId': self.chapter_id, 'targetId': entity_id, 'kind': 'located_in'})
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         return source
 
     def test_read_list_references_current_source_for_scope_entities(self):
@@ -78,7 +78,7 @@ class TaskPrepareTests(unittest.TestCase):
         source = load_structure(self.root)
         source['entities'].append({'entityId': 'C-NEW', 'entityType': 'character', 'name': '新角色', 'aliases': [], 'status': 'active'})
         source['references'].append({'sourceId': self.chapter_id, 'targetId': 'C-NEW', 'kind': 'features'})
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         report, _ = self.codes('writer')
         self.assertIn('C-NEW', report['scope']['entities'])
         self.assertTrue(report['reading']['sourceReads'])
@@ -163,7 +163,7 @@ class TaskPrepareTests(unittest.TestCase):
         self.fill_source()
         source = load_structure(self.root)
         source['entities'].append({'entityId': 'C-UNRELATED', 'entityType': 'character', 'name': '路人', 'aliases': [], 'status': 'active'})
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         report, _ = self.codes('writer')
         self.assertIn(self.fixture['locationId'], report['scope']['entities'])
         self.assertNotIn('C-UNRELATED', report['scope']['entities'])
@@ -174,18 +174,18 @@ class TaskPrepareTests(unittest.TestCase):
         report, _ = self.codes('writer')
         read_id = report['reading']['sourceReads'][0]['readId']
         source = load_structure(self.root); source['attributes'][-1]['values'][0]['value'] = '仓库位于西侧'
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         with self.assertRaises(ValueError):
             call_operation('task.read-batch', self.root, {'credential': report['reading']['credential'], 'readIds': [read_id]})
 
     def test_stale_stage_a_binding_blocks_writer(self):
         fixture = review_ready_project(self.root, chapter_count=1)
-        chapter = read_json(self.root / ".gnovel/structure.json")["chapters"][0]
+        chapter = read_json(self.root / ".govel/structure.json")["chapters"][0]
         report, codes = self.codes("writer", chapter_id=fixture["chapterIds"][0])
         self.assertNotIn("STAGE_A_OUTLINE_MISMATCH", codes)
         source = load_structure(self.root)
         next(f for f in source['fragments'] if f['ownerId'] == chapter['chapterId'])['text'] += '临时改动的推演。'
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         report, codes = self.codes("writer", chapter_id=fixture["chapterIds"][0])
         self.assertIn("STAGE_A_OUTLINE_MISMATCH", codes)
         self.assertFalse(report["readiness"]["taskReady"])
@@ -234,7 +234,7 @@ class TaskPrepareTests(unittest.TestCase):
         payload = json.loads(proc.stdout)
         self.assertEqual(proc.returncode, 1)
         self.assertEqual(payload["code"], "TASK_NOT_READY")
-        self.assertEqual(payload["station"], "gnovel-writer")
+        self.assertEqual(payload["station"], "govel-writer")
         self.assertTrue(payload["blocking"])
 
     def test_unknown_task_and_selector_fail_closed(self):

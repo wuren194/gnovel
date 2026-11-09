@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Loopback-only HTTP server for the gnovel story workspace.
+"""Loopback-only HTTP server for the govel story workspace.
 
 请求边界（Phase 0 §10 / §65）：
 
@@ -101,8 +101,8 @@ DASHBOARD_ROOT = Path(__file__).resolve().parent.parent / "dashboard"
 # 产品版本唯一真源是 toolbox.manifest.json，不在此硬编码第二份。
 TOOLBOX_VERSION = str(toolbox_manifest()["version"])
 
-SESSION_COOKIE = "gnovelMutation"
-TOKEN_HEADER = "X-gnovel-Token"
+SESSION_COOKIE = "govelMutation"
+TOKEN_HEADER = "X-govel-Token"
 MAX_BODY_BYTES = 10 * 1024 * 1024
 
 # 状态码映射：冲突类 409，认证类 401/403，未找到 404，其余 400。
@@ -152,7 +152,7 @@ def _status_for(code: str) -> int:
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
-    server_version = f"gnovelDashboard/{TOOLBOX_VERSION}"
+    server_version = f"govelDashboard/{TOOLBOX_VERSION}"
     # HTTP/1.0 下浏览器每个 ES module 单开一条连接，一个页面的十几条并发连接会打爆
     # listen backlog 变成 ERR_CONNECTION_RESET；keep-alive 让它复用至多 6 条。
     protocol_version = "HTTP/1.1"
@@ -588,7 +588,7 @@ class DashboardServer(ThreadingHTTPServer):
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="gnovel local story workspace server")
+    parser = argparse.ArgumentParser(description="govel local story workspace server")
     parser.add_argument("--host", default="127.0.0.1", choices=["127.0.0.1", "localhost"])
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--project-root")
@@ -596,7 +596,7 @@ def main(argv: list[str] | None = None) -> int:
     server = DashboardServer((args.host, args.port), DashboardHandler)
     server.project_root = str(Path(args.project_root).expanduser().resolve()) if args.project_root else None
     server.mutation_token = secrets.token_urlsafe(24)
-    print(f"gnovel dashboard: http://{args.host}:{server.server_port}")
+    print(f"govel dashboard: http://{args.host}:{server.server_port}")
     server.serve_forever()
     return 0
 

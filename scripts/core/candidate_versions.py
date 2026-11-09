@@ -13,10 +13,10 @@
 - **保存不是审校，激活不是批准**：本模块不改章节状态、不产生任何批准。
 - CLI / MCP / HTTP 共用本模块（§59），不存在只有浏览器安全的路径。
 
-存储布局（全部在 `.gnovel/` 下，core 受控）：
+存储布局（全部在 `.govel/` 下，core 受控）：
 
-    .gnovel/workbench/candidates/<chapterId>/index.json
-    .gnovel/workbench/candidates/<chapterId>/v0001-<sha16>.md
+    .govel/workbench/candidates/<chapterId>/index.json
+    .govel/workbench/candidates/<chapterId>/v0001-<sha16>.md
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ CANDIDATE_INDEX_SCHEMA_VERSION = 1
 from .evidence_invalidation import PROSE_DEPENDENT_EVIDENCE, invalidate_prose_evidence
 
 ACTIVATION_INVALIDATED_EVIDENCE = PROSE_DEPENDENT_EVIDENCE
-WORKBENCH_DIR = ".gnovel/workbench/candidates"
+WORKBENCH_DIR = ".govel/workbench/candidates"
 
 
 def _chapter(root: Path, chapter_id: str) -> dict[str, Any]:
@@ -275,7 +275,7 @@ def activate_candidate_version(
                 "invalidatedArtifacts": {}, "invalidationId": None, "changed": False,
             }
 
-        workflow_path = safe_project_path(root, ".gnovel/workflow.json")
+        workflow_path = safe_project_path(root, ".govel/workflow.json")
         workflow = read_json(workflow_path) if workflow_path.is_file() else None
         invalidated: dict[str, str] = {}
         invalidation_id = f"INV-{candidate_version:04d}-{utc_now().replace('-', '').replace(':', '').replace('.', '')}"
@@ -308,7 +308,7 @@ def activate_candidate_version(
 
         outputs = {
             f"{WORKBENCH_DIR}/{chapter_id}/index.json": json_bytes(new_index),
-            ".gnovel/workflow.json": json_bytes(workflow) if workflow is not None else None,
+            ".govel/workflow.json": json_bytes(workflow) if workflow is not None else None,
         }
         # 激活的版本正文文件是本事务的前提证据：提交窗口内被外部改动则整体失败。
         guards = capture_guards(root, [f"{WORKBENCH_DIR}/{chapter_id}/{row['fileName']}"])
@@ -386,7 +386,7 @@ def candidate_recovery_status(root: Path, chapter_id: str) -> dict[str, Any]:
     root = root.expanduser().resolve()
     _chapter(root, chapter_id)
     index = load_candidate_index(root, chapter_id, recovery_view=True)
-    transactions_dir = safe_project_path(root, ".gnovel/transactions")
+    transactions_dir = safe_project_path(root, ".govel/transactions")
     pending = []
     if transactions_dir.is_dir():
         for tx_path in sorted(transactions_dir.glob("*.json")):
@@ -396,7 +396,7 @@ def candidate_recovery_status(root: Path, chapter_id: str) -> dict[str, Any]:
                 pending.append({"transactionId": tx_path.stem, "phase": "unreadable", "touchesWorkbench": None})
                 continue
             rows = manifest.get("files") or []
-            touches = any(f"{WORKBENCH_DIR}/{chapter_id}/" in str(row.get("path", "")) or row.get("path") == ".gnovel/workflow.json" for row in rows)
+            touches = any(f"{WORKBENCH_DIR}/{chapter_id}/" in str(row.get("path", "")) or row.get("path") == ".govel/workflow.json" for row in rows)
             pending.append({"transactionId": manifest.get("transactionId", tx_path.stem),
                             "phase": manifest.get("phase", "unknown"), "operation": manifest.get("operation", ""),
                             "touchesWorkbench": touches})

@@ -5,7 +5,7 @@
   "chapterId": "CHAPTER",
   "sourceSha256": null,
   "createdAt": "2026-08-29T08:11:18.335577+00:00",
-  "producer": "gnovel",
+  "producer": "govel",
   "payload": {
     "decision": "pending",
     "activeSeats": [
@@ -22,5 +22,5 @@
     "openItems": [],
     "sourcePlanHash": "0000000000000000000000000000000000000000000000000000000000000000"
   },
-  "artifactSha256": "58c72ede74f27a80adf86e502997790efa2da6912e32c075eff8d8a116d39886"
+  "artifactSha256": "53c89ee3086fe2bbccb38a6f946d3b28b8ad130ac5200e54a9ce03627248a14b"
 }

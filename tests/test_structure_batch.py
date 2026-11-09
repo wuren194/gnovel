@@ -39,7 +39,7 @@ class StructureBatchTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         StructureCommandTests()._project(self.root)
-        write_json(self.root / ".gnovel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0",
+        write_json(self.root / ".govel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0",
                                                          "projectId": "project-1", "bookName": "测试"})
         data = load_structure(self.root)
         from scripts.core.structure_commands import preview_insert_chapter
@@ -50,12 +50,12 @@ class StructureBatchTests(unittest.TestCase):
         self.ids = order(self.root)
 
     def test_reverse_order_is_one_plan_one_commit_one_undo(self) -> None:
-        before = read_json(self.root / ".gnovel/structure.json")
+        before = read_json(self.root / ".govel/structure.json")
         steps = [{"op": "move-chapter", "chapterId": code, "beforeChapterId": "CH001"}
                  for code in ("CH004", "CH003", "CH002")]
         preview = preview_structure_batch(self.root, steps=steps)
         # 预览不写真源；显示编号按预览前结构解析成稳定 ID
-        self.assertEqual(read_json(self.root / ".gnovel/structure.json"), before)
+        self.assertEqual(read_json(self.root / ".govel/structure.json"), before)
         self.assertEqual([row["chapterId"] for row in preview["parameters"]["steps"]], self.ids[:0:-1])
         self.assertEqual({row["beforeChapterId"] for row in preview["parameters"]["steps"]}, {self.ids[0]})
         self.assertEqual(preview["batch"]["stepCounts"], {"move-chapter": 3})
@@ -82,7 +82,7 @@ class StructureBatchTests(unittest.TestCase):
         self.assertIn("藏书楼", names)
 
     def test_failed_step_reports_its_index_and_writes_no_plan(self) -> None:
-        plans = self.root / ".gnovel/plans"
+        plans = self.root / ".govel/plans"
         before = sorted(plans.glob("*.json")) if plans.is_dir() else []
         for steps, step_code in (
             ([{"op": "move-chapter", "chapterId": "CH002", "beforeChapterId": "CH001"},

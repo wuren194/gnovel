@@ -38,7 +38,7 @@ class BoundedQueryTests(unittest.TestCase):
         self.structure['relations'].append({'relationId': 'REL-ONE', 'fromEntity': 'RU-ONE', 'toEntity': self.fixture['characterId'], 'kind': 'constrains'})
         self.save()
 
-    def save(self): write_json(self.root / '.gnovel/structure.json', self.structure)
+    def save(self): write_json(self.root / '.govel/structure.json', self.structure)
 
     def test_four_dimensions_default_to_small_independent_overviews(self):
         for dimension in ('logic', 'timeline', 'attributes', 'nodes'):

@@ -225,9 +225,9 @@ class CacheGenerationTests(unittest.TestCase):
         def change_source(structure):
             nonlocal count
             count += 1
-            latest = read_json(self.root / ".gnovel/structure.json")
+            latest = read_json(self.root / ".govel/structure.json")
             latest["revision"] += 1
-            write_json(self.root / ".gnovel/structure.json", latest)
+            write_json(self.root / ".govel/structure.json", latest)
             return original_design(structure)
 
         with patch.object(state_cache, "_build_design", side_effect=change_source):
@@ -257,7 +257,7 @@ class CacheGenerationTests(unittest.TestCase):
         save_structure(self.root, structure)
         state_cache.rebuild(self.root)
         manifest = read_json(self.root / state_cache.MANIFEST_REL)
-        self.assertIn(".gnovel/structure.json", manifest["sources"])
+        self.assertIn(".govel/structure.json", manifest["sources"])
         structure["bookName"] += " changed"
         save_structure(self.root, structure)
         self.assertFalse(state_cache.is_fresh(self.root))
@@ -270,7 +270,7 @@ class CacheGenerationTests(unittest.TestCase):
         self.assertEqual(design["schemaVersion"], 5)
         self.assertEqual(state["structureHash"], design["structureHash"])
         self.assertEqual(state_cache.status(self.root)["status"], "fresh")
-        (self.root / ".gnovel/structure.json").unlink()
+        (self.root / ".govel/structure.json").unlink()
         self.assertFalse(state_cache.is_fresh(self.root))
         self.assertEqual(state_cache.status(self.root)["status"], "invalid")
 

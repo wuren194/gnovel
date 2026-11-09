@@ -42,7 +42,7 @@ def load_operation(root: Path, operation_id: str) -> dict:
 def discover_receipts(root: Path, checklist: dict) -> tuple[dict, dict]:
     matches = {item['itemId']: [] for item in checklist['items']}
     receipts = {}
-    directory = safe_project_path(root, '.gnovel/operations')
+    directory = safe_project_path(root, '.govel/operations')
     if not directory.is_dir():
         return matches, receipts
     for path in sorted(directory.glob('OP-*.json')):

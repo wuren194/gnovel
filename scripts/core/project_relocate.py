@@ -33,15 +33,15 @@ from .jsonio import read_json
 from .structure_store import StructureError
 from .write_sets import apply_write_set, json_bytes
 
-RECEIPT_PATH = '.gnovel/project-locator.json'
+RECEIPT_PATH = '.govel/project-locator.json'
 PLAN_TTL_SECONDS = 1800
-PLAN_DIRECTORY = '.gnovel/plans'
+PLAN_DIRECTORY = '.govel/plans'
 
 # Bookkeeping that is not authored byte and must not participate in the before/after
 # inventory comparison. `plans` is here because the relocation stages its own
 # approved plan inside the tree it describes: hashing that file would make every
 # preview expire itself the moment it was written.
-_INVENTORY_EXCLUDES = {'.gnovel/transactions', '.gnovel/structure.lock', PLAN_DIRECTORY}
+_INVENTORY_EXCLUDES = {'.govel/transactions', '.govel/structure.lock', PLAN_DIRECTORY}
 
 
 class ProjectRelocateError(StructureError):
@@ -101,13 +101,13 @@ def _validate(root: Path, target: str) -> dict:
                                    'cross-device relocation is not supported in this version; '
                                    'copy, verify hashes, swap atomically, then delete the source',
                                    {'source': str(source), 'target': str(resolved)})
-    marker = source / '.gnovel' / 'project.json'
+    marker = source / '.govel' / 'project.json'
     if not marker.is_file():
-        raise ProjectRelocateError('PROJECT_RELOCATE_NOT_A_PROJECT', 'source is not a gnovel project',
+        raise ProjectRelocateError('PROJECT_RELOCATE_NOT_A_PROJECT', 'source is not a govel project',
                                    {'source': str(source)})
     # No `structure.lock` check: the caller holds that lock across the whole move, so
     # a lock file here means "we are mid-relocation", not "someone else is inside".
-    transactions = source / '.gnovel' / 'transactions'
+    transactions = source / '.govel' / 'transactions'
     if transactions.is_dir() and any(transactions.glob('*.json')):
         raise ProjectRelocateError('TRANSACTION_INCOMPLETE',
                                    'recover the pending transaction before relocating the project')
@@ -121,7 +121,7 @@ def _payload(root: Path, resolved: dict, actor: str) -> dict:
     approved must describe the same move seconds later, or the commit must refuse.
     """
     inventory_hash, file_count = _hash_tree(root)
-    marker = read_json(root / '.gnovel' / 'project.json')
+    marker = read_json(root / '.govel' / 'project.json')
     return {
         'schemaVersion': 1, 'operation': 'project_relocate', 'actor': actor,
         'parameters': {'sourceRoot': resolved['sourceRoot'], 'targetRoot': resolved['targetRoot']},

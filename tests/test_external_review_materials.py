@@ -36,7 +36,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
         return preview_accept_external_modification(self.root, chapter_id=self.cid, request_id=request_id)
 
     def stored(self, result):
-        return read_json(self.root/f".gnovel/plans/{result['operationId']}.json")
+        return read_json(self.root/f".govel/plans/{result['operationId']}.json")
 
     def test_h1_h2_are_real_frozen_bytes_and_readonly_guards(self):
         report = self.preview(); plan = self.stored(report); material = plan['externalReviewMaterials']
@@ -59,7 +59,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_registered_artifact_missing_can_use_exact_committed_transaction_image(self):
-        workflow_path = self.root/'.gnovel/workflow.json'; workflow = read_json(workflow_path)
+        workflow_path = self.root/'.govel/workflow.json'; workflow = read_json(workflow_path)
         workflow['artifacts'][self.cid].pop('candidate_prose')
         write_json(workflow_path, workflow)
         plan = self.stored(self.preview())
@@ -71,7 +71,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
         cid = fixture['chapterIds'][0]; path = root/fixture['structure']['chapters'][0]['filePath']
         path.write_text('external replacement')
         report = preview_accept_external_modification(root, chapter_id=cid, request_id='no-h1')
-        plan = read_json(root/f".gnovel/plans/{report['operationId']}.json")
+        plan = read_json(root/f".govel/plans/{report['operationId']}.json")
         material = plan['externalReviewMaterials']
         self.assertEqual(material['availability'], 'missing_accepted_bytes')
         self.assertIsNone(material['H1']); self.assertNotIn('diff', material)
@@ -127,7 +127,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
         report = self.preview()
         self.assertEqual(self.stored(report)['externalReviewMaterials']['observedContentDigest'],
                          'sha256:' + hashlib.sha256(self.h2).hexdigest())
-        self.assertEqual(len(list((self.root/'.gnovel/plans').glob('OP-*.external'))), 1)
+        self.assertEqual(len(list((self.root/'.govel/plans').glob('OP-*.external'))), 1)
 
     def test_h3_after_material_freeze_never_replaces_uncommitted_original_request(self):
         with patch('scripts.core.refactor._refactor_plan', side_effect=RuntimeError('after material freeze')):
@@ -138,7 +138,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), b'H3')
 
     def test_external_invalidation_preserves_historical_finalization(self):
-        workflow = read_json(self.root/'.gnovel/workflow.json')
+        workflow = read_json(self.root/'.govel/workflow.json')
         before = deepcopy(workflow['approvals'][self.cid])
         after = accept_external_workflow(workflow, self.cid)
         self.assertEqual(after['approvals'][self.cid]['finalized'], before['finalized'])

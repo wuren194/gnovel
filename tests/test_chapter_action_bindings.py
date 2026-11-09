@@ -32,32 +32,32 @@ class ChapterActionBindingsTests(unittest.TestCase):
                 self.assertFalse(row['executable'])
 
     def test_approval_calls_reference_registered_files_but_never_execute(self):
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['approvals'] = {}
-        write_json(self.root / '.gnovel/workflow.json', workflow)
-        before = (self.root / '.gnovel/workflow.json').read_bytes()
+        write_json(self.root / '.govel/workflow.json', workflow)
+        before = (self.root / '.govel/workflow.json').read_bytes()
         rows = chapter_status(self.root, self.cid)['nextActions']
         approval = [row for row in rows if row['operation'] == 'project.workflow.artifact-approve']
         self.assertTrue(approval)
         self.assertTrue(all(row['needsApproval'] and not row['executable'] for row in approval))
         self.assertTrue(any(row['arguments']['artifact'] for row in approval))
-        self.assertEqual(before, (self.root / '.gnovel/workflow.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/workflow.json').read_bytes())
 
     def test_missing_diagnostics_reports_semantic_parameters_instead_of_placeholders(self):
-        source = read_json(self.root/'.gnovel/structure.json')
+        source = read_json(self.root/'.govel/structure.json')
         plan = next(f for f in source['fragments'] if f['ownerId'] == self.cid)
         plan['chapterContract'].pop('mode', None); plan['chapterContract'].pop('intensityLevel', None)
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         from scripts.core.source_plan import chapter_plan
         from tests.fixtures_workflow import register_and_approve
         register_and_approve(self.root, self.cid, 'stage_a_review', {'decision': 'adopt', 'activeSeats': list(range(1, 11)),
             'sourcePlanHash': chapter_plan(source, self.cid)['sourcePlanHash'], 'consensus': [], 'disagreements': [], 'openItems': []})
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['chapters'][0]['status'] = 'draft'
-        write_json(self.root / '.gnovel/structure.json', source)
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        write_json(self.root / '.govel/structure.json', source)
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['artifacts'][self.cid].pop('diagnostics')
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         row = chapter_status(self.root, self.cid)['nextActions'][0]
         self.assertEqual(row['operation'], 'diagnostics.aggregate')
         self.assertEqual(set(row['missingInputs']), {'mode', 'intensityLevel'})

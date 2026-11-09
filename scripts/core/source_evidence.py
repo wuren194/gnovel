@@ -10,7 +10,7 @@ from .source_model import SourceIndex, snapshot_hash
 from .structure_store import StructureError
 from .write_sets import apply_write_set, digest, json_bytes, safe_project_path
 
-EVIDENCE_PATH = '.gnovel/source-prose-evidence.json'
+EVIDENCE_PATH = '.govel/source-prose-evidence.json'
 KINDS = {'mentions', 'depends_on'}
 
 

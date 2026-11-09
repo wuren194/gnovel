@@ -27,7 +27,7 @@ class ExportProtectionTests(unittest.TestCase):
         make_project(self.root)
         self.target = self.root / '工作台' / '导出测试-成品.txt'
         self.prose = self.root / '正文' / f'{CHAPTERS[0][0]}.md'
-        self.source = self.root / '.gnovel' / 'structure.json'
+        self.source = self.root / '.govel' / 'structure.json'
 
     def export(self, **kwargs):
         return export_manuscript(self.root, **kwargs)
@@ -186,7 +186,7 @@ class ExportProtectionTests(unittest.TestCase):
         self.assertFalse(self.target.exists())
 
     def test_pending_transaction_blocks_export(self):
-        transactions = self.root / '.gnovel' / 'transactions'
+        transactions = self.root / '.govel' / 'transactions'
         transactions.mkdir(exist_ok=True)
         (transactions / 'TX-pending.json').write_text('{}')
         with self.assertRaises(StructureError) as caught:

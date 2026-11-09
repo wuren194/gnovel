@@ -28,7 +28,7 @@ class AuthoritativeQueryTests(unittest.TestCase):
         set_field(self.structure, self.entity['entityId'], '声纹禁词', '当前值')
         set_field(self.structure, self.entity['entityId'], '备注', '完整的当前散文\n第二行')
         declare_field(self.structure, '空间布局', 'location')
-        write_json(self.root / '.gnovel/structure.json', self.structure)
+        write_json(self.root / '.govel/structure.json', self.structure)
 
     def test_unrendered_entity_has_standard_and_custom_values(self):
         result = query_settings(self.root, selector=self.entity['entityId'])
@@ -49,7 +49,7 @@ class AuthoritativeQueryTests(unittest.TestCase):
         self.assertEqual(query_settings(self.root, selector='旧名字')['matchedCount'], 0)
 
     def test_missing_and_corrupt_structure_fail_closed(self):
-        path = self.root / '.gnovel/structure.json'
+        path = self.root / '.govel/structure.json'
         for contents in (None, '{broken'):
             with self.subTest(contents=contents):
                 if contents is None:

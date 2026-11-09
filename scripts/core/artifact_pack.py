@@ -99,7 +99,7 @@ def candidate_structure_identity(structure: dict, chapter_id: str) -> str:
 
 def artifact_request_path(project_id: str, request_id: str) -> str:
     identity = sha256_json({'projectId': project_id, 'requestId': request_id})
-    return f'.gnovel/artifact-requests/{identity}.json'
+    return f'.govel/artifact-requests/{identity}.json'
 
 
 def bounded_authoring_report(root: Path, report: dict) -> dict:
@@ -201,7 +201,7 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
             guards[relative] = {'path': relative, **state}
             return raw
 
-        observe('.gnovel/structure.json')
+        observe('.govel/structure.json')
         structure = load_structure(root)
         chapter = next((row for row in structure['chapters'] if row['chapterId'] == chapterId), None)
         if chapter is None or chapter.get('status') == 'archived':
@@ -222,10 +222,10 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
             notes = f'工作台/inputs/notes-{digest(prepared_notes)}.json'
             if safe_project_path(root, notes).exists() and observe(notes) != prepared_notes:
                 raise StructureError('ARTIFACT_INPUT_OVERWRITE', 'prepared notes path already has different content')
-        workflow_path = safe_project_path(root, '.gnovel/workflow.json')
+        workflow_path = safe_project_path(root, '.govel/workflow.json')
         workflow_raw = workflow_path.read_bytes() if workflow_path.is_file() else None
-        if '.gnovel/workflow.json' in stage_guards:
-            expected_workflow = stage_guards['.gnovel/workflow.json']['sha256']
+        if '.govel/workflow.json' in stage_guards:
+            expected_workflow = stage_guards['.govel/workflow.json']['sha256']
             if (digest(workflow_raw) if workflow_raw is not None else None) != expected_workflow:
                 raise StructureError('WRITE_SET_CONFLICT', 'submission workflow changed before packaging')
         if _expected_workflow_sha256 is not None and (workflow_raw is None or digest(workflow_raw) != _expected_workflow_sha256):
@@ -332,7 +332,7 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
             completed_hash = None
             restored = None
             if requestId is not None:
-                prior_path = safe_project_path(root, '.gnovel/artifact-requests/' +
+                prior_path = safe_project_path(root, '.govel/artifact-requests/' +
                     sha256_json({'projectId': structure['projectId'], 'requestId': requestId}) + '.json')
                 if prior_path.is_file():
                     prior = read_json(prior_path)
@@ -442,13 +442,13 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
         if artifactType == 'stage_b_review' and 'repairRef' in json.loads(raw):
             # The saved artifact and candidate are checked on replay. Our own
             # report registration changes workflow, not the reviewed content.
-            dependency_guards.pop('.gnovel/workflow.json', None)
+            dependency_guards.pop('.govel/workflow.json', None)
         if advanceLifecycle:
             if artifactType != 'candidate_prose' or chapter['status'] not in {'planned', 'draft', 'review'}:
                 raise StructureError('LIFECYCLE_ADVANCE_INVALID', 'candidate lifecycle requires planned, draft or review')
             # A lifecycle retry may see our own new revision/inode. Bind every story field,
             # while normalizing only bookkeeping and this chapter's allowed candidate stages.
-            dependency_guards['.gnovel/structure.json'] = {
+            dependency_guards['.govel/structure.json'] = {
                 'lifecycleContentHash': candidate_structure_identity(structure, chapterId)}
         dependency_hash = sha256_json({'guards': dependency_guards, 'candidateSelection': selection_dependency, 'bindings': {
             key: value['contentSha256'] for key, value in bindings.items()}})
@@ -523,7 +523,7 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
             elif chapter['status'] not in {'draft', 'review'}:
                 raise StructureError('LIFECYCLE_ADVANCE_INVALID', 'candidate lifecycle requires planned, draft or review')
         workflow['updatedAt'] = utc_now()
-        outputs = {output: artifact_bytes, '.gnovel/workflow.json': json_bytes(workflow)}
+        outputs = {output: artifact_bytes, '.govel/workflow.json': json_bytes(workflow)}
         created_paths = set()
         if _prepared_input is not None:
             if input_path.exists():
@@ -587,7 +587,7 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
         for row in expected:
             if row['path'] in created_paths and row['before']['exists']:
                 raise StructureError('ARTIFACT_INPUT_OVERWRITE', 'a new input or receipt appeared during packaging', {'path': row['path']})
-        old_workflow = next(row['before'] for row in expected if row['path'] == '.gnovel/workflow.json')
+        old_workflow = next(row['before'] for row in expected if row['path'] == '.govel/workflow.json')
         if old_workflow['sha256'] != (digest(workflow_raw) if workflow_raw is not None else None):
             raise StructureError('WRITE_SET_CONFLICT', 'workflow changed while packaging')
         validate_guards(root, list(guards.values()), stage='artifact-pack')

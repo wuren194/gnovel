@@ -1,3 +1,3 @@
-# gnovel 开发依赖：在 requirements.txt 之上追加测试工具
+# govel 开发依赖：在 requirements.txt 之上追加测试工具
 -r requirements.txt
 pytest>=7

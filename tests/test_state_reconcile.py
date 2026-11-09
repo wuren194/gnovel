@@ -20,7 +20,7 @@ class WorkflowReconcileTests(unittest.TestCase):
             fixture = create_schema5_project(root, chapter_count=1)
             workflow = default_workflow()
             workflow["approvedChapterIds"] = fixture["chapterIds"]
-            write_json(root / ".gnovel/workflow.json", workflow)
+            write_json(root / ".govel/workflow.json", workflow)
             result = reconcile_workflow(root)
             self.assertEqual(result["code"], "WORKFLOW_RECONCILED")
             self.assertEqual(result["nextAction"]["action"], "continuity")
@@ -29,13 +29,13 @@ class WorkflowReconcileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             fixture = create_schema5_project(root, chapter_count=2)
-            structure = read_json(root / ".gnovel/structure.json")
+            structure = read_json(root / ".govel/structure.json")
             structure["chapters"][0]["status"] = "review"
-            write_json(root / ".gnovel/structure.json", structure)
+            write_json(root / ".govel/structure.json", structure)
             state_cache.rebuild(root)
             workflow = default_workflow()
             workflow["approvedChapterIds"] = fixture["chapterIds"]
-            write_json(root / ".gnovel/workflow.json", workflow)
+            write_json(root / ".govel/workflow.json", workflow)
             result = reconcile_workflow(root)
             self.assertEqual(result["code"], "WORKFLOW_RECONCILED")
             self.assertEqual(result["nextAction"]["chapterId"], fixture["chapterIds"][0])
@@ -44,13 +44,13 @@ class WorkflowReconcileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             fixture = create_schema5_project(root, chapter_count=2)
-            structure = read_json(root / ".gnovel/structure.json")
+            structure = read_json(root / ".govel/structure.json")
             structure["chapters"][0]["status"] = "draft"
             structure["chapters"][1]["status"] = "review"
-            write_json(root / ".gnovel/structure.json", structure)
+            write_json(root / ".govel/structure.json", structure)
             workflow = default_workflow()
             workflow["approvedChapterIds"] = fixture["chapterIds"]
-            write_json(root / ".gnovel/workflow.json", workflow)
+            write_json(root / ".govel/workflow.json", workflow)
             result = reconcile_workflow(root)
             self.assertFalse(result["ok"])
             self.assertEqual(result["code"], "WORKFLOW_AMBIGUOUS")
@@ -64,7 +64,7 @@ class WorkflowReconcileTests(unittest.TestCase):
             workflow = default_workflow()
             workflow["approvedChapterIds"] = [chapter_id]
             workflow["chapterStates"][chapter_id] = {"status": "draft"}
-            write_json(root / ".gnovel/workflow.json", workflow)
+            write_json(root / ".govel/workflow.json", workflow)
             result = reconcile_workflow(root)
             self.assertFalse(result["ok"])
             self.assertTrue(any(item["code"] == "CHAPTER_STATE_DIVERGED" for item in result["conflicts"]))
@@ -75,7 +75,7 @@ class FinalizeChapterTests(unittest.TestCase):
         from tests.fixtures_workflow import review_ready_project, register_and_approve
         from scripts.core.chapter_receipt import chapter_receipt
         cid = review_ready_project(root, chapter_count=1)['chapterIds'][0]
-        source = read_json(root/'.gnovel/structure.json')
+        source = read_json(root/'.govel/structure.json')
         register_and_approve(root, cid, 'title_candidates', {'candidates': [{'candidateId': 'title-1', 'title': '定稿标题'}]})
         receipt = chapter_receipt(root, cid, title_candidate_id='title-1')
         self.assertTrue(receipt['readyToFinalize'], receipt['blockers'])
@@ -86,7 +86,7 @@ class FinalizeChapterTests(unittest.TestCase):
             root = Path(temp).resolve(); cid, chapter, generation = self.ready(root)
             result = finalize_chapter(root, cid, title_candidate_id='title-1', binding_generation=generation)
             self.assertEqual(result['code'], 'CHAPTER_FINALIZED')
-            updated = read_json(root/'.gnovel/structure.json')
+            updated = read_json(root/'.govel/structure.json')
             self.assertEqual(updated['chapters'][0]['status'], 'stable')
             self.assertEqual(updated['chapters'][0]['title'], '定稿标题')
             self.assertEqual((root/chapter['filePath']).read_text(), '他把钥匙放回桌上，合上了登记本。')
@@ -114,7 +114,7 @@ class FinalizeChapterTests(unittest.TestCase):
     def test_finalization_preserves_metadata_changed_after_preflight(self):
         from scripts.core import derived_views
         from scripts.core.structure_store import StructureError
-        for relative in ('.gnovel/structure.json', '.gnovel/workflow.json'):
+        for relative in ('.govel/structure.json', '.govel/workflow.json'):
             with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve(); cid, chapter, generation = self.ready(root)
                 path = root / relative
@@ -139,7 +139,7 @@ class FinalizeChapterTests(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 'WRITE_SET_CONFLICT')
                 self.assertEqual(path.read_bytes(), changed[0])
                 self.assertFalse((root / chapter['filePath']).exists())
-                self.assertEqual(list((root / '.gnovel/transactions').glob('*.json')), [])
+                self.assertEqual(list((root / '.govel/transactions').glob('*.json')), [])
 
 
 if __name__ == '__main__': unittest.main()

@@ -22,7 +22,7 @@ class ReviewCompletionBoundaryTests(unittest.TestCase):
         fixture = create_schema5_project(self.root, chapter_count=1)
         self.source = fixture['structure']; self.cid = fixture['chapterIds'][0]
         self.source['chapters'][0]['status'] = 'planning_required'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         self.payload = assessed_review_payload(self.source, self.cid, 'stage_a_review', {
             'decision': 'adopt', 'activeSeats': list(range(1, 11)),
             'sourcePlanHash': chapter_plan(self.source, self.cid)['sourcePlanHash']})
@@ -48,7 +48,7 @@ class ReviewCompletionBoundaryTests(unittest.TestCase):
                               approval_mode='manual', project_root=self.root)
         self.assertEqual(caught.exception.code, 'REVIEW_SEATS_MISSING')
         workflow['approvals'] = {self.cid: {'approved': True, 'artifactHashes': {'stage_a_review': artifact['artifactSha256']}}}
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         with self.assertRaises(StructureError) as caught:
             advance_chapter_status(self.root, self.cid, 'planned')
         self.assertEqual(caught.exception.code, 'REVIEW_SEATS_MISSING')
@@ -71,7 +71,7 @@ class ReviewCompletionBoundaryTests(unittest.TestCase):
         record_artifact(workflow, self.cid, artifact, structure=self.source, artifact_path=str(path), project_root=self.root)
         approve_artifacts(workflow, self.cid, artifact_hashes={'stage_a_review': artifact['artifactSha256']},
                           approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         with self.assertRaises(ValueError) as caught:
             advance_chapter_status(self.root, self.cid, 'planned')
         self.assertEqual(caught.exception.code, 'STAGE_A_NOT_ADOPTED')

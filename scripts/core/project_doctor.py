@@ -207,7 +207,7 @@ def _project_json(root: Path) -> dict:
     """
     from .jsonio import read_json
     from .structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION
-    path = root / '.gnovel' / 'project.json'
+    path = root / '.govel' / 'project.json'
     try:
         marker = read_json(path)
     except (OSError, json.JSONDecodeError) as exc:
@@ -221,7 +221,7 @@ def _project_json(root: Path) -> dict:
 
 
 def _read_workflow(root: Path) -> dict:
-    path = root / '.gnovel' / 'workflow.json'
+    path = root / '.govel' / 'workflow.json'
     if not path.is_file() or path.is_symlink():
         return {}
     try:
@@ -326,7 +326,7 @@ def refactor_path_issues(root: Path, structure: dict) -> list[dict]:
                 code='SOURCE_CHAPTER_PLAN_MISSING', domain='project', severity='blocking',
                 status='mechanical_error', object_type='chapter', object_id=chapter['chapterId'],
                 chapterId=chapter['chapterId'], message='本章缺少有效的源计划片段',
-                evidence={'source': '.gnovel/structure.json'},
+                evidence={'source': '.govel/structure.json'},
                 affected_operations=['source.chapter-plan', 'task.prepare'],
                 recommended_action='通过源事务补齐本章 plan 片段；阅读导出不提供计划权威'))
     return issues
@@ -470,7 +470,7 @@ def _project_domain(root: Path, *, strict: bool, structure, workflow, marker) ->
             status='mechanical_error', object_type='project', object_id=str(root),
             message='结构不可读；无法评估项目健康',
             evidence={}, affected_operations=['project.doctor'],
-            recommended_action='修复 .gnovel/structure.json 或重新初始化'))
+            recommended_action='修复 .govel/structure.json 或重新初始化'))
         sections['structure'] = None
         return sections, issues, []
 
@@ -573,7 +573,7 @@ def _project_domain(root: Path, *, strict: bool, structure, workflow, marker) ->
         issues.append(_issue(
             code='STATE_CACHE_INVALID', domain='project', severity='blocking',
             status='needs_rebuild', object_type='stateCache',
-            object_id='.gnovel/cache', message=str(item), evidence={'problem': item},
+            object_id='.govel/cache', message=str(item), evidence={'problem': item},
             affected_operations=['project.state.rebuild'],
             recommended_action='运行 project state rebuild 重建派生缓存'))
 

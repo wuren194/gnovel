@@ -43,9 +43,9 @@ class Round7CloseoutTests(unittest.TestCase):
                     structure['entities'].append({'entityId': 'C-CLOSEOUT', 'entityType': 'character',
                         'name': '合成人物', 'aliases': [], 'status': 'active', 'summary': '守门人', 'sourceRefs': []})
                     save_structure(root, structure)
-                    workflow = read_json(root/'.gnovel/workflow.json')
+                    workflow = read_json(root/'.govel/workflow.json')
                     workflow['approvedChapterIds'] = [cid, second]
-                    write_json(root/'.gnovel/workflow.json', workflow)
+                    write_json(root/'.govel/workflow.json', workflow)
                     chapter = next(c for c in structure['chapters'] if c['chapterId'] == cid)
                     state_cache.rebuild(root)
                     design = prepare_task(root, 'design', knowledge_mode=mode)
@@ -80,10 +80,10 @@ class Round7CloseoutTests(unittest.TestCase):
                     advance_chapter_status(root, cid, 'draft')
                     diagnostic = run_diagnostics(root, chapter_id=cid, mode='plot', intensity_level=1,
                                                  register=True, advance_lifecycle=True)
-                    workflow = read_json(root/'.gnovel/workflow.json')
+                    workflow = read_json(root/'.govel/workflow.json')
                     approve_artifacts(workflow, cid, artifact_hashes={
                         'diagnostics': diagnostic['artifactSha256']}, approval_mode='manual')
-                    write_json(root/'.gnovel/workflow.json', workflow)
+                    write_json(root/'.govel/workflow.json', workflow)
                     self.assertTrue(diagnostic['evidence']['passed'])
                     if schema == 5:
                         self.assertEqual(diagnostic['evidence']['chapterContract']['targetRange'], [10, 50])

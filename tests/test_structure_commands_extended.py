@@ -29,7 +29,7 @@ class ExtendedStructureCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = self._project(root)
-            write_json(root / ".gnovel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0", "projectId": "project-1", "bookName": "测试"})
+            write_json(root / ".govel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0", "projectId": "project-1", "bookName": "测试"})
             first, second = data["chapters"]
             preview = preview_move_chapter(root, chapter_id=first["chapterId"], before_chapter_id=None)
             result = commit_plan(root, operation_id=preview["operationId"], plan_hash=preview["planHash"], approved=True)
@@ -78,7 +78,7 @@ class PlanHousekeepingTests(unittest.TestCase):
             plans = list_pending_plans(root)
             self.assertEqual([item["operationId"] for item in plans], [preview["operationId"]])
             self.assertFalse(plans[0]["expired"])
-            plan_path = root / ".gnovel/plans" / f"{preview['operationId']}.json"
+            plan_path = root / ".govel/plans" / f"{preview['operationId']}.json"
             plan = read_json(plan_path)
             plan["expiresAtEpoch"] = 1
             write_json(plan_path, plan)

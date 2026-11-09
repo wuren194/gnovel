@@ -184,7 +184,7 @@ class AbaAndManagedMoveTests(MonotonicUndoCase):
         # before/after 语义哈希与两次真实结构状态精确对上（structure_hash 忽略 revision/时间戳）。
         self.assertEqual(undo_journal["afterHash"], structure_transaction.structure_hash(load_structure(self.root)))
         # beforeHash 不是自声明：undo 自己落盘的 durable before-image 能把它重算出来。
-        pre_undo = read_json(self.root / ".gnovel" / "backups" / result["undoOperationId"] / "structure.json")
+        pre_undo = read_json(self.root / ".govel" / "backups" / result["undoOperationId"] / "structure.json")
         self.assertEqual(structure_transaction.structure_hash(pre_undo), undo_journal["beforeHash"])
         # receipt 与辅助 authority 是索引：它们指向同一次正式 undo operation。
         receipt = read_json(self.root / result["undoReceiptPath"])
@@ -400,7 +400,7 @@ class ChainTopAndEvidenceTests(MonotonicUndoCase):
 
     def test_i1_missing_before_image_blocks_the_undo_and_not_the_ownership(self) -> None:
         target = self.move(fx.CHAPTER_A, MOVED_PATH)
-        shutil.rmtree(self.root / ".gnovel" / "backups" / target)
+        shutil.rmtree(self.root / ".govel" / "backups" / target)
         self.assertEqual(error_code(lambda: self.undo(target)), "BACKUP_MISSING")
         self.assertEqual(error_code(lambda: structure_commands.undo_operation(self.root, target, actor="test")),
                          "BACKUP_MISSING")
@@ -410,14 +410,14 @@ class ChainTopAndEvidenceTests(MonotonicUndoCase):
 
     def test_i2_damaged_before_image_blocks_the_undo(self) -> None:
         target = self.move(fx.CHAPTER_A, MOVED_PATH)
-        backup_structure = self.root / ".gnovel" / "backups" / target / "structure.json"
+        backup_structure = self.root / ".govel" / "backups" / target / "structure.json"
         backup_structure.write_text("{ not the committed bytes", encoding="utf-8")
         self.assertEqual(error_code(lambda: self.undo(target)), "BACKUP_HASH_MISMATCH")
         self.assertEqual(self.observation(fx.CHAPTER_A)["state"], prose_binding.OWNED_CLEAN)
 
     def test_i3_damaged_prose_before_image_blocks_the_undo(self) -> None:
         target = self.move(fx.CHAPTER_A, MOVED_PATH)
-        (self.root / ".gnovel" / "backups" / target / MANAGED_PATH).write_text("损坏", encoding="utf-8")
+        (self.root / ".govel" / "backups" / target / MANAGED_PATH).write_text("损坏", encoding="utf-8")
         self.assertEqual(error_code(lambda: self.undo(target)), "BACKUP_HASH_MISMATCH")
         self.assertEqual(self.chapter(fx.CHAPTER_A)["filePath"], MOVED_PATH)
 
@@ -430,8 +430,8 @@ class EvidenceForgeryTests(MonotonicUndoCase):
     def test_j1_hand_written_receipts_and_authorities_prove_nothing(self) -> None:
         target = self.move(fx.CHAPTER_A, MOVED_PATH)
         bogus_operation = "OP-" + "A" * 16
-        receipts = self.root / ".gnovel" / "undo-receipts"
-        authorities = self.root / ".gnovel" / "undo-operations"
+        receipts = self.root / ".govel" / "undo-receipts"
+        authorities = self.root / ".govel" / "undo-operations"
         receipts.mkdir(parents=True, exist_ok=True)
         authorities.mkdir(parents=True, exist_ok=True)
         write_json(receipts / f"{target}-999.json", {
@@ -449,23 +449,23 @@ class EvidenceForgeryTests(MonotonicUndoCase):
 
     def test_j2_a_journal_like_json_cannot_mint_an_undoable_operation(self) -> None:
         forged = "OP-" + "B" * 16
-        (self.root / ".gnovel" / "operations").mkdir(parents=True, exist_ok=True)
-        write_json(self.root / ".gnovel" / "operations" / f"{forged}.json", {
+        (self.root / ".govel" / "operations").mkdir(parents=True, exist_ok=True)
+        write_json(self.root / ".govel" / "operations" / f"{forged}.json", {
             "schemaVersion": 4, "operationId": forged, "operation": "undo",
             "reversible": True, "actor": "human", "beforeHash": "0" * 64, "afterHash": "0" * 64,
             "beforeRevision": 7, "afterRevision": 8, "impact": {},
-            "backupPath": f".gnovel/backups/{forged}", "backupFiles": [], "beforeFiles": {},
+            "backupPath": f".govel/backups/{forged}", "backupFiles": [], "beforeFiles": {},
             "afterFiles": {}, "committedAt": "2026-09-29T00:00:00Z"})
         # 伪造的 undo 条目即使自称 reversible 也绝不可撤销；没有可核对的 before-image 的
         # journal-like JSON 同样不构成证据。
         self.assertEqual(error_code(lambda: self.undo(forged)), "OPERATION_NOT_REVERSIBLE")
         fake_target = "OP-" + "C" * 16
-        write_json(self.root / ".gnovel" / "operations" / f"{fake_target}.json", {
+        write_json(self.root / ".govel" / "operations" / f"{fake_target}.json", {
             "schemaVersion": 4, "operationId": fake_target, "operation": "refactor_relocate_chapter_paths",
             "reversible": True, "actor": "human",
             "beforeHash": "0" * 64, "afterHash": structure_transaction.structure_hash(load_structure(self.root)),
             "beforeRevision": 7, "afterRevision": 8, "impact": {},
-            "backupPath": f".gnovel/backups/{fake_target}", "backupFiles": [],
+            "backupPath": f".govel/backups/{fake_target}", "backupFiles": [],
             "beforeFiles": {}, "afterFiles": {}, "committedAt": "2026-09-29T00:00:00Z"})
         self.assertEqual(error_code(lambda: self.undo(fake_target)), "UNDO_UNVERIFIABLE")
 
@@ -527,7 +527,7 @@ class SiblingAndAliasTests(MonotonicUndoCase):
         structure = load_structure(self.root)
         sibling = next(row for row in structure["chapters"] if row["chapterId"] == fx.CHAPTER_C)
         sibling["proseBinding"]["integrityDigest"] = "sha256:" + "0" * 64
-        write_json(self.root / ".gnovel" / "structure.json", structure)
+        write_json(self.root / ".govel" / "structure.json", structure)
         self.assertEqual(self.observation(fx.CHAPTER_C)["state"], prose_binding.BINDING_INVALID)
         target = self.move(fx.CHAPTER_A, MOVED_PATH)
         sibling_before = json.dumps(self.chapter(fx.CHAPTER_C), sort_keys=True)
@@ -557,7 +557,7 @@ class SiblingAndAliasTests(MonotonicUndoCase):
         structure = load_structure(self.root)
         chapter = next(row for row in structure["chapters"] if row["chapterId"] == fx.CHAPTER_A)
         chapter["proseBinding"]["integrityDigest"] = "sha256:" + "0" * 64
-        write_json(self.root / ".gnovel" / "structure.json", structure)
+        write_json(self.root / ".govel" / "structure.json", structure)
         self.assertEqual(error_code(lambda: self.undo(target)), "UNDO_NOT_CHAIN_TOP")
         self.assertEqual(self.chapter(fx.CHAPTER_A)["filePath"], MOVED_PATH)
         self.assertEqual(self.observation(fx.CHAPTER_A)["state"], prose_binding.BINDING_INVALID)
@@ -624,12 +624,12 @@ class HistoryIndependenceTests(MonotonicUndoCase):
         gc_project(self.root)
         self.assertEqual(self.observation(fx.CHAPTER_A)["state"], prose_binding.OWNED_CLEAN)
         # 更彻底的历史损失：正式 undo 之后的当前归属不依赖任何历史 replay。
-        for relative in (".gnovel/operations", ".gnovel/backups",
-                         ".gnovel/undo-receipts", ".gnovel/undo-operations"):
+        for relative in (".govel/operations", ".govel/backups",
+                         ".govel/undo-receipts", ".govel/undo-operations"):
             shutil.rmtree(self.root / relative, ignore_errors=True)
-        workflow = read_json(self.root / ".gnovel" / "workflow.json")
+        workflow = read_json(self.root / ".govel" / "workflow.json")
         workflow["continuity"] = {}
-        write_json(self.root / ".gnovel" / "workflow.json", workflow)
+        write_json(self.root / ".govel" / "workflow.json", workflow)
         self.assertEqual(self.observation(fx.CHAPTER_A)["state"], prose_binding.OWNED_CLEAN)
         # 未来正常 ownership permission 只看当前 binding：正向移动照常提交并推进代次。
         previous_generation = self.chapter(fx.CHAPTER_A)["proseBinding"]["generation"]
@@ -718,7 +718,7 @@ class InPlaceReverseTests(MonotonicUndoCase):
     def _finalization_evidence(self, chapter_id: str, *, after_text: str, before_text: str | None) -> str:
         from scripts.core.write_sets import file_state
 
-        structure_path = self.root / ".gnovel" / "structure.json"
+        structure_path = self.root / ".govel" / "structure.json"
         structure_before = read_json(structure_path)
         chapter = next(row for row in structure_before["chapters"] if row["chapterId"] == chapter_id)
         locator = chapter["filePath"]
@@ -743,30 +743,30 @@ class InPlaceReverseTests(MonotonicUndoCase):
         write_json(structure_path, after)
         prose_path.write_bytes(prose_bytes)
         operation_id = "OP-" + "F" * 16
-        backup = self.root / ".gnovel" / "backups" / operation_id
+        backup = self.root / ".govel" / "backups" / operation_id
         (backup / "structure.json").parent.mkdir(parents=True, exist_ok=True)
         (backup / "structure.json").write_bytes(before_bytes)
         if before_text is not None:
             backup_prose = backup / locator
             backup_prose.parent.mkdir(parents=True, exist_ok=True)
             backup_prose.write_bytes(before_text.encode("utf-8"))
-        write_json(self.root / ".gnovel" / "operations" / f"{operation_id}.json", {
+        write_json(self.root / ".govel" / "operations" / f"{operation_id}.json", {
             "schemaVersion": 4, "operationId": operation_id, "operation": "finalize_chapter",
             "actor": "workflow", "beforeHash": structure_transaction.structure_hash(structure_before),
             "afterHash": structure_transaction.structure_hash(after),
             "beforeRevision": structure_before["revision"], "afterRevision": revision, "impact": {},
-            "backupPath": f".gnovel/backups/{operation_id}",
-            "backupFiles": [".gnovel/structure.json", locator],
+            "backupPath": f".govel/backups/{operation_id}",
+            "backupFiles": [".govel/structure.json", locator],
             "beforeFiles": {
-                ".gnovel/structure.json": before_state,
+                ".govel/structure.json": before_state,
                 locator: ({"exists": True, "sha256": hashlib.sha256(before_text.encode("utf-8")).hexdigest(),
                            "mode": None} if before_text is not None else {"exists": False, "sha256": None, "mode": None}),
             },
             "afterFiles": {
-                ".gnovel/structure.json": file_state(structure_path),
+                ".govel/structure.json": file_state(structure_path),
                 locator: file_state(prose_path),
             },
-            "existingFiles": [".gnovel/structure.json"] + ([locator] if before_text is not None else []),
+            "existingFiles": [".govel/structure.json"] + ([locator] if before_text is not None else []),
             "createdFiles": [] if before_text is not None else [locator],
             "writtenIndexes": [], "refusedIndexes": [],
             "committedAt": "2026-09-29T00:00:00Z", "reversible": True,
@@ -835,8 +835,8 @@ class CurrentFormatUndoTests(unittest.TestCase):
             case.root = root
             target = case.move(fx.CHAPTER_A, MOVED_PATH)
             case.undo(target)
-            shutil.rmtree(root / ".gnovel" / "operations", ignore_errors=True)
-            shutil.rmtree(root / ".gnovel" / "backups", ignore_errors=True)
+            shutil.rmtree(root / ".govel" / "operations", ignore_errors=True)
+            shutil.rmtree(root / ".govel" / "backups", ignore_errors=True)
             self.assertEqual(case.observation(fx.CHAPTER_A)["state"], prose_binding.OWNED_CLEAN)
 
 
@@ -911,7 +911,7 @@ class RequestTokenBoundaryTests(MonotonicUndoCase):
         self.addCleanup(server.shutdown)
         conn = http.client.HTTPConnection("127.0.0.1", server.server_port)
         conn.request("POST", "/api/operation/undo", body=json.dumps(body),
-                     headers={"Content-Type": "application/json", "X-gnovel-Token": "token-boundary"})
+                     headers={"Content-Type": "application/json", "X-govel-Token": "token-boundary"})
         response = conn.getresponse()
         payload = json.loads(response.read())
         conn.close()

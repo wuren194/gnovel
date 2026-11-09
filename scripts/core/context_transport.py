@@ -224,6 +224,7 @@ def task_model_response(report: dict) -> dict:
             'contractReads': [{'path': row['path'], 'readIds': row.get('readIds', []), 'readRanges': [
                 {k: deepcopy(v) for k, v in span.items() if k != 'sha256'} for span in row['readRanges']]}
                 for row in plan.get('contracts', [])],
+            'roundtable': (plan.get('roundtable') or {}).get('label'),
             'providerReads': [{'id': row['id'], 'role': row['role'], 'path': row['path'],
                                'readId': row.get('readId'), 'active': row['active']}
                               for row in plan.get('providerMaterials', [])],

@@ -25,10 +25,10 @@ class ReadingSnapshotTests(unittest.TestCase):
         path = Path(result['path']); before = path.read_bytes()
         result = write_view_file(self.root, '工作台/关系图.md', title='关系', mermaid='graph LR\n  A --> B')
         self.assertFalse(result['written']); self.assertEqual(path.read_bytes(), before)
-        self.assertFalse((self.root/'.gnovel/views.json').exists())
+        self.assertFalse((self.root/'.govel/views.json').exists())
 
     def test_protected_destinations_and_traversal_are_rejected(self):
-        for relative in ('正文/覆盖.md', '设定/覆盖.md', '规划/覆盖.md', '.gnovel/覆盖.md', '../覆盖.md'):
+        for relative in ('正文/覆盖.md', '设定/覆盖.md', '规划/覆盖.md', '.govel/覆盖.md', '../覆盖.md'):
             with self.subTest(relative=relative), self.assertRaises((StructureError, ProjectPathError)):
                 write_view_file(self.root, relative, title='关系', mermaid='graph LR')
             self.assertFalse((self.root/relative).exists())
@@ -58,7 +58,7 @@ class ReadingSnapshotTests(unittest.TestCase):
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(authored.read_bytes(), before)
         self.assertFalse((self.root/'规划/结构索引.md').exists())
-        self.assertFalse((self.root/'.gnovel/views.json').exists())
+        self.assertFalse((self.root/'.govel/views.json').exists())
 
     def test_source_render_is_read_only_and_retains_selected_text(self):
         source_fixture(self.root)

@@ -37,9 +37,9 @@ class SourceReviewTests(unittest.TestCase):
 
     def test_real_locators_and_all_reviewed_export(self):
         reviews = [self.review(row['recordId']) for row in query_reviews(self.root)['items']]
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         submit_review(self.root, requestId='review-all', reviews=reviews)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         self.assertEqual({r['status'] for r in query_reviews(self.root)['items']}, {'compatible'})
         self.assertTrue(render_source(self.root, requireReviewed=True)['ok'])
 
@@ -100,7 +100,7 @@ class SourceReviewTests(unittest.TestCase):
     def test_direct_source_edit_does_not_keep_old_review_fresh(self):
         submit_review(self.root, requestId='checked', reviews=[self.review()])
         self.source['attributes'][0]['values'][0]['value']['number'] = 185
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         self.assertEqual(next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')['status'], 'stale')
 
     def test_compatible_state_without_matching_receipt_cannot_pass(self):
@@ -170,7 +170,7 @@ class SourceReviewTests(unittest.TestCase):
         source, chapter = planning_source(self.root)
         cid = chapter['chapterId']; workflow = default_workflow()
         workflow['approvedChapterIds'] = [cid]
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         plan_hash = chapter_plan(source, cid)['sourcePlanHash']
         text = '他核对完记录，关上了门。'
         register_and_approve(self.root, cid, 'stage_a_review', {
@@ -185,7 +185,7 @@ class SourceReviewTests(unittest.TestCase):
         self.change(value=190)
         row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'SF-PLAN')
         self.assertEqual(row['status'], 'compatible')
-        current = read_json(self.root / '.gnovel/workflow.json')
+        current = read_json(self.root / '.govel/workflow.json')
         self.assertFalse(current['approvals'][cid]['approved'])
         for kind in ('stage_a_review', 'stage_b_review'):
             with self.assertRaises(WorkflowError):

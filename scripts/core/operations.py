@@ -64,7 +64,7 @@ def _new_operations() -> list[OperationSpec]:
     from .project import resolve_knowledge_mode, knowledge_modes
     from .task_prepare import TASK_STATIONS
     station_tasks = tuple(TASK_STATIONS)
-    station_audiences = tuple(sorted({station.removeprefix('gnovel-') for station in TASK_STATIONS.values()}))
+    station_audiences = tuple(sorted({station.removeprefix('govel-') for station in TASK_STATIONS.values()}))
     # Supported modes are a public protocol declaration. Discovering tools must
     # not open a user data provider; execution validates the selected policy.
     knowledge_mode_schema = {'type': 'string', 'enum': knowledge_modes()}

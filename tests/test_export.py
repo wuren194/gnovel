@@ -44,7 +44,7 @@ def make_project(root: Path) -> None:
         ["project", "quick-init", "--project-root", str(root), "--book-name", "导出测试", "--no-agents-md"]
     )
     assert code == 0, result
-    path = root / ".gnovel" / "structure.json"
+    path = root / ".govel" / "structure.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data["volumes"].append(
         {"volumeId": "VOL-EXPORT01", "title": "第一卷", "summary": "", "status": "planned"}
@@ -149,8 +149,8 @@ class ExportTests(unittest.TestCase):
             watched = {
                 rel: (root / rel).read_text(encoding="utf-8")
                 for rel in (
-                    ".gnovel/structure.json",
-                    ".gnovel/workflow.json",
+                    ".govel/structure.json",
+                    ".govel/workflow.json",
                     f"正文/{CHAPTERS[0][0]}.md",
                 )
             }

@@ -412,7 +412,7 @@ def get_entity(root: Path, selector: str) -> dict:
     # This is the author-level entity query, as before; it has no POV/asOf input.
     # Keep source facts beside the metadata, never on the writable entity record.
     source_projection = {
-        "valueSource": ".gnovel/structure.json",
+        "valueSource": ".govel/structure.json",
         "knowledgeMode": "author",
         "timeScope": "all",
         "excludedReason": "archived" if entity.get("status") == "archived" else None,
@@ -457,7 +457,7 @@ def resolve_export_target(root: Path, output: Path | None, *, book_name: str, fm
 
     - 不给 `--output`：落 `工作台/<书名>-成品.<格式>`；
     - 相对 `--output`：按 `--project-root` 解析（而不是进程 CWD），且项目内目标必须位于
-      `工作台/` 下——`设定/`、`规划/`、正文与 `.gnovel/` 都不是导出目标；
+      `工作台/` 下——`设定/`、`规划/`、正文与 `.govel/` 都不是导出目标；
     - 项目外交付物：用绝对路径显式指定（例如 `~/Desktop/xxx.md`）；
     - 目标本身是符号链接一律拒绝（`resolve()` 会吞掉链接，所以要在解析前检查）。
     """

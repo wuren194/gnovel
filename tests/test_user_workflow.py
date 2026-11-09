@@ -71,7 +71,7 @@ class UserWorkflowMappingTests(unittest.TestCase):
                     self.assertIn('contextProofRef', mcp['_meta'])
 
     def test_alias_preserves_missing_approval_and_stale_plan_blockers(self):
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path)
         workflow['approvals'][self.chapter]['artifactHashes'].pop('stage_a_review')
         write_json(path, workflow)
@@ -80,7 +80,7 @@ class UserWorkflowMappingTests(unittest.TestCase):
         self.assertIn('STAGE_A_NOT_APPROVED', {r['code'] for r in report['blocking']})
         source = load_structure(self.root)
         next(f for f in source['fragments'] if f['ownerId'] == self.chapter)['text'] += '\n改动\n'
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         report = prepare_task(self.root, 'write', chapter_id=self.chapter)
         self.assertIn('STAGE_A_OUTLINE_MISMATCH', {r['code'] for r in report['blocking']})
         self.assertIsNone(report['nextAction'])
@@ -144,7 +144,7 @@ class ContinueRoutingTests(unittest.TestCase):
         self.assertEqual(snapshot(self.root), before)
 
     def test_no_authorized_next_action_is_explicit(self):
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path)
         workflow['approvedChapterIds'] = []
         write_json(path, workflow)
@@ -181,11 +181,11 @@ class StationResponsibilityTests(unittest.TestCase):
         self.assertEqual(set(policy['stages']), {'design', 'write', 'revise'})
         self.assertEqual(set(TASK_STATIONS), {'planner', 'writer', 'editor', 'repair', 'titler', 'continuity'})
         self.assertEqual(TASK_STATIONS['repair'], TASK_STATIONS['editor'])
-        self.assertEqual(TASK_STATIONS['continuity'], 'gnovel-router')
+        self.assertEqual(TASK_STATIONS['continuity'], 'govel-router')
         self.assertEqual(policy['stages']['revise']['subtasks'], ['repair', 'titler', 'continuity'])
         manifest = read_json(ROOT / 'toolbox.manifest.json')
         self.assertEqual(len(manifest['skills']), 6)
-        self.assertNotIn('gnovel-composer', TASK_STATIONS.values())
+        self.assertNotIn('govel-composer', TASK_STATIONS.values())
         self.assertEqual(set(manifest['skills']), {key for key in manifest['promptPlan'] if not key.startswith('_')})
 
     def test_wrappers_have_no_workflow_business_rules(self):
@@ -210,9 +210,9 @@ class WorkflowTransitionTests(unittest.TestCase):
             structure = load_structure(root)
             structure['chapters'][0]['status'] = 'planning_required'
             save_structure(root, structure)
-            workflow = read_json(root / '.gnovel/workflow.json')
+            workflow = read_json(root / '.govel/workflow.json')
             workflow['approvedChapterIds'] = [chapter]
-            write_json(root / '.gnovel/workflow.json', workflow)
+            write_json(root / '.govel/workflow.json', workflow)
             self.assertEqual(prepare_task(root, 'continue')['task'], 'planner')
             with self.assertRaises(WorkflowError):
                 advance_chapter_status(root, chapter, 'planned')
@@ -254,8 +254,8 @@ class WorkflowTransitionTests(unittest.TestCase):
             chapter = fixture['chapterIds'][0]
             report = prepare_task(root, 'repair', chapter_id=chapter)
             self.assertEqual(report['userStage'], 'revise')
-            self.assertEqual(report['station'], 'gnovel-editor')
-            workflow = read_json(root / '.gnovel/workflow.json')
+            self.assertEqual(report['station'], 'govel-editor')
+            workflow = read_json(root / '.govel/workflow.json')
             maximum = repair_policy()['maxAutomaticRounds']
             for number in range(maximum):
                 self.assertEqual(increment_repair_round(workflow, chapter, maximum=maximum), number + 1)

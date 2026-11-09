@@ -98,7 +98,7 @@ class MaintenanceDocumentTests(unittest.TestCase):
         report = self.prepare()
         segments = report['segments']
         raw = self.path.read_bytes().decode()
-        before_source = (self.root / '.gnovel/structure.json').read_bytes()
+        before_source = (self.root / '.govel/structure.json').read_bytes()
         result = self.write(report, [
             {'segmentIds': [segments[1]['id'], segments[2]['id']], 'recordIds': ['SF-HEIGHT', 'SF-LIFE']},
             {'segmentIds': [segments[3]['id']], 'range': {'start': 3, 'end': 7}, 'recordIds': []},
@@ -114,7 +114,7 @@ class MaintenanceDocumentTests(unittest.TestCase):
         checked = check_maintenance(self.root, checklistPath=result['checklistPath'])
         self.assertTrue(checked['summary']['needsMapping'])
         self.assertEqual(checked['summary']['submittedItemCount'], 0)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before_source)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before_source)
 
     def test_bad_selections_cannot_write_partial_checklists(self):
         from scripts.core.locks import project_lock_reentrant
@@ -147,7 +147,7 @@ class MaintenanceDocumentTests(unittest.TestCase):
         selection = [{'segmentIds': [report['segments'][1]['id']], 'recordIds': []}]
         (self.root / '工作台/existing.json').write_text('authored')
         before = self.inventory()
-        for output in ('工作台/existing.json', '.gnovel/structure.json', '正文/new.json', '.'):
+        for output in ('工作台/existing.json', '.govel/structure.json', '正文/new.json', '.'):
             with self.subTest(output=output), self.assertRaises(StructureError):
                 self.write(report, selection, output)
             self.assertEqual(before, self.inventory())

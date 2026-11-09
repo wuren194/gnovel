@@ -124,7 +124,7 @@ class HistoryIndexTests(unittest.TestCase):
 
     def test_same_mtime_edit_stales_index_and_removal_drops_rows(self):
         rebuild_history_index(self.root)
-        ledger = self.root / f'.gnovel/workbench/candidates/{self.cid}/index.json'
+        ledger = self.root / f'.govel/workbench/candidates/{self.cid}/index.json'
         state = ledger.stat()
         data = read_json(ledger); data['versions'][0]['source'] = 'external'
         write_json(ledger, data)
@@ -140,7 +140,7 @@ class HistoryIndexTests(unittest.TestCase):
         rebuild_history_index(self.root)
         target = self.root / INDEX_PATH
         original = target.read_bytes()
-        ledger = self.root / f'.gnovel/workbench/candidates/{self.cid}/index.json'
+        ledger = self.root / f'.govel/workbench/candidates/{self.cid}/index.json'
         ledger.write_text('{broken')
         for operation in (query_history, rebuild_history_index):
             with self.assertRaises(ValueError):
@@ -149,7 +149,7 @@ class HistoryIndexTests(unittest.TestCase):
 
     def test_pending_transactions_and_index_symlinks_are_rejected(self):
         rebuild_history_index(self.root)
-        pending = self.root / '.gnovel/transactions/pending.json'
+        pending = self.root / '.govel/transactions/pending.json'
         write_json(pending, {})
         for operation in (history_index_state, query_history, rebuild_history_index):
             with self.assertRaises(ValueError):
@@ -194,7 +194,7 @@ class HistoryIndexTests(unittest.TestCase):
         (self.root / relative).write_text('未批准的新候选。')
         packed = pack_artifact(self.root, chapterId=self.cid, artifactType='candidate_prose',
                                input=relative, requestId='packed')
-        saved_workflow = (self.root / '.gnovel/workflow.json').read_bytes()
+        saved_workflow = (self.root / '.govel/workflow.json').read_bytes()
         for indexed in (False, True):
             if indexed:
                 rebuild_history_index(self.root)
@@ -204,7 +204,7 @@ class HistoryIndexTests(unittest.TestCase):
             self.assertEqual(result['items'][0]['recordType'], 'request_receipt')
             self.assertIn('retained_artifact', {r['recordType'] for r in query_history(
                 self.root, kind='candidate', limit=100)['items']})
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), saved_workflow)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), saved_workflow)
 
     def test_source_review_receipt_lookup_uses_existing_request_identity(self):
         from scripts.core.source_review import query_reviews, submit_review
@@ -241,15 +241,15 @@ class HistoryIndexTests(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]['id'], plan['operationId'])
             self.assertTrue(rows[0]['historicalSnapshot'])
-        backup = self.root / '.gnovel/backups/OP-1234567890ABCDEF/.gnovel/workflow.json'
-        write_json(backup, read_json(self.root / '.gnovel/workflow.json'))
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        backup = self.root / '.govel/backups/OP-1234567890ABCDEF/.govel/workflow.json'
+        write_json(backup, read_json(self.root / '.govel/workflow.json'))
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['approvals'][self.cid]['approved'] = False
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         rebuild_history_index(self.root)
         rows = query_history(self.root, kind='approval', chapterId=self.cid, limit=100)['items']
         self.assertTrue(any(row['recordedApproved'] and '/backups/' in row['path'] for row in rows))
-        self.assertTrue(any(not row['recordedApproved'] and row['path'] == '.gnovel/workflow.json' for row in rows))
+        self.assertTrue(any(not row['recordedApproved'] and row['path'] == '.govel/workflow.json' for row in rows))
 
     def test_prose_evidence_uses_ledger_without_scanning_current_manuscript(self):
         from scripts.core.source_evidence import register_evidence
@@ -265,8 +265,8 @@ class HistoryIndexTests(unittest.TestCase):
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': 'CH-ALPHA', 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
         validate_structure(source)
-        write_json(root / '.gnovel/structure.json', source)
-        write_json(root / '.gnovel/workflow.json', default_workflow())
+        write_json(root / '.govel/structure.json', source)
+        write_json(root / '.govel/workflow.json', default_workflow())
         manuscript = root / chapter['filePath']; manuscript.parent.mkdir()
         text = '他一米九的身形挡住了城门。'; manuscript.write_text(text)
         receipt = register_evidence(root, chapterId='CH-ALPHA', fileHash=digest(manuscript.read_bytes()),

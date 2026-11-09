@@ -1,1 +1,1 @@
-"""Shared runtime primitives for the gnovel toolbox."""
+"""Shared runtime primitives for the govel toolbox."""

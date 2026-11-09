@@ -1,0 +1,77 @@
+name: CLA
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  cla:
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request && github.event.issue.state == 'open' &&
+       github.event.comment.user.type == 'User' &&
+       (github.event.comment.body == 'recheck' ||
+        startsWith(github.event.comment.body, 'I have read the CLA (')))
+    runs-on: macos-15
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
+    concurrency:
+      group: cla-${{ github.repository }}-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      # github.sha is the trusted base/default-branch commit for these events.
+      # Do not substitute a PR head ref, install its dependencies or run its tests here.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Bind PR and agreement version
+        id: prepare
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { prepare } = require('./.github/scripts/cla.cjs');
+            await prepare({ github, context, core });
+      - name: Check and record signatures
+        id: signer
+        if: steps.prepare.outputs.eligible == 'true'
+        continue-on-error: true
+        uses: manaflow-ai/cla-github-action@44731e8bc2120b726d651a1c1d90721411c75eb7
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          branch: cla-signatures
+          required-base-ref: main
+          expected-head-sha: ${{ steps.prepare.outputs.head }}
+          expected-base-sha: ${{ steps.prepare.outputs.base }}
+          path-to-document: ${{ steps.prepare.outputs.document }}
+          path-to-signatures: ${{ steps.prepare.outputs.path }}
+          custom-pr-sign-comment: ${{ steps.prepare.outputs.phrase }}
+          allowlist-ids: ${{ steps.prepare.outputs.allowlist }}
+          require-opener-as-author: 'true'
+          lock-pullrequest-aftermerge: 'false'
+          custom-notsigned-prcomment: '请先阅读链接中的 CLA（草稿，需律师审阅），同意后单独发布下面的完整签署句。'
+      - name: Publish required CLA status
+        if: always() && steps.prepare.outputs.head != ''
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CLA_HEAD: ${{ steps.prepare.outputs.head }}
+          CLA_BASE: ${{ steps.prepare.outputs.base }}
+          CLA_OUTCOME: ${{ steps.signer.outcome }}
+          CLA_PASSED: ${{ steps.signer.outputs.cla_passed }}
+        with:
+          script: |
+            const { finish } = require('./.github/scripts/cla.cjs');
+            await finish({ github, context, core, head: process.env.CLA_HEAD,
+              base: process.env.CLA_BASE, outcome: process.env.CLA_OUTCOME,
+              passed: process.env.CLA_PASSED });

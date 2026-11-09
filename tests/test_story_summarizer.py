@@ -66,7 +66,7 @@ class StorySummarizerTests(unittest.TestCase):
             fixture = create_schema5_project(root)
             ctx = build_continuation_context(root, fixture["chapterIds"][0])
             self.assertNotIn("storySummary", ctx)
-            (root / ".gnovel/aux/story-summary.json").write_text("bad", encoding="utf-8")
+            (root / ".govel/aux/story-summary.json").write_text("bad", encoding="utf-8")
             ctx = build_continuation_context(root, fixture["chapterIds"][0])
             self.assertNotIn("storySummary", ctx)
 

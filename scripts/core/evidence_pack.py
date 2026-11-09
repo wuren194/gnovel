@@ -72,7 +72,7 @@ def _prepare_snapshot(root: Path, *, kind: str, recordIds: list[str] | None = No
         for relative in sorted(set(paths or [])):
             path = safe_project_path(root, relative)
             name = path.relative_to(root).as_posix()
-            summary = name == '.gnovel/aux/story-summary.json'
+            summary = name == '.govel/aux/story-summary.json'
             if not summary and (path.suffix != '.md' or name.split('/')[0] not in {'设定', '规划'} or is_generated(path.read_text(encoding='utf-8'))):
                 raise StructureError('CONTINUITY_EVIDENCE_INVALID', 'only authored continuity documents may be selected')
             raw = path.read_bytes()
@@ -316,7 +316,7 @@ def pack_evidence(root: Path, *, decisions: list | dict, snapshot: dict | None =
                     raise StructureError('EVIDENCE_SNAPSHOT_STALE', 'explicit document hash differs')
                 evidence['sha256'] = documents[path]
         if confirmation.get('summary', {}).get('resolution') == 'refreshed':
-            path = '.gnovel/aux/story-summary.json'
+            path = '.govel/aux/story-summary.json'
             if path not in documents:
                 raise StructureError('EVIDENCE_SELECTION_INVALID', 'select the refreshed summary snapshot')
             confirmation['summary']['sha256'] = documents[path]

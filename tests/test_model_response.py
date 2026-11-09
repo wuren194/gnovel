@@ -58,7 +58,7 @@ class ModelResponseTests(unittest.TestCase):
         self.cache = self.directory / 'transport'
         self.cache.mkdir(mode=0o700)
         for item in (patch.object(transport_cache, '_directory', return_value=self.cache),
-                     patch.dict(os.environ, {'GNOVEL_LOG_MODE': 'off'})):
+                     patch.dict(os.environ, {'GOVEL_LOG_MODE': 'off'})):
             item.start(); self.addCleanup(item.stop)
 
     def full(self, projected):
@@ -239,7 +239,7 @@ class ModelResponseTests(unittest.TestCase):
     def test_logger_keeps_original_business_result_and_actual_model_response(self):
         original = receipt_sample()
         output = io.StringIO()
-        with patch.dict(os.environ, {'GNOVEL_LOG_MODE': 'full', 'GNOVEL_LOG_DIR': str(self.directory / 'logs')}), \
+        with patch.dict(os.environ, {'GOVEL_LOG_MODE': 'full', 'GOVEL_LOG_DIR': str(self.directory / 'logs')}), \
                 patch.object(novelctl, '_dispatch', return_value=original), redirect_stdout(output):
             novelctl.main(['project', 'workflow', 'closeout-prepare', '--project-root', str(self.root),
                            '--chapter-id', 'CH-EXAMPLE'])
@@ -326,9 +326,9 @@ class ModelResponseTests(unittest.TestCase):
         self.assertEqual(model['bindingGeneration'], ready['bindingGeneration'])
         self.assertEqual(model['finalizeAction'], ready['finalizeAction'])
         self.assertEqual(self.full(model), ready)
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['approvals'][chapter_id]['approved'] = False
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         blocked = call_operation('project.workflow.chapter-receipt', self.root, arguments)
         shown = project_response(self.root, 'project.workflow.chapter-receipt', blocked)
         self.assertFalse(shown['readyToFinalize'])
@@ -343,12 +343,12 @@ class ModelResponseTests(unittest.TestCase):
         for transport in ('cli', 'mcp'):
             for view in (None, 'model', 'full'):
                 with self.subTest(transport=transport, view=view):
-                    workflow_path = self.root / '.gnovel/workflow.json'
+                    workflow_path = self.root / '.govel/workflow.json'
                     workflow = read_json(workflow_path)
                     workflow['artifacts'][chapter_id].pop('diagnostics', None)
                     write_json(workflow_path, workflow)
                     log_dir = self.directory / f'logs-{transport}-{view}'
-                    with patch.dict(os.environ, {'GNOVEL_LOG_MODE': 'full', 'GNOVEL_LOG_DIR': str(log_dir)}):
+                    with patch.dict(os.environ, {'GOVEL_LOG_MODE': 'full', 'GOVEL_LOG_DIR': str(log_dir)}):
                         if transport == 'cli':
                             arguments = ['project', 'diagnostics', 'run', '--project-root', str(self.root),
                                          '--chapter-id', chapter_id, '--mode', 'plot', '--intensity-level', '1', '--register']
@@ -405,7 +405,7 @@ class ModelResponseTests(unittest.TestCase):
                 original = case.receipt()
                 self.assertEqual(original['factInventory']['items'][0]['requiredEvidence'], expected_quotes)
                 before = {name: (case.root / name).read_bytes()
-                          for name in ('.gnovel/structure.json', '.gnovel/workflow.json')}
+                          for name in ('.govel/structure.json', '.govel/workflow.json')}
                 output = io.StringIO()
                 with redirect_stdout(output):
                     code = novelctl.main(['project', 'workflow', 'chapter-receipt', '--project-root', str(case.root),

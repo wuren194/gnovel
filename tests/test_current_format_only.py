@@ -20,7 +20,7 @@ class CurrentFormatOnlyTests(unittest.TestCase):
                 root = Path(temp)
                 source = initialize_project(root)
                 source['schemaVersion'] = version
-                write_json(root/'.gnovel/structure.json', source)
+                write_json(root/'.govel/structure.json', source)
                 before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob('*') if p.is_file()}
                 for operation, args in (
                         ('source.query', {}),

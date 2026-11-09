@@ -9,7 +9,7 @@ from typing import Any
 
 from .artifacts import sha256_json, sha256_text
 from .static_cache import cached_bytes, cached_sha256 as file_sha256
-from .review_plan import DECISION_TYPES, resolve_effective_review_plan
+from .review_plan import DECISION_TYPES, SOURCE_CONTRACT, resolve_effective_review_plan
 from .project import TOOLBOX_ROOT, toolbox_manifest
 from .prompt_conditions import PromptPlanError, evaluate_condition, resolve_field
 
@@ -97,7 +97,14 @@ def resolve_prompt_plan(
         design = {**design, "chapter": {**design["chapter"], "reviewClass": review_class}}
     warnings: list[dict[str, Any]] = []
     loaded: list[dict[str, Any]] = []
+    from .data_provider import roundtable_resource, binding, materials, ProviderError
+    initial_provider = binding()
+    uses_roundtable = (Path(SOURCE_CONTRACT).name in plan.get('always', [])
+                      or any(row.get('contract') == Path(SOURCE_CONTRACT).name for row in plan.get('conditional', [])))
+    private_roundtable = roundtable_resource() if uses_roundtable else None
     for name in plan.get("always", []):
+        if private_roundtable is not None and name == Path(SOURCE_CONTRACT).name:
+            continue
         path = TOOLBOX_ROOT / "shared" / "contracts" / name
         if not path.is_file():
             raise PromptPlanError("PROMPT_PATH_MISSING", f"contract path missing: {name}")
@@ -114,6 +121,8 @@ def resolve_prompt_plan(
         item = {"contract": entry.get("contract"), "reason": entry.get("reason", ""), "matched": matched, "evidence": evidence}
         conditions.append(item)
         if matched:
+            if private_roundtable is not None and entry.get('contract') == Path(SOURCE_CONTRACT).name:
+                continue
             path = TOOLBOX_ROOT / "shared" / "contracts" / str(entry.get("contract"))
             if not path.is_file():
                 raise PromptPlanError("PROMPT_PATH_MISSING", f"conditional contract path missing: {entry.get('contract')}")
@@ -141,14 +150,16 @@ def resolve_prompt_plan(
         "complete": not warnings,
         "warnings": warnings,
         "contracts": loaded,
+        'roundtable': ({'source': 'user' if private_roundtable else 'default',
+                       'label': '用户圆桌' if private_roundtable else '通用圆桌',
+                       'resource': private_roundtable} if uses_roundtable else None),
         "conditional": conditions,
         "conditionInputsHash": sha256_json([row['evidence']['inputHash'] for row in conditions]),
         "onDemandReferences": [_reference(relative, view) for relative in references],
         "characterCounts": {"contractText": contract_characters, "response": 0, "unit": "unicodeCharacters"},
     }
-    from .data_provider import binding, materials
-    result['provider'] = binding()
-    result['providerMaterials'] = materials(station.removeprefix('gnovel-'), design)
+    result['provider'] = initial_provider
+    result['providerMaterials'] = materials(station.removeprefix('govel-'), design)
     for row in result['providerMaterials']:
         if not row['active'] or (row['condition'] or {}).get('status') == 'unresolved':
             result['complete'] = False
@@ -156,6 +167,8 @@ def resolve_prompt_plan(
                              'message': '本地规则的适用条件尚未确定'})
     if decision_type is not None:
         result["reviewPlan"] = resolve_effective_review_plan(station, decision_type, chapter=design.get("chapter"))
+    if binding() != initial_provider or (uses_roundtable and roundtable_resource() != private_roundtable):
+        raise ProviderError('PROVIDER_CHANGED', 'local inputs changed while preparing; prepare again')
     result["planHash"] = "0" * 64
     while True:
         size = len(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))

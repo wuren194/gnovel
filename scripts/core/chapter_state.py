@@ -38,7 +38,7 @@ ADVANCEABLE_STATUSES = ("planned", "draft", "review", "stale")
 
 
 def _workflow_path(root: Path) -> Path:
-    return root / ".gnovel" / "workflow.json"
+    return root / ".govel" / "workflow.json"
 
 
 def _load_workflow(root: Path) -> dict[str, Any]:
@@ -185,7 +185,7 @@ def _advance_chapter_status(root: Path, chapter_id: str, target_status: str, *, 
         from .write_sets import apply_write_set, json_bytes
         proposed, evidence = prepare_transition(root, structure, workflow, chapter_id, target_status, actor=actor)
         outputs, _ = derived_outputs(root, proposed, current=structure,
-                                     extras={".gnovel/workflow.json": json_bytes({**workflow, "updatedAt": utc_now()})})
+                                     extras={".govel/workflow.json": json_bytes({**workflow, "updatedAt": utc_now()})})
         apply_write_set(root, outputs, operation="advance_chapter_status")
     return {
         "ok": True,

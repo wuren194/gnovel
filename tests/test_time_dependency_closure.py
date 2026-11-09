@@ -239,11 +239,11 @@ class TimeDependencyClosureTests(unittest.TestCase):
                 source['fragments'].append({'fragmentId': 'SF-ANCHOR-EVIDENCE', 'ownerId': anchor_id,
                     'text': quote, 'order': 1, 'contentRole': 'fact', 'contentBindings': ['AT-ANCHOR']})
                 validate_structure(source)
-                write_json(root / '.gnovel/structure.json', source)
+                write_json(root / '.govel/structure.json', source)
                 workflow = default_workflow()
                 chapter_ids = [chapter['chapterId'] for chapter in source['chapters']]
                 workflow['approvedChapterIds'] = chapter_ids
-                write_json(root / '.gnovel/workflow.json', workflow)
+                write_json(root / '.govel/workflow.json', workflow)
                 text = '他核对了行程，随后关上门。'
                 for chapter_id in chapter_ids:
                     plan_hash = chapter_plan(source, chapter_id)['sourcePlanHash']
@@ -254,19 +254,19 @@ class TimeDependencyClosureTests(unittest.TestCase):
                     register_and_approve(root, chapter_id, 'stage_b_review', {
                         'verdict': 'POLISH_READY', 'sourcePlanHash': plan_hash,
                         'finalProseSha256': sha256_text(text), 'slots': evidenced_slots(text), 'findings': []})
-                workflow_before = read_json(root / '.gnovel/workflow.json')
+                workflow_before = read_json(root / '.govel/workflow.json')
                 approved = {(cid, kind): require_approved_artifact(workflow_before, cid, kind)
                             for cid in chapter_ids for kind in ('stage_a_review', 'candidate_prose', 'stage_b_review')}
-                source_bytes = (root / '.gnovel/structure.json').read_bytes()
-                workflow_bytes = (root / '.gnovel/workflow.json').read_bytes()
+                source_bytes = (root / '.govel/structure.json').read_bytes()
+                workflow_bytes = (root / '.govel/workflow.json').read_bytes()
                 preview = preview_proposal_batch(root, sourceHash=snapshot_hash(source), items=[{
                     'kind': 'entity', 'recordId': anchor_id,
                     'patch': [{'op': 'set', 'path': ['timeOrdinal'], 'value': ordinal}],
                     'reason': '核对锚点日期', 'evidence': [{'fragmentId': 'SF-ANCHOR-EVIDENCE', 'quote': quote}],
                 }], requestId='time-anchor-update', approvalActor='author', approvalEvidence='合成测试批准')
                 self.assertEqual(preview['impact']['approvalInvalidations'], ['CH-CHAIN', 'CH-TIME'])
-                self.assertEqual((root / '.gnovel/structure.json').read_bytes(), source_bytes)
-                self.assertEqual((root / '.gnovel/workflow.json').read_bytes(), workflow_bytes)
+                self.assertEqual((root / '.govel/structure.json').read_bytes(), source_bytes)
+                self.assertEqual((root / '.govel/workflow.json').read_bytes(), workflow_bytes)
                 receipt = commit(root, operation_id=preview['operationId'], plan_hash=preview['planHash'],
                                  approved=True, actor='test')
                 self.assertEqual(receipt['code'], 'STRUCTURE_COMMITTED')
@@ -275,7 +275,7 @@ class TimeDependencyClosureTests(unittest.TestCase):
                 state = story_time_states(after)['E-REL']
                 self.assertEqual((state['lower'], state['upper']), expected)
                 self.assert_plan_changes(source, after, {'CH-TIME', 'CH-CHAIN'})
-                workflow_after = read_json(root / '.gnovel/workflow.json')
+                workflow_after = read_json(root / '.govel/workflow.json')
                 for chapter_id in ('CH-TIME', 'CH-CHAIN'):
                     self.assertFalse(workflow_after['approvals'][chapter_id]['approved'])
                     self.assertEqual(workflow_after['approvals'][chapter_id]['invalidatedBy'],
@@ -291,7 +291,7 @@ class TimeDependencyClosureTests(unittest.TestCase):
                 for kind in ('stage_a_review', 'candidate_prose', 'stage_b_review'):
                     self.assertEqual(require_approved_artifact(workflow_after, 'CH-OTHER', kind),
                                      approved['CH-OTHER', kind])
-                review = read_json(root / '.gnovel/source-review.json')['items']
+                review = read_json(root / '.govel/source-review.json')['items']
                 self.assertEqual(set(review), {'SF-CH-TIME', 'SF-CH-CHAIN'})
                 for fragment_id, item in review.items():
                     self.assertEqual(item['status'], 'pending')

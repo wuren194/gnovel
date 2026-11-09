@@ -48,21 +48,21 @@ class CognitionReviewTests(unittest.TestCase):
         self.save(source)
         workflow = default_workflow()
         workflow['approvedChapterIds'] = fixture['chapterIds']
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         register_and_approve(self.root, self.cid, 'stage_a_review', {
             'decision': 'adopt', 'activeSeats': list(range(1, 11)), 'consensus': [], 'disagreements': [], 'openItems': []})
         self.text = '来客介绍自己叫顾行，林舟听清了。\n林舟说：“顾行，请坐。”'
         self.set_candidate(self.text)
 
     def source(self):
-        return read_json(self.root / '.gnovel/structure.json')
+        return read_json(self.root / '.govel/structure.json')
 
     def workflow(self):
-        return read_json(self.root / '.gnovel/workflow.json')
+        return read_json(self.root / '.govel/workflow.json')
 
     def save(self, source):
         validate_structure(source)
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
 
     def set_candidate(self, text):
         self.text = text
@@ -232,7 +232,7 @@ class CognitionReviewTests(unittest.TestCase):
         workflow = self.workflow()
         approve_artifacts(workflow, self.cid, artifact_hashes={kind: entry['artifactSha256']
             for kind, entry in workflow['artifacts'][self.cid].items()}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         finalization.finalize_chapter(self.root, self.cid, skip_title=True,
             binding_generation=self.source()['chapters'][0]['proseBinding']['generation'])
         continuity = continuity_preview(self.root, self.cid)
@@ -255,11 +255,11 @@ class CognitionReviewTests(unittest.TestCase):
         workflow = self.workflow()
         approve_artifacts(workflow, self.cid, artifact_hashes={kind: entry['artifactSha256']
             for kind, entry in workflow['artifacts'][self.cid].items()}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         preflight = preflight_finalization(self.root, self.cid, skip_title=True, binding_generation=1)
         self.assertTrue(preflight.ready, preflight.blockers)
-        before_source = (self.root / '.gnovel/structure.json').read_bytes()
-        before_workflow = (self.root / '.gnovel/workflow.json').read_bytes()
+        before_source = (self.root / '.govel/structure.json').read_bytes()
+        before_workflow = (self.root / '.govel/workflow.json').read_bytes()
         prior_path = self.root / self.source()['chapters'][0]['filePath']
         from scripts.core import write_sets
         real_apply = write_sets.apply_write_set
@@ -272,8 +272,8 @@ class CognitionReviewTests(unittest.TestCase):
             with self.assertRaises(StructureError) as caught:
                 finalization.finalize_chapter(self.root, self.cid, skip_title=True, binding_generation=1)
         self.assertIn(caught.exception.code, {'TRANSACTION_GUARD_DRIFT', 'WRITE_SET_CONFLICT'})
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before_source)
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), before_workflow)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before_source)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), before_workflow)
         self.assertFalse((self.root / self.source()['chapters'][1]['filePath']).exists())
         self.assertEqual(prior_path.read_text(), '作者在预检后修改了前章。')
 
@@ -291,7 +291,7 @@ class CognitionReviewTests(unittest.TestCase):
         real_apply = write_sets.apply_write_set
         for bind in ([], ['--bind', 'finalProseSha256']):
             with self.subTest(bind=bind):
-                before = (self.root / '.gnovel/workflow.json').read_bytes()
+                before = (self.root / '.govel/workflow.json').read_bytes()
                 before_artifact = artifact_path.read_bytes()
 
                 def race(root, outputs, **kwargs):
@@ -306,7 +306,7 @@ class CognitionReviewTests(unittest.TestCase):
                 response = json.loads(stream.getvalue())
                 self.assertNotEqual(code, 0, response)
                 self.assertEqual(response['code'], 'TRANSACTION_GUARD_DRIFT')
-                self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), before)
+                self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), before)
                 self.assertEqual(artifact_path.read_bytes(), before_artifact)
                 self.assertEqual(prior_path.read_text(), '在直接登记的写入边界修改前章。')
                 prior_path.write_bytes(prior_raw)
@@ -321,7 +321,7 @@ class CognitionReviewTests(unittest.TestCase):
                                                     'quote': {'text': '顾行向林舟作了自我介绍。'}})
         artifact_path = self.root / self.pack(payload)['artifactPath']
         real_apply = write_sets.apply_write_set
-        for target in ('.gnovel/structure.json', '.gnovel/workflow.json'):
+        for target in ('.govel/structure.json', '.govel/workflow.json'):
             for bind in ([], ['--bind', 'finalProseSha256']):
                 with self.subTest(target=target, bind=bind):
                     path = self.root / target
@@ -587,7 +587,7 @@ class CognitionReviewTests(unittest.TestCase):
         process = subprocess.run([sys.executable, str(root / 'scripts/novelctl.py'), 'project',
             'workflow', 'review-form', '--project-root', str(self.root), '--chapter-id', self.cid,
             '--artifact-type', 'stage_b_review'], capture_output=True, text=True, timeout=30,
-            env={**os.environ, 'GNOVEL_LOG_MODE': 'off', 'PYTHONDONTWRITEBYTECODE': '1'})
+            env={**os.environ, 'GOVEL_LOG_MODE': 'off', 'PYTHONDONTWRITEBYTECODE': '1'})
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
         form = json.loads(process.stdout)
         self.assertEqual(form['fields']['cognitionReviews'], self.form('model')['fields']['cognitionReviews'])

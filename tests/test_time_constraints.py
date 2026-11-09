@@ -150,7 +150,7 @@ class TimeConstraintTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             source_fixture(root)
-            path = root / '.gnovel/structure.json'
+            path = root / '.govel/structure.json'
             original = path.read_bytes()
             with self.assertRaises(StructureError):
                 preview_source_change(root, changes=[{'action': 'put', 'collection': 'entities',
@@ -164,7 +164,7 @@ class TimeConstraintTests(unittest.TestCase):
             source = source_fixture()
             source['entities'].append(event('E-SPAN', timeStartId='TA-START', timeEndId='TA-LATER'))
             from scripts.core.jsonio import write_json
-            write_json(root / '.gnovel/structure.json', source)
+            write_json(root / '.govel/structure.json', source)
             row = next(row for row in query_timeline(root)['items'] if row['timeId'] == 'E-SPAN')
             self.assertEqual(row['storyTime']['status'], 'unknown')
             self.assertEqual(row['timeSpan']['startId'], 'TA-START')

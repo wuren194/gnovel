@@ -56,7 +56,7 @@ class CatalogCommandTests(unittest.TestCase):
         before['fragments'].append({'fragmentId': 'SF-ARCHIVE-FACT', 'ownerId': hook, 'order': 1,
             'contentRole': 'fact', 'contentBindings': ['AT-ARCHIVE-FACT'], 'text': '钥匙秘密已经解决。'})
         before['fragments'][0]['dependsOn'] = [hook]
-        write_json(self.root/'.gnovel/structure.json', before)
+        write_json(self.root/'.govel/structure.json', before)
         note = self.root/'工作台/作者资料.md'; note.write_text('作者保留的原稿，不是运行时设定。')
         prose = {c['filePath']: (self.root/c['filePath']).read_bytes() for c in before['chapters']}
         plan = catalog.preview_archive_entity(self.root, selector=hook)
@@ -76,7 +76,7 @@ class CatalogCommandTests(unittest.TestCase):
                                      'name': '测试锚点', 'absoluteTime': '2026-01-01'})
         structure['chapters'][0]['storyTimeStartId'] = 'TA-TEST-0001'
         structure['entities'][0]['timeStartId'] = 'TA-TEST-0001'
-        write_json(self.root/'.gnovel/structure.json', structure)
+        write_json(self.root/'.govel/structure.json', structure)
         plan = catalog.preview_archive_entity(self.root, selector='TA-TEST-0001')
         self.commit(plan)
         source = load_structure(self.root)
@@ -96,11 +96,11 @@ class CatalogCommandTests(unittest.TestCase):
                                       new_name=name, keep_old_name_as_alias=True)
         self.assertCode("STRUCTURE_INVALID", catalog.preview_create_entity, entity_type="character", name="沈砚")
         self.assertCode("ENTITY_TYPE_INVALID", catalog.preview_create_entity, entity_type="unknown", name="新人物")
-        self.assertFalse(list((self.root / ".gnovel/plans").iterdir()))
+        self.assertFalse(list((self.root / ".govel/plans").iterdir()))
 
     def test_visibility_only_changes_supported_planning_metadata(self):
         from scripts.core.catalog_api import call_catalog_operation
-        before = (self.root/'.gnovel/structure.json').read_bytes()
+        before = (self.root/'.govel/structure.json').read_bytes()
         for collection, record_id in [('entities', self.fixture['characterId']), ('relations', 'REL-UNKNOWN')]:
             self.assertCode('VISIBILITY_COLLECTION_INVALID', catalog.preview_set_visibility,
                             collection=collection, record_id=record_id, visibility='public')
@@ -108,7 +108,7 @@ class CatalogCommandTests(unittest.TestCase):
                 call_catalog_operation('preview_set_visibility', self.root,
                     {'collection': collection, 'recordId': record_id, 'visibility': 'public'}, actor='test')
             self.assertEqual(caught.exception.code, 'ARGUMENTS_INVALID')
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
         cid = self.fixture['chapterIds'][0]
         original = load_structure(self.root)['chapters'][0]
         plan = catalog.preview_set_visibility(self.root, collection='chapters', record_id=cid,
@@ -176,14 +176,14 @@ class CatalogCommandTests(unittest.TestCase):
         self.assertCode("PLAN_HASH_MISMATCH", commit_plan, operation_id=plan["operationId"], plan_hash="bad", approved=True)
         self.commit(catalog.preview_create_volume(self.root, title="第二卷"))
         self.assertCode("REVISION_CONFLICT", commit_plan, operation_id=plan["operationId"], plan_hash=plan["planHash"], approved=True)
-        write_json(self.root / ".gnovel/transactions/TX-pending.json", {})
+        write_json(self.root / ".govel/transactions/TX-pending.json", {})
         self.assertCode("TRANSACTION_INCOMPLETE", catalog.preview_create_entity, entity_type="character", name="新人物")
 
     def test_symlink_plan_directory_is_rejected(self):
         outside = self.root / "outside"
         outside.mkdir()
-        (self.root / ".gnovel/plans").rmdir()
-        (self.root / ".gnovel/plans").symlink_to(outside, target_is_directory=True)
+        (self.root / ".govel/plans").rmdir()
+        (self.root / ".govel/plans").symlink_to(outside, target_is_directory=True)
         with self.assertRaises(StructureError):
             catalog.preview_create_volume(self.root, title="第二卷")
         self.assertFalse(list(outside.iterdir()))

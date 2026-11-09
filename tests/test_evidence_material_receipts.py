@@ -59,7 +59,7 @@ class EvidenceMaterialReceiptTests(unittest.TestCase):
             if row['fragmentId'] in {'SF-HEIGHT', 'SF-MIXED'}:
                 row['dependsOn'].append('SF-SHARED')
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         self.shared_metrics = {}
         for reuse in (False, True):
             all_pages, prior = [], None
@@ -76,7 +76,7 @@ class EvidenceMaterialReceiptTests(unittest.TestCase):
 
     def test_partial_unicode_material_only_reuses_delivered_characters(self):
         self.source['fragments'][0]['text'] = '长句😀\r\n' * 2400
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         first = self.read(['SF-HEIGHT'], maxBytes=3000)
         self.assertTrue(first['hasMore'])
         next_read = self.read(['SF-HEIGHT'], maxBytes=3000, priorReceipt=first['materialReadReceipt'])
@@ -125,7 +125,7 @@ class EvidenceMaterialReceiptTests(unittest.TestCase):
         self.assertTrue(changed['reusedMaterials']['scopeChanged'])
         self.assertEqual(changed['reusedMaterials']['characters'], 0)
         self.source['fragments'][0]['text'] += ' Changed.'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         current = self.read(['SF-HEIGHT'], priorReceipt=changed['materialReadReceipt'])
         self.assertEqual(current['reusedMaterials']['characters'], 0)
 
@@ -150,7 +150,7 @@ class EvidenceMaterialReceiptTests(unittest.TestCase):
                 'order': len(self.source['fragments']) + 1, 'contentRole': 'belief', 'perspectiveId': pov,
                 'contentBindings': ['AT-HEIGHT'], 'dependsOn': dependencies})
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         first, _ = self.pages(['SF-KNOWN'])
         pages, rows = self.pages(['SF-KNOWN'], priorReceipt=first[-1]['materialReadReceipt'],
                                 selection={'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']})
@@ -179,7 +179,7 @@ class EvidenceMaterialReceiptTests(unittest.TestCase):
     def test_complete_partial_reading_roundtrips_unicode_and_crlf(self):
         text = 'Full line 😀\r\n' * 90
         self.source['fragments'][0]['text'] = text
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         first = self.read(['SF-HEIGHT'], maxBytes=1900)
         pages, rows = self.pages(['SF-HEIGHT'], maxBytes=1900, priorReceipt=first['materialReadReceipt'])
         body = [row for row in first['materials'] + rows if not row.get('materialKind')]

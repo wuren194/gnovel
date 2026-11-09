@@ -10,7 +10,7 @@
 - ``prepare``：从状态缓存与已提交章节提取摘要输入（章节清单/正文路径/StoryState 概要），
   输出给摘要生成环节的上下文——生成者按需读正文全文后产出摘要 JSON。
 - ``commit``：校验摘要生成环节返回的 JSON（必填键校验），原子写入
-  ``.gnovel/aux/story-summary.json``（独立辅助产物，不属于项目标记与派生缓存）。
+  ``.govel/aux/story-summary.json``（独立辅助产物，不属于项目标记与派生缓存）。
 
 续写时 ``continuation_context.py`` 读取 aux 摘要注入 `storySummary`，缺失则回退
 标题聚合。
@@ -51,7 +51,7 @@ class StorySummarizerError(ValueError):
 def _load_commit_data(project_root: Path) -> tuple[object, dict, dict, dict]:
     """加载当前 StoryState 与 StoryDesign（只读），返回轻量 store 对象。
 
-    真源：设定/ 的 md → state_cache 重建派生缓存 .gnovel/cache/；
+    真源：设定/ 的 md → state_cache 重建派生缓存 .govel/cache/；
     无 md 真源时回退旧版 状态/*.json + 设定/*.json。
     sourceCommitId 取 StoryState 的 head 事件（历史 commit 归档存在时不改语义）。
     """
@@ -78,7 +78,7 @@ def _char_count(path: Path) -> int:
 
 
 def _load_aux_summary(project_root: Path) -> dict | None:
-    """读 .gnovel/aux/story-summary.json（存在且合法时）。"""
+    """读 .govel/aux/story-summary.json（存在且合法时）。"""
     try:
         from scripts.core.summary_contract import load_summary
     except ImportError:
@@ -302,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
     p_prepare.add_argument("--project-root", required=True)
     p_prepare.add_argument("--summary", action="store_true", help="输出纯文本摘要而不是 JSON")
 
-    p_commit = sub.add_parser("commit", help="校验并落盘摘要 JSON 到 .gnovel/aux/")
+    p_commit = sub.add_parser("commit", help="校验并落盘摘要 JSON 到 .govel/aux/")
     p_commit.add_argument("--project-root", required=True)
     p_commit.add_argument("--input", required=True, help="摘要生成环节返回的 JSON 文件路径")
 

@@ -47,7 +47,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         return read_json(self.root / result['artifactPath'])
 
     def entry(self, kind='stage_b_review'):
-        return read_json(self.root / '.gnovel/workflow.json')['artifacts'][self.chapter][kind]
+        return read_json(self.root / '.govel/workflow.json')['artifacts'][self.chapter][kind]
 
     def artifact_path(self, kind='stage_b_review'):
         value = Path(self.entry(kind)['artifactPath'])
@@ -75,10 +75,10 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         artifact['artifactSha256'] = sha256_json({key: value for key, value in artifact.items() if key != 'artifactSha256'})
         write_json(path, artifact)
         if update_registration:
-            workflow = read_json(self.root / '.gnovel/workflow.json')
+            workflow = read_json(self.root / '.govel/workflow.json')
             entry = workflow['artifacts'][self.chapter]['stage_b_review']
             entry.update(artifactSha256=artifact['artifactSha256'], artifactFileSha256=file_sha256(path), artifactPath=str(path))
-            write_json(self.root / '.gnovel/workflow.json', workflow)
+            write_json(self.root / '.govel/workflow.json', workflow)
 
     def assert_no_current_offsets(self, result):
         self.assertFalse(result['versionBinding']['current'])
@@ -96,7 +96,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         saved = save_candidate_version(self.root, self.chapter, body=body, request_id='active-1',
                                        base_candidate_version=None)
         activate_candidate_version(self.root, self.chapter, candidate_version=saved['version'], expected_active_token=0)
-        return self.root / '.gnovel/workbench/candidates' / self.chapter / saved['fileName']
+        return self.root / '.govel/workbench/candidates' / self.chapter / saved['fileName']
 
     def change_plan_without_changing_report(self):
         source = load_structure(self.root)
@@ -105,7 +105,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         validate_structure(source)
         # Deliberate source drift without invalidation metadata proves the reader
         # verifies actual bindings instead of trusting absence of an invalid flag.
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
 
     def test_public_view_reads_verified_candidate_and_exact_current_locations(self):
         before = self.inventory()
@@ -208,7 +208,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         self.note()
         report_bytes = self.artifact_path().read_bytes()
         self.activate(BODY + '下一轮候选增补了说明。')
-        workflow_bytes = (self.root / '.gnovel/workflow.json').read_bytes()
+        workflow_bytes = (self.root / '.govel/workflow.json').read_bytes()
         before = self.inventory()
         result = self.view()
         self.assertEqual(result['code'], 'REVIEW_REPORT')
@@ -219,7 +219,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         self.assertEqual(result['notes'][f"{self.report['artifactSha256']}:0"]['state'], 'processed')
         self.assertTrue(all(row['anchor']['state'] == 'historical' for row in result['localization']))
         self.assertEqual(self.artifact_path().read_bytes(), report_bytes)
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), workflow_bytes)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), workflow_bytes)
         self.assertEqual(self.inventory(), before)
         with self.assertRaises(StructureError):
             self.note()
@@ -249,7 +249,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
 
     def test_unparseable_active_index_is_unavailable_without_silent_fallback(self):
         self.activate(BODY)
-        (self.root / '.gnovel/workbench/candidates' / self.chapter / 'index.json').write_text('{')
+        (self.root / '.govel/workbench/candidates' / self.chapter / 'index.json').write_text('{')
         result = self.view()
         self.assertEqual(result['versionBinding']['state'], 'unavailable')
         self.assert_no_current_offsets(result)
@@ -276,7 +276,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         self.assertTrue(result['versionBinding']['reasons'])
 
     def test_missing_and_corrupt_proof_inputs_are_unavailable_not_merely_historical(self):
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         original_workflow = workflow_path.read_bytes()
         for kind in ('stage_a_review', 'diagnostics'):
             path = self.artifact_path(kind)
@@ -303,7 +303,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         with self.assertRaises(StructureError) as caught:
             self.register_report(label='登记候选的报告')
         self.assertEqual(caught.exception.code, 'CURRENT_CANDIDATE_UNALIGNED')
-        path = self.root / '.gnovel/workbench/candidates' / self.chapter / 'index.json'
+        path = self.root / '.govel/workbench/candidates' / self.chapter / 'index.json'
         original = read_json(path)
         for missing in (True, False):
             index = deepcopy(original)
@@ -322,8 +322,8 @@ class ReviewReportIntegrityTests(unittest.TestCase):
                     self.note()
 
     def test_stale_plan_or_stage_a_cannot_hide_unavailable_diagnostics(self):
-        source_path = self.root / '.gnovel/structure.json'
-        workflow_path = self.root / '.gnovel/workflow.json'
+        source_path = self.root / '.govel/structure.json'
+        workflow_path = self.root / '.govel/workflow.json'
         original_source, original_workflow = source_path.read_bytes(), workflow_path.read_bytes()
         diagnostics_path = self.artifact_path('diagnostics')
         original_diagnostics = diagnostics_path.read_bytes()
@@ -359,14 +359,14 @@ class ReviewReportIntegrityTests(unittest.TestCase):
             'verdict': 'POLISH_READY', 'slots': evidenced_slots(BODY),
             'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'},
             'factAssessment': {'status': 'no_change'}, 'findings': self.report['payload']['findings']})
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         approve_artifacts(workflow, self.chapter, artifact_hashes={'stage_b_review': result['artifactSha256']}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         source = load_structure(self.root)
         finalize_chapter(self.root, self.chapter, skip_title=True, binding_generation=source['chapters'][0]['proseBinding']['generation'])
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['artifacts'][self.chapter].pop('candidate_prose')
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         self.assertTrue(self.view()['canAnnotate'])
         source = load_structure(self.root)
         first, second = [self.root / row['filePath'] for row in source['chapters']]
@@ -392,7 +392,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
 
     def test_note_is_work_state_only_and_does_not_change_report_source_or_workflow(self):
         protected = {path: path.read_bytes() for path in (
-            self.root / '.gnovel/structure.json', self.root / '.gnovel/workflow.json',
+            self.root / '.govel/structure.json', self.root / '.govel/workflow.json',
             self.artifact_path(), self.artifact_path('candidate_prose'))}
         result = self.note()
         self.assertEqual(result['code'], 'REVIEW_NOTED')
@@ -407,7 +407,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         report_path = self.artifact_path()
         candidate_path = self.artifact_path('candidate_prose')
         original_report = report_path.read_bytes()
-        original_workflow = (self.root / '.gnovel/workflow.json').read_bytes()
+        original_workflow = (self.root / '.govel/workflow.json').read_bytes()
 
         def racing_observation(path):
             result = observe(path)
@@ -418,7 +418,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
         with patch('scripts.core.review_report_sources.guard_observation', side_effect=racing_observation), self.assertRaises(ValueError):
             self.view()
         self.assertEqual(report_path.read_bytes(), original_report + b'\n')
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), original_workflow)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), original_workflow)
 
     def test_ghost_boolean_negative_and_out_of_range_indices_never_create_notes(self):
         for index in (True, False, -1, 2, 100000, 0.0, '0'):
@@ -449,8 +449,8 @@ class ReviewReportIntegrityTests(unittest.TestCase):
     def test_changed_report_during_prepared_note_transaction_is_not_overwritten_or_annotated(self):
         path = self.artifact_path()
         original = path.read_bytes()
-        note_path = self.root / '.gnovel/workbench/review-notes' / f'{self.chapter}.json'
-        workflow = (self.root / '.gnovel/workflow.json').read_bytes()
+        note_path = self.root / '.govel/workbench/review-notes' / f'{self.chapter}.json'
+        workflow = (self.root / '.govel/workflow.json').read_bytes()
 
         def change(phase, relative=None):
             if phase == 'prepared':
@@ -460,11 +460,11 @@ class ReviewReportIntegrityTests(unittest.TestCase):
             self.note()
         self.assertEqual(path.read_bytes(), original + b'\n')
         self.assertFalse(note_path.exists())
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), workflow)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), workflow)
 
     def test_candidate_change_after_note_write_rolls_back_only_the_note(self):
         self.note(note='已有笔记')
-        notes_path = self.root / '.gnovel/workbench/review-notes' / f'{self.chapter}.json'
+        notes_path = self.root / '.govel/workbench/review-notes' / f'{self.chapter}.json'
         original_notes = notes_path.read_bytes()
         candidate_path = self.artifact_path('candidate_prose')
         original_candidate = candidate_path.read_bytes()
@@ -487,10 +487,10 @@ class ReviewReportIntegrityTests(unittest.TestCase):
                 'planApplicabilityReason': '合成夹具实际保留同一动作展开，核对原计划及阶段A适用。'})
         self.report = self.register_report(label='激活稿已检查')
         self.assertTrue(self.view()['canAnnotate'])
-        index_path = self.root / '.gnovel/workbench/candidates' / self.chapter / 'index.json'
+        index_path = self.root / '.govel/workbench/candidates' / self.chapter / 'index.json'
         index = read_json(index_path)
         changed = {**index, 'activeToken': index['activeToken'] + 1}
-        notes_path = self.root / '.gnovel/workbench/review-notes' / f'{self.chapter}.json'
+        notes_path = self.root / '.govel/workbench/review-notes' / f'{self.chapter}.json'
 
         def change(phase, relative=None):
             if phase == 'prepared':
@@ -503,7 +503,7 @@ class ReviewReportIntegrityTests(unittest.TestCase):
 
     def test_competing_note_edit_is_preserved_when_our_write_is_rejected(self):
         self.note(note='原笔记')
-        notes_path = self.root / '.gnovel/workbench/review-notes' / f'{self.chapter}.json'
+        notes_path = self.root / '.govel/workbench/review-notes' / f'{self.chapter}.json'
         changed = read_json(notes_path)
         key = f"{self.report['artifactSha256']}:0"
         changed['notes'][key]['note'] = '另一个编辑器的新笔记'
@@ -525,9 +525,9 @@ class ReviewReportIntegrityTests(unittest.TestCase):
             source = load_structure(root)
             generation = source['chapters'][0]['proseBinding']['generation']
             finalize_chapter(root, cid, skip_title=True, binding_generation=generation)
-            workflow = read_json(root / '.gnovel/workflow.json')
+            workflow = read_json(root / '.govel/workflow.json')
             workflow['artifacts'][cid].pop('candidate_prose')
-            write_json(root / '.gnovel/workflow.json', workflow)
+            write_json(root / '.govel/workflow.json', workflow)
             current = call_operation('review.report-view', root, {'chapterId': cid})
             self.assertEqual(current['localizedAgainst']['kind'], 'formal_prose')
             self.assertTrue(current['versionBinding']['matchesBody'])

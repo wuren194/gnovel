@@ -122,9 +122,9 @@ class LongEvidenceTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 'CURSOR_STALE')
 
     def test_multi_record_reading_retains_remaining_work(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['fragments'][0]['text'] = '甲' * 9100
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         first = prepare_evidence(self.root, kind='review', recordIds=['SF-HEIGHT', 'SF-LOOK'], limit=1)
         self.assertEqual(first['coverage']['remainingMaterials'], 2)
         texts = []
@@ -163,7 +163,7 @@ class SummaryIncrementTests(unittest.TestCase):
         return _commit_summary(self.root, str(path))
 
     def mutate(self, callback):
-        path = self.root / '.gnovel/structure.json'; source = read_json(path)
+        path = self.root / '.govel/structure.json'; source = read_json(path)
         callback(source); source['revision'] += 1; write_json(path, source)
 
     def test_unlinked_anchor_does_not_require_twelve_chapter_reread(self):
@@ -173,7 +173,7 @@ class SummaryIncrementTests(unittest.TestCase):
         self.assertTrue(result['upToDate']); self.assertEqual(result['chapters'], [])
 
     def test_old_body_change_reads_only_changed_body_with_prior_summary(self):
-        source = read_json(self.root / '.gnovel/structure.json'); row = source['chapters'][3]
+        source = read_json(self.root / '.govel/structure.json'); row = source['chapters'][3]
         path = self.root / row['filePath']; path.write_text(path.read_text() + '改动')
         result = _prepare_context(self.root)
         self.assertTrue(result['incremental'])
@@ -207,14 +207,14 @@ class SummaryIncrementTests(unittest.TestCase):
         self.assertTrue(result['refresh']['fullRefresh']); self.assertEqual(len(result['chapters']), 12)
 
     def test_commit_cannot_seal_changed_body_with_same_structure_revision(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         path = self.root / source['chapters'][0]['filePath']; path.write_text('准备后正文已变。')
         with self.assertRaises(StorySummarizerError): self.commit(self.initial)
 
     def test_new_summary_freshness_detects_old_body_change_without_revision_change(self):
         from scripts.core.summary_status import summary_freshness
         from scripts.core.context_builder import build_station_context
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         path = self.root / source['chapters'][2]['filePath']; path.write_text(path.read_text() + '改写')
         freshness = summary_freshness(self.root, source)
         self.assertTrue(freshness['stale'])
@@ -227,7 +227,7 @@ class SummaryIncrementTests(unittest.TestCase):
         self.assertTrue(_prepare_context(self.root)['upToDate'])
 
     def test_damaged_summary_without_dependencies_requires_conservative_refresh(self):
-        path = self.root / '.gnovel/aux/story-summary.json'
+        path = self.root / '.govel/aux/story-summary.json'
         old = read_json(path); old.pop('inputSnapshot'); write_json(path, old)
         report = _prepare_context(self.root)
         self.assertFalse(report['incremental']); self.assertEqual(len(report['chapters']), 12)

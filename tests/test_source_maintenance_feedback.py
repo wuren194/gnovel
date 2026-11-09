@@ -37,7 +37,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.source = source_fixture()
         self.source['fragments'].append({**self.source['fragments'][3], 'fragmentId': 'SF-PLAN',
                                         'contentRole': 'plan', 'text': '计划：独自守门，第二日回家。'})
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def preview(self, items=None, request_id='feedback-1'):
         return preview_proposal_batch(self.root, sourceHash=snapshot_hash(self.source), requestId=request_id,
@@ -58,7 +58,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.source['fieldDefinitions'].append({'fieldId': 'FD-PROJECT', 'key': 'project.plan', 'label': '总规划',
                                                'valueType': 'topic', 'appliesTo': ['project']})
         self.source['entities'].append({'entityId': 'RU-GATE', 'entityType': 'rule', 'name': '门禁规则'})
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         before = self.inventory()
         request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {
             'name': 'query_logic', 'arguments': {'projectRoot': str(self.root), 'view': 'list'}}}
@@ -107,7 +107,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.assertEqual(source['revision'], self.source['revision'] + 1)
         self.assertEqual(source['fragments'][3]['text'], '他单独守过大门。')
         self.assertEqual(source['fragments'][-1]['text'], '计划：单独守门，第三日回家。')
-        self.assertEqual(len(list((self.root / '.gnovel/operations').glob('*.json'))), 1)
+        self.assertEqual(len(list((self.root / '.govel/operations').glob('*.json'))), 1)
         undo(self.root, plan['operationId'], actor='test')
         self.assertEqual(load_structure(self.root)['fragments'], self.source['fragments'])
 
@@ -140,16 +140,16 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
             self.preview(items)
         self.assertEqual(error.exception.code, 'FACT_PROMOTION_REVIEW_REQUIRED')
         self.assertEqual(error.exception.details['itemIndex'], 1)
-        self.assertFalse(list((self.root / '.gnovel/plans').glob('OP-*.json')))
+        self.assertFalse(list((self.root / '.govel/plans').glob('OP-*.json')))
         plan = self.preview()
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         def fail(stage, *args):
-            if stage == 'write' and args == ('.gnovel/structure.json',):
+            if stage == 'write' and args == ('.govel/structure.json',):
                 raise RuntimeError('simulated interruption')
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail), self.assertRaises(RuntimeError):
             call_operation('source.commit', self.root, plan['nextAction']['arguments'])
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
-        self.assertFalse((self.root / f'.gnovel/operations/{plan["operationId"]}.json').exists())
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
+        self.assertFalse((self.root / f'.govel/operations/{plan["operationId"]}.json').exists())
 
     def test_evidence_error_identifies_quote_role_and_reason(self):
         for evidence, reason in (({'fragmentId': 'SF-PLAN', 'quote': '独自'}, 'non_fact_fragment'),
@@ -168,8 +168,8 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
 
     def test_renew_refuses_changed_staged_bytes_without_writes(self):
         plan = self.preview()
-        files = self.root / f'.gnovel/plans/{plan["operationId"]}.files'
-        target = files / '.gnovel/structure.json'
+        files = self.root / f'.govel/plans/{plan["operationId"]}.files'
+        target = files / '.govel/structure.json'
         target.write_bytes(target.read_bytes() + b'\n')
         before = self.inventory()
         with patch('scripts.core.source_requests.time.time', return_value=plan['expiresAtEpoch'] + 1):
@@ -182,7 +182,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
 
     def test_source_scan_word_lists_role_status_read_only_and_cursor_binding(self):
         self.source['fragments'].append({**self.source['fragments'][3], 'fragmentId': 'SF-OLD', 'status': 'archived'})
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         words = self.root / '工作台/禁用词.json'
         write_json(words, ['独自'])
         before = self.inventory()

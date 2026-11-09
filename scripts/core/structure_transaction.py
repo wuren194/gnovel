@@ -122,7 +122,7 @@ def prepare_writes(root: Path, plan: dict, current: dict) -> dict:
         plan['chapterFactGuards'] = validate_fact_plan_inputs(root, plan, current=current)
     for row in plan['writeSet']:
         if outputs[row['path']] is not None:
-            path = safe_project_path(root, f".gnovel/plans/{plan['operationId']}.files/{row['path']}")
+            path = safe_project_path(root, f".govel/plans/{plan['operationId']}.files/{row['path']}")
             write_bytes(path, outputs[row['path']])
     return plan
 
@@ -132,7 +132,7 @@ def _load_outputs(root: Path, plan: dict) -> dict:
     for row in plan['writeSet']:
         data = None
         if row['after']['exists']:
-            path = safe_project_path(root, f".gnovel/plans/{plan['operationId']}.files/{row['path']}")
+            path = safe_project_path(root, f".govel/plans/{plan['operationId']}.files/{row['path']}")
             data = path.read_bytes()
             if digest(data) != row['after']['sha256']:
                 raise StructureError('PLAN_HASH_MISMATCH', 'staged content differs from approved write set')
@@ -143,7 +143,7 @@ def _load_outputs(root: Path, plan: dict) -> dict:
 def _reject_unsafe_plan(root: Path, operation_id: str, plan_hash: str) -> None:
     """Refuse a substituted, expired or path-unsafe plan *before* the lock is taken.
 
-    Acquiring the lock creates `.gnovel/structure.lock` inside the project, so in a
+    Acquiring the lock creates `.govel/structure.lock` inside the project, so in a
     tree someone swapped for a symlink that check would already have written through
     the link. The same validations run again under the lock; this pass exists to keep
     lock-free callers — and lock-free refusals — honest.
@@ -247,7 +247,7 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
     # against the freshly loaded current state before anything is written——same exact
     # materialization capability as the preview（实施轮 §15/§36/§55）。
     _enforce_transaction_boundary(plan, current, proposed, root=root)
-    if outputs['.gnovel/structure.json'] != json_bytes(proposed):
+    if outputs['.govel/structure.json'] != json_bytes(proposed):
         raise StructureError('PLAN_HASH_MISMATCH', 'staged structure does not match semantic preview')
     # The historical ID inventory is copied from impact into the committed ledger.
     # Bind its three identity lists to the actual source delta, even if somebody
@@ -340,7 +340,7 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
     chapter = next((c for c in proposed['chapters'] if c['chapterId'] == plan['parameters'].get('chapterId')), None)
     result = {'ok': True, 'code': 'STRUCTURE_COMMITTED', **journal, **({'chapter': chapter} if chapter else {}),
             'semanticFollowUp': ['refresh_context', 'regenerate_affected_outline', 'repeat_review_and_approval']
-            if '.gnovel/workflow.json' in journal['backupFiles'] else []}
+            if '.govel/workflow.json' in journal['backupFiles'] else []}
     from .source_reports import public_report
     result['semanticFollowUp'] = ['query_source_reviews', 'query_source_prose_evidence']
     return public_report(result, root=root)
@@ -365,12 +365,12 @@ def validate_undo(root: Path, operation_id: str, journal: dict, *, preserve_sour
         raise StructureError('UNDO_UNVERIFIABLE', 'incomplete inventory')
     existed = {}
     for relative in files:
-        if preserve_source_runtime and relative in {'.gnovel/source-review.json', '.gnovel/workflow.json'}:
+        if preserve_source_runtime and relative in {'.govel/source-review.json', '.govel/workflow.json'}:
             continue
         before, after = journal['beforeFiles'][relative], journal['afterFiles'][relative]
         current = file_state(safe_project_path(root, relative))
         if current != after:
-            if relative == '.gnovel/structure.json':
+            if relative == '.govel/structure.json':
                 # 撤销本身会把 revision +1：内容等价（忽略 revision/时间戳）视为未冲突。
                 try:
                     from .author_decisions import undo_content_equivalent
@@ -379,7 +379,7 @@ def validate_undo(root: Path, operation_id: str, journal: dict, *, preserve_sour
                     equivalent = False
                 if not equivalent:
                     raise StructureError('UNDO_FILE_CONFLICT', 'structure changed after commit', {'path': relative})
-            elif Path(relative).parent == Path('.gnovel/cache'):
+            elif Path(relative).parent == Path('.govel/cache'):
                 pass  # 派生缓存按新 revision 重建，不算作者改动
             else:
                 raise StructureError('UNDO_FILE_CONFLICT', 'newer edits would be overwritten', {'path': relative})
@@ -499,19 +499,19 @@ def _undo_target_structure(root: Path, operation_id: str, journal: dict) -> tupl
     from .structure_commands import _operation_paths, _backup_path
     _, _, backup = _operation_paths(root, operation_id)
     before_files = journal.get('beforeFiles')
-    row = before_files.get('.gnovel/structure.json') if isinstance(before_files, dict) else None
+    row = before_files.get('.govel/structure.json') if isinstance(before_files, dict) else None
     if not isinstance(row, dict) or row.get('exists') is not True:
         raise StructureError('UNDO_UNVERIFIABLE',
                              'the target journal does not carry a structure before-image',
                              {'operationId': operation_id})
-    source = safe_project_path(root, _backup_path(backup, '.gnovel/structure.json').relative_to(root))
+    source = safe_project_path(root, _backup_path(backup, '.govel/structure.json').relative_to(root))
     if not source.is_file():
         raise StructureError('BACKUP_MISSING', 'the operation before-image is unavailable',
-                             {'path': '.gnovel/structure.json'})
+                             {'path': '.govel/structure.json'})
     raw = source.read_bytes()
     if digest(raw) != row.get('sha256'):
         raise StructureError('BACKUP_HASH_MISMATCH', 'the operation before-image is damaged',
-                             {'path': '.gnovel/structure.json'})
+                             {'path': '.govel/structure.json'})
     try:
         before = json.loads(raw)
     except ValueError as exc:
@@ -579,9 +579,9 @@ def _reverse_write_set(root: Path, journal: dict, backup: Path) -> tuple[dict, d
     outputs: dict[str, bytes | None] = {}
     modes: dict[str, int] = {}
     for relative in journal['backupFiles']:
-        if relative == '.gnovel/structure.json':
+        if relative == '.govel/structure.json':
             continue
-        if Path(relative).parent == Path('.gnovel/cache'):
+        if Path(relative).parent == Path('.govel/cache'):
             continue
         before = journal['beforeFiles'][relative]
         if before.get('exists'):
@@ -754,7 +754,7 @@ def _monotonic_undo_locked(root: Path, operation_id: str, *, journal: dict, curr
             operation_id=undo_operation_id, revision=proposed['revision'], restoring=True)
     validate_structure(proposed)
     outputs, modes = _reverse_write_set(root, journal, backup)
-    outputs['.gnovel/structure.json'] = json_bytes(proposed)
+    outputs['.govel/structure.json'] = json_bytes(proposed)
     impact = {}
     from .source_impact import source_impact, review_outputs
     impact = source_impact(current, proposed, root=root)

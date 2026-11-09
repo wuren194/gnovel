@@ -34,7 +34,7 @@ def validate_summary(payload) -> None:
 
 
 def load_summary(root: Path) -> dict | None:
-    target = root / '.gnovel/aux/story-summary.json'
+    target = root / '.govel/aux/story-summary.json'
     if not target.is_file() or target.is_symlink():
         return None
     try:

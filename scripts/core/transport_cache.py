@@ -17,7 +17,7 @@ REFERENCE = re.compile(r'gn:([a-z-]+):([0-9a-f]{32})\Z')
 
 
 def _directory():
-    path = Path(tempfile.gettempdir()) / f'gnovel-transport-{os.getuid()}'
+    path = Path(tempfile.gettempdir()) / f'govel-transport-{os.getuid()}'
     path.mkdir(mode=0o700, exist_ok=True)
     state = path.lstat()
     if not stat.S_ISDIR(state.st_mode) or state.st_uid != os.getuid() or state.st_mode & 0o077:
@@ -70,7 +70,7 @@ def preparation_signature(root):
     from .static_cache import signature, toolbox_signature
     root = Path(root).resolve()
     paths = [root / 'AGENTS.md']
-    for directory in ('.gnovel', '设定', '规划', '正文', '工作台'):
+    for directory in ('.govel', '设定', '规划', '正文', '工作台'):
         paths.extend(p for p in (root / directory).rglob('*')
                      if (p.is_file() or p.is_symlink()) and p.name != 'structure.lock')
     value = (tuple((str(p), signature(p)) for p in sorted(set(paths))), toolbox_signature())

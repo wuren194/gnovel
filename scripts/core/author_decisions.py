@@ -27,7 +27,7 @@ def _scope_hashes(source: dict, scope_ids: list[str]) -> dict[str, str]:
     records = _scoped_records(source)
     index = SourceIndex.build(source)
     return {rid: hashlib.sha256(canonical_json({
-                'purpose': 'gnovel:author-decision:scope',
+                'purpose': 'govel:author-decision:scope',
                 'basis': SCOPE_SNAPSHOT_BASIS, 'recordId': rid,
                 'content': _scope_content(source, index, records, rid)
             }).encode()).hexdigest()
@@ -446,7 +446,7 @@ def _committed_source_image(root, journal, side):
     from .jsonio import read_json
     from .write_sets import digest, safe_project_path
     from .structure_store import structure_hash
-    relative = '.gnovel/structure.json'
+    relative = '.govel/structure.json'
     expected = journal.get(side + 'Files', {}).get(relative, {})
     if not expected.get('exists'):
         return None
@@ -454,10 +454,10 @@ def _committed_source_image(root, journal, side):
     if side == 'before':
         candidates.append(safe_project_path(root, journal['backupPath'] + '/structure.json'))
     else:
-        candidates.append(safe_project_path(root, f".gnovel/plans/{journal['operationId']}.files/{relative}"))
-        journal_path = safe_project_path(root, f".gnovel/operations/{journal['operationId']}.json")
+        candidates.append(safe_project_path(root, f".govel/plans/{journal['operationId']}.files/{relative}"))
+        journal_path = safe_project_path(root, f".govel/operations/{journal['operationId']}.json")
         journal_digest = digest(journal_path.read_bytes())
-        for terminal in sorted(safe_project_path(root, '.gnovel/transactions').glob('TX-*/completed.json')):
+        for terminal in sorted(safe_project_path(root, '.govel/transactions').glob('TX-*/completed.json')):
             manifest = read_json(safe_project_path(root, terminal.relative_to(root)))
             if not isinstance(manifest, dict) or manifest.get('phase') != 'committed':
                 continue
@@ -504,7 +504,7 @@ def undo_content_equivalent(root, current, journal):
                 continue
             if prior_marker is not None or not _valid_invalidation(marker):
                 return False
-            proof = read_json(safe_project_path(root, f".gnovel/operations/{marker['operationId']}.json"))
+            proof = read_json(safe_project_path(root, f".govel/operations/{marker['operationId']}.json"))
             if proof.get('operationId') != marker['operationId'] or proof.get('afterRevision') != marker['revision']:
                 return False
             proof_before = _committed_source_image(root, proof, 'before')

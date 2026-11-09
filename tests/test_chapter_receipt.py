@@ -22,9 +22,9 @@ class ChapterReceiptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             fixture = create_schema5_project(root, chapter_count=1)
-            structure = read_json(root / ".gnovel/structure.json")
+            structure = read_json(root / ".govel/structure.json")
             structure["chapters"][0]["status"] = "review"
-            write_json(root / ".gnovel/structure.json", structure)
+            write_json(root / ".govel/structure.json", structure)
             receipt = chapter_receipt(root, fixture["chapterIds"][0])
             codes = {item["code"] for item in receipt["blockers"]}
             self.assertIn("FINAL_ARTIFACTS_MISSING", codes)

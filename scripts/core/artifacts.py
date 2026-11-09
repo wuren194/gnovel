@@ -49,7 +49,7 @@ def envelope(
     project_id: str | None = None,
     chapter_id: str | None = None,
     source_sha256: str | None = None,
-    producer: str = "gnovel",
+    producer: str = "govel",
 ) -> dict[str, Any]:
     body = {
         "artifactType": artifact_type,

@@ -93,7 +93,7 @@ class RegistryConsumerGuards(unittest.TestCase):
         editor = tool_cards.render_card('editor')
         self.assertIn('chapter.mechanical', editor)
         self.assertIn('chapter.finalize', editor)
-        self.assertIn('gnovel-editor/SKILL.md', editor)
+        self.assertIn('govel-editor/SKILL.md', editor)
         self.assertNotIn('summary.commit', editor, '候选写入类能力不进语义工位的条件段')
         # 每个出现的能力 ID 都必须能在目录里解析（工位入口的可达性）
         catalog = {cap['id'] for cap in load_catalog()['capabilities']}
@@ -155,17 +155,17 @@ class TransportAlignmentGuards(unittest.TestCase):
             result = call('workflow_set_next', {'projectRoot': str(root), 'chapterId': chapter,
                                                 'nextAction': 'editor', 'reason': 'test'})
             self.assertFalse(result['isError'], result)
-            self.assertEqual(json.loads((root / '.gnovel/workflow.json').read_text())['nextAction']['action'], 'editor')
+            self.assertEqual(json.loads((root / '.govel/workflow.json').read_text())['nextAction']['action'], 'editor')
             from scripts.core.locks import project_lock, project_lock_observation
             self.assertFalse(project_lock_observation(root)['locked'], '写入结束必须释放锁')
             # 竞争样本：锁被活进程持有时 MCP 写入必须拒绝且不动 workflow
-            before = (root / '.gnovel/workflow.json').read_bytes()
+            before = (root / '.govel/workflow.json').read_bytes()
             with project_lock(root):
                 result = call('workflow_set_next', {'projectRoot': str(root), 'chapterId': chapter,
                                                     'nextAction': 'writer', 'reason': 'contended'})
             self.assertTrue(result['isError'])
             self.assertEqual(result['structuredContent']['code'], 'PROJECT_LOCKED')
-            self.assertEqual((root / '.gnovel/workflow.json').read_bytes(), before)
+            self.assertEqual((root / '.govel/workflow.json').read_bytes(), before)
 
     def test_skill_and_operation_bindings_are_different_types(self):
         catalog = load_catalog()
@@ -201,10 +201,10 @@ class TransportAlignmentGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             fixture = review_ready_project(root)
-            workflow_before = (root / '.gnovel/workflow.json').read_bytes()
+            workflow_before = (root / '.govel/workflow.json').read_bytes()
             result = execute_task_actions(root, 'editor', chapter_id=fixture['chapterIds'][0], authorization='read')
             self.assertFalse(result['approvalsPerformed'])
-            self.assertEqual((root / '.gnovel/workflow.json').read_bytes(), workflow_before,
+            self.assertEqual((root / '.govel/workflow.json').read_bytes(), workflow_before,
                              'read 授权不得改写批准状态')
             self.assertTrue(all(item.get('operation') != 'project.workflow.artifact-approve' for item in result['executed']))
 
@@ -261,7 +261,7 @@ class TaskEntryWiringGuards(unittest.TestCase):
             root = Path(temp).resolve()
             fixture = review_ready_project(root)
             chapter_id = fixture['chapterIds'][0]
-            artifact_path = Path(read_json(root/'.gnovel/workflow.json')['artifacts'][chapter_id]['diagnostics']['artifactPath'])
+            artifact_path = Path(read_json(root/'.govel/workflow.json')['artifacts'][chapter_id]['diagnostics']['artifactPath'])
             artifact = read_json(artifact_path)
             artifact['payload']['draftSha256'] = 'f' * 64
             write_json(artifact_path, artifact)
@@ -279,7 +279,7 @@ class TaskEntryWiringGuards(unittest.TestCase):
             structure['chapters'][0]['status'] = 'draft'
             save_structure(root, structure)
             # 机械证据指向不再匹配的输入（带指纹）→ 不再是「当前证据」
-            artifact_path = Path(read_json(root/'.gnovel/workflow.json')['artifacts'][chapter_id]['diagnostics']['artifactPath'])
+            artifact_path = Path(read_json(root/'.govel/workflow.json')['artifacts'][chapter_id]['diagnostics']['artifactPath'])
             artifact = read_json(artifact_path)
             artifact['payload']['inputHash'] = 'f' * 64
             artifact['payload']['run'] = {'mode': 'plot', 'intensityLevel': 1, 'sceneParagraphs': '', 'strictFloor': False}

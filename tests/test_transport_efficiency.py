@@ -107,7 +107,7 @@ class TransportTests(unittest.TestCase):
         from tests.context_semantic_fixture import fixture
         from tests.test_context_builder import save_context_source
         cid, goal = fixture(self.root, 'small')
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['pairAssessment'] = {'status': 'not_applicable', 'reason': '本合成视角传输测试没有配对情节。'}
         visible = next(r for r in source['fragments'] if r['fragmentId'] == 'SF-BELIEF')
         visible['text'] = '甲认得门上的字。' * 1800
@@ -140,10 +140,10 @@ class TransportTests(unittest.TestCase):
         cid = self.chapter(); body = '甲' * 3000 + '唯一定位句。' + '乙' * 3000
         # This fixture measures two explicit review issues, not old mechanical
         # findings attached to the original short body.
-        workflow = read_json(self.root/'.gnovel/workflow.json')
+        workflow = read_json(self.root/'.govel/workflow.json')
         workflow['artifacts'][cid].pop('diagnostics', None)
         workflow['approvals'][cid].get('artifactHashes', {}).pop('diagnostics', None)
-        write_json(self.root/'.gnovel/workflow.json', workflow)
+        write_json(self.root/'.govel/workflow.json', workflow)
         (self.root / '工作台/input.txt').write_text(body)
         call_operation('workflow.artifact-pack', self.root, {'chapterId': cid, 'artifactType': 'candidate_prose', 'input': '工作台/input.txt'})
         findings = [{'severity': 'S2', 'ruleId': rule, 'summary': '独立问题', 'location': body,
@@ -200,7 +200,7 @@ class TransportTests(unittest.TestCase):
         payload.update(schemaVersion=prepared['schemaVersion'], storySummary='测试摘要', plotLine=[], characterSummaries=[])
         path = self.root / 'summary.json'; write_json(path, payload)
         self.assertTrue(_commit_summary(self.root, str(path))['ok'])
-        saved = read_json(self.root / '.gnovel/aux/story-summary.json')
+        saved = read_json(self.root / '.govel/aux/story-summary.json')
         self.assertIn('inputSnapshot', saved)
         prose = self.root / prepared['chapters'][0]['relativePath']; prose.write_text('准备后被修改')
         with self.assertRaises(StorySummarizerError): _commit_summary(self.root, str(path))

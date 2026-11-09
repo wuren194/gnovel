@@ -53,7 +53,7 @@ def _subprocess_env() -> dict[str, str]:
     env["GIT_OPTIONAL_LOCKS"] = "0"  # status 不刷新 index 的 stat cache。
     # Product logging is on by default; regression calls are not personal use
     # evidence. Logging tests explicitly enable their own temporary stores.
-    env["GNOVEL_LOG_MODE"] = "off"
+    env["GOVEL_LOG_MODE"] = "off"
     return env
 
 
@@ -302,7 +302,7 @@ def discovered_test_gate(discovery: dict, *, timeout=None, jobs=None, started=No
     jobs = test_worker_count(jobs)
     serial = [r for r in discovery['modules'] if _runner().serial_reason(r['module'])]
     parallel = [r for r in discovery['modules'] if not _runner().serial_reason(r['module'])]
-    with tempfile.TemporaryDirectory(prefix='gnovel-tests-', dir=_temp_root()) as directory:
+    with tempfile.TemporaryDirectory(prefix='govel-tests-', dir=_temp_root()) as directory:
         # No other lane is running while serial tests touch shared inputs/GPU.
         runs = _module_queue(serial, 1, directory, timeout)
         runs += _module_queue(parallel, jobs, directory, timeout)
@@ -597,7 +597,7 @@ def resolve_report_path(report_out: str | None) -> Path:
         if path.exists():
             raise FileExistsError("Report output must be a new file; existing files are never overwritten")
         return path
-    return Path(tempfile.mkdtemp(prefix="gnovel-local-ci-", dir=_temp_root())) / "local-ci-report.json"
+    return Path(tempfile.mkdtemp(prefix="govel-local-ci-", dir=_temp_root())) / "local-ci-report.json"
 
 
 def _exception_gate(name: str, exc: Exception) -> dict:
@@ -628,7 +628,7 @@ def run_gates(focus: list[str], timeout: float | None = None, before: dict | Non
 
 
 def _temporary_checker_gate(timeout: float | None) -> dict:
-    with tempfile.TemporaryDirectory(prefix="gnovel-checker-", dir=_temp_root()) as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="govel-checker-", dir=_temp_root()) as temp_dir:
         return checker_baseline_gate(temp_dir, timeout)
 
 

@@ -17,7 +17,7 @@ class StatePreviewTests(unittest.TestCase):
 
     def test_current_projection_is_checked_without_cache_or_markdown(self):
         for name in ('story-state.json', 'story-design.json'):
-            (self.root/'.gnovel/cache'/name).unlink(missing_ok=True)
+            (self.root/'.govel/cache'/name).unlink(missing_ok=True)
         before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
         result = state_preview(self.root, self.cid)
         self.assertTrue(result['baseMatches'])
@@ -28,12 +28,12 @@ class StatePreviewTests(unittest.TestCase):
         self.assertFalse(list((self.root/'工作台').glob('*设定回写候选*')))
 
     def test_source_change_makes_binding_mismatch_visible(self):
-        path = self.root/'.gnovel/structure.json'; source = read_json(path)
+        path = self.root/'.govel/structure.json'; source = read_json(path)
         source['revision'] += 1; write_json(path, source)
         self.assertFalse(state_preview(self.root, self.cid)['baseMatches'])
 
     def test_modified_or_invalidated_artifact_cannot_be_previewed_as_current(self):
-        workflow_path = self.root/'.gnovel/workflow.json'; workflow = read_json(workflow_path)
+        workflow_path = self.root/'.govel/workflow.json'; workflow = read_json(workflow_path)
         entry = workflow['artifacts'][self.cid]['state_candidate']
         artifact_path = Path(entry['artifactPath'])
         original = artifact_path.read_bytes(); artifact_path.write_bytes(original+b' ')

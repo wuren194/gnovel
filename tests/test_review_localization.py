@@ -94,7 +94,7 @@ class ReviewReportViewTests(unittest.TestCase):
     def test_absent_report_is_honest_not_fabricated(self) -> None:
         # review_ready_project 只给第一章登记过工件；第二章应当如实报「无报告」。
         from scripts.core.jsonio import read_json
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         second_id = structure["chapters"][1]["chapterId"]
         view = review_report_view(self.root, second_id, body=None, body_kind="none")
         self.assertEqual(view["code"], "REVIEW_REPORT_ABSENT")

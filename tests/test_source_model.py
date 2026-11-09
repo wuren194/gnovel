@@ -176,7 +176,7 @@ class SourceQueryTests(unittest.TestCase):
             query_source(self.root, view='list', limit=2, cursor=first['nextCursor'])
         self.assertEqual(error.exception.code, 'CURSOR_QUERY_MISMATCH')
         self.source['revision'] += 1
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as error:
             query_source(self.root, view='detail', limit=2, cursor=first['nextCursor'])
         self.assertEqual(error.exception.code, 'CURSOR_STALE')
@@ -187,7 +187,7 @@ class SourceQueryTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 'FIELD_TOO_LARGE')
 
     def test_real_cli_query_is_read_only(self):
-        path = self.root / '.gnovel/structure.json'; before = path.read_bytes()
+        path = self.root / '.govel/structure.json'; before = path.read_bytes()
         proc = subprocess.run([sys.executable, str(ROOT / 'scripts/novelctl.py'), 'project', 'source', 'query',
                                '--project-root', str(self.root), '--view', 'detail', '--selection',
                                json.dumps({'includeAttributes': ['AT-LIFE']})], capture_output=True, text=True)

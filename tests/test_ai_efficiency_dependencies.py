@@ -58,7 +58,7 @@ class PreparationDependencyTests(unittest.TestCase):
 
     def test_registered_workbench_content_and_authorization_change_are_named(self):
         report, args = self.prepare()
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         candidate = self.root / workflow['artifacts'][self.chapter]['candidate_prose']['artifactPath']
         candidate.write_bytes(candidate.read_bytes() + b'\n')
         with self.assertRaises(StructureError) as caught:
@@ -67,22 +67,22 @@ class PreparationDependencyTests(unittest.TestCase):
                       [item.get('path') for item in caught.exception.details['changedItems']])
         _, args = self.prepare()
         workflow['approvedChapterIds'] = []
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         with self.assertRaises(StructureError) as caught:
             call_operation('task.read-batch', self.root, args)
-        self.assertTrue(any(item['kind'] == 'authorization' and item['path'] == '.gnovel/workflow.json'
+        self.assertTrue(any(item['kind'] == 'authorization' and item['path'] == '.govel/workflow.json'
                             for item in caught.exception.details['changedItems']))
 
     def test_new_member_of_a_consumed_query_invalidates(self):
         _, args = self.prepare()
-        path = self.root / '.gnovel/transactions/TX-test.json'
+        path = self.root / '.govel/transactions/TX-test.json'
         path.parent.mkdir(parents=True, exist_ok=True)
         write_json(path, {'transactionId': 'TX-test', 'phase': 'prepared'})
         from scripts.core.transport_cache import prepared
         with self.assertRaises(StructureError) as caught:
             prepared(self.root, args['credential'])
         membership = next(item for item in caught.exception.details['changedItems'] if item['kind'] == 'query-membership')
-        self.assertIn('.gnovel/transactions/TX-test.json', membership['added'])
+        self.assertIn('.govel/transactions/TX-test.json', membership['added'])
 
     def test_creation_of_optional_project_rules_is_not_ignored(self):
         _, args = self.prepare()
@@ -111,7 +111,7 @@ class EvidencePageDependencyTests(unittest.TestCase):
         self.record = source['fragments'][0]['fragmentId']
         source['fragments'][0]['text'] = '原始连续正文😀。\r\n' * 2000
         self.text = source['fragments'][0]['text']
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         self.args = {'kind': 'review', 'recordIds': [self.record], 'maxBytes': 3000}
 
     def test_remaining_pages_do_not_prepare_again_and_keep_original_snapshot(self):
@@ -132,9 +132,9 @@ class EvidencePageDependencyTests(unittest.TestCase):
 
     def test_changed_inputs_and_missing_page_cache_cannot_rebind(self):
         first = call_operation('evidence.prepare', self.root, self.args)
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['fragments'][0]['text'] = 'changed'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError) as caught:
             call_operation('evidence.prepare', self.root, {**self.args, 'cursor': first['nextCursor']})
         self.assertEqual(caught.exception.code, 'CURSOR_STALE')

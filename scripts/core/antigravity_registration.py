@@ -124,25 +124,25 @@ def inspect_entry(entry, script: Path) -> dict:
         problems.append({'code': code, 'message': message})
 
     if entry is None:
-        problem('MCP_REGISTRATION_MISSING', '官方全局 MCP 配置缺少 gnovel 注册')
+        problem('MCP_REGISTRATION_MISSING', '官方全局 MCP 配置缺少 govel 注册')
         return {'configHealthy': False, 'problems': problems}
     if not isinstance(entry, dict):
-        problem('MCP_ENTRY_INVALID', 'gnovel 注册必须是对象')
+        problem('MCP_ENTRY_INVALID', 'govel 注册必须是对象')
         return {'configHealthy': False, 'problems': problems}
     for key, inactive in (('disabled', True), ('enabled', False)):
         if key in entry and type(entry[key]) is not bool:
-            problem('MCP_ENABLED_INVALID', 'gnovel 启用字段必须是布尔值')
+            problem('MCP_ENABLED_INVALID', 'govel 启用字段必须是布尔值')
         elif entry.get(key) is inactive:
-            problem('MCP_REGISTRATION_DISABLED', 'gnovel 注册已禁用')
+            problem('MCP_REGISTRATION_DISABLED', 'govel 注册已禁用')
     if entry.get('type', 'stdio') != 'stdio' or 'url' in entry or 'serverUrl' in entry:
-        problem('MCP_TRANSPORT_CONFLICT', 'gnovel 应使用本地 stdio，不能同时带远程 URL')
+        problem('MCP_TRANSPORT_CONFLICT', 'govel 应使用本地 stdio，不能同时带远程 URL')
     environment = entry.get('env', {})
     environment_valid = (isinstance(environment, dict)
                          and all(isinstance(key, str) and key and '=' not in key and '\0' not in key
                                  and isinstance(value, str) and '\0' not in value for key, value in environment.items()))
     command = _python_command(entry.get('command'), environment if environment_valid else {})
     if command is None:
-        problem('MCP_COMMAND_INVALID', 'gnovel command 不是当前环境可执行的 Python')
+        problem('MCP_COMMAND_INVALID', 'govel command 不是当前环境可执行的 Python')
     args = entry.get('args')
     valid_args = isinstance(args, list) and bool(args) and all(isinstance(arg, str) and '\0' not in arg for arg in args)
     if valid_args:
@@ -151,16 +151,16 @@ def inspect_entry(entry, script: Path) -> dict:
         except (OSError, ValueError, RuntimeError):
             valid_args = False
     if not valid_args:
-        problem('MCP_SCRIPT_MISMATCH', 'gnovel args 的首项必须是当前工具箱 MCP 入口的绝对路径')
+        problem('MCP_SCRIPT_MISMATCH', 'govel args 的首项必须是当前工具箱 MCP 入口的绝对路径')
     elif not startup_arguments_valid(args[1:]):
-        problem('MCP_ARGUMENTS_INVALID', 'gnovel 的入口参数无法启动服务；请移除无效选项或 help 参数')
+        problem('MCP_ARGUMENTS_INVALID', 'govel 的入口参数无法启动服务；请移除无效选项或 help 参数')
     if not script.is_file():
         problem('MCP_SCRIPT_MISSING', '当前工具箱缺少 scripts/mcp_server.py')
     if not environment_valid:
-        problem('MCP_ENV_INVALID', 'gnovel env 必须是合法字符串键值对象')
+        problem('MCP_ENV_INVALID', 'govel env 必须是合法字符串键值对象')
     if 'cwd' in entry and (not isinstance(entry['cwd'], str) or '\0' in entry['cwd'] or not Path(entry['cwd']).is_absolute()
                            or not Path(entry['cwd']).is_dir()):
-        problem('MCP_CWD_INVALID', 'gnovel cwd 必须是存在的绝对目录')
+        problem('MCP_CWD_INVALID', 'govel cwd 必须是存在的绝对目录')
     return {'configHealthy': not problems, 'problems': problems,
             'resolvedCommand': command, 'script': str(script)}
 
@@ -168,9 +168,9 @@ def inspect_entry(entry, script: Path) -> dict:
 def _desired_configuration(snapshot: dict, script: Path) -> dict:
     data = deepcopy(snapshot['data'])
     entries = data.setdefault('mcpServers', {})
-    entry = entries.get('gnovel')
-    if 'gnovel' in entries and not isinstance(entry, dict):
-        raise RegistrationError('MCP_ENTRY_INVALID', 'gnovel 注册不是对象，无法安全合并；保留原文件')
+    entry = entries.get('govel')
+    if 'govel' in entries and not isinstance(entry, dict):
+        raise RegistrationError('MCP_ENTRY_INVALID', 'govel 注册不是对象，无法安全合并；保留原文件')
     entry = deepcopy(entry or {})
     # Environment and unknown options are user-owned. Malformed environment
     # data must not be silently discarded while repairing the launch command.
@@ -178,7 +178,7 @@ def _desired_configuration(snapshot: dict, script: Path) -> dict:
     if (not isinstance(environment, dict)
             or any(not isinstance(key, str) or not key or '=' in key or '\0' in key
                    or not isinstance(value, str) or '\0' in value for key, value in environment.items())):
-        raise RegistrationError('MCP_ENV_INVALID', 'gnovel env 无法安全合并；保留原文件')
+        raise RegistrationError('MCP_ENV_INVALID', 'govel env 无法安全合并；保留原文件')
     args = entry.get('args')
     tail = (args[1:] if isinstance(args, list) and args and all(isinstance(arg, str) and '\0' not in arg for arg in args)
             and args[0].endswith('.py') else [])
@@ -196,7 +196,7 @@ def _desired_configuration(snapshot: dict, script: Path) -> dict:
     if 'cwd' in entry and (not isinstance(entry['cwd'], str) or '\0' in entry['cwd'] or not Path(entry['cwd']).is_absolute()
                            or not Path(entry['cwd']).is_dir()):
         entry.pop('cwd')
-    entries['gnovel'] = entry
+    entries['govel'] = entry
     inspected = inspect_entry(entry, script)
     if not inspected['configHealthy']:
         raise RegistrationError('MCP_REPAIR_INVALID', '无法生成有效的本地 MCP 注册')
@@ -226,7 +226,7 @@ def _sync_directory(path):
 
 
 def _pending_path(path):
-    return path.parent / '.gnovel-mcp-install-pending.json'
+    return path.parent / '.govel-mcp-install-pending.json'
 
 
 def pending_registration(path: Path) -> dict | None:
@@ -252,8 +252,8 @@ def pending_registration(path: Path) -> dict | None:
     except (ValueError, TypeError, KeyError) as exc:
         raise RegistrationError('MCP_RECOVERY_INVALID', 'MCP 安装恢复标记损坏；保留配置和备份') from exc
     return {**payload,
-            'backupPath': str(path.parent / f'.{path.name}.gnovel-backup-{payload["token"]}'),
-            'stagedPath': str(path.parent / f'.gnovel-mcp-staged-{payload["token"]}')}
+            'backupPath': str(path.parent / f'.{path.name}.govel-backup-{payload["token"]}'),
+            'stagedPath': str(path.parent / f'.govel-mcp-staged-{payload["token"]}')}
 
 
 def _restore_backup(path: Path, backup: Path, mode: int) -> bool:
@@ -261,7 +261,7 @@ def _restore_backup(path: Path, backup: Path, mode: int) -> bool:
     saved = _read_file(backup)
     if saved['raw'] is None:
         raise RegistrationError('MCP_RECOVERY_MISSING', '被移走的 MCP 配置备份不可读', backup_path=backup)
-    temporary = path.parent / ('.gnovel-mcp-restore-' + uuid.uuid4().hex)
+    temporary = path.parent / ('.govel-mcp-restore-' + uuid.uuid4().hex)
     try:
         _write_private(temporary, saved['raw'])
         temporary.chmod(mode)
@@ -343,8 +343,8 @@ def _publish_configuration(path: Path, snapshot: dict, raw: bytes, token: str) -
     replace a particular file version. A durable marker allows the next install
     to restore the actual displaced version after a kill in this short window.
     """
-    staged = path.parent / f'.gnovel-mcp-staged-{token}'
-    backup = path.parent / f'.{path.name}.gnovel-backup-{token}'
+    staged = path.parent / f'.govel-mcp-staged-{token}'
+    backup = path.parent / f'.{path.name}.govel-backup-{token}'
     pending = {'schemaVersion': 1, 'token': token,
                'originalSha256': hashlib.sha256(snapshot['raw']).hexdigest() if snapshot['raw'] is not None else None,
                'installedSha256': hashlib.sha256(raw).hexdigest(), 'originalMode': snapshot['mode']}
@@ -399,7 +399,7 @@ def install_registration(path: Path, script: Path) -> dict:
     path = _configuration_path(path)
     if not path.parent.is_dir():
         raise RegistrationError('MCP_CONFIG_PARENT_MISSING', 'Antigravity 官方配置目录不存在')
-    lock_path = path.parent / '.gnovel-mcp-install.lock'
+    lock_path = path.parent / '.govel-mcp-install.lock'
     descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
     try:
         info = os.fstat(descriptor)
@@ -415,8 +415,8 @@ def install_registration(path: Path, script: Path) -> dict:
         if (json.dumps(desired, sort_keys=True, allow_nan=False) == json.dumps(snapshot['data'], sort_keys=True, allow_nan=False)
                 and snapshot['raw'] is not None):
             return {'changed': False, 'backupPath': None, 'changedFields': [], 'recovery': recovery}
-        previous = snapshot['data'].get('mcpServers', {}).get('gnovel', {})
-        current = desired['mcpServers']['gnovel']
+        previous = snapshot['data'].get('mcpServers', {}).get('govel', {})
+        current = desired['mcpServers']['govel']
         absent = object()
         changed_fields = sorted(key for key in previous.keys() | current.keys()
                                 if type(previous.get(key, absent)) is not type(current.get(key, absent))

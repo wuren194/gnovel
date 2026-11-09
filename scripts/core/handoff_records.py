@@ -11,7 +11,7 @@
   依赖已变化时标记 stale。
 - 不消费上下文的任务显式记录 `contextApplicable: false`，不伪造 contextHash。
 
-存储：`.gnovel/handoffs/index.json`（单文件，容量受 single-track 与任务数天然约束）。
+存储：`.govel/handoffs/index.json`（单文件，容量受 single-track 与任务数天然约束）。
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from .project import knowledge_policy, resolve_knowledge_mode
 from .structure_store import StructureError, load_structure
 
 HANDOFF_INDEX_SCHEMA_VERSION = 1
-HANDOFFS_PATH = ".gnovel/handoffs/index.json"
+HANDOFFS_PATH = ".govel/handoffs/index.json"
 OPEN_STATUSES = {"created"}
 TERMINAL_STATUSES = {"returned", "stopped", "failed"}
 KNOWLEDGE_MODE_SOURCES = {"project_default", "task_override", "unknown"}

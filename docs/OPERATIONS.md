@@ -2,7 +2,7 @@
 
 按已确认方案批量修订设定，先查询当前源记录与操作定义，选择对应受审入口并明确影响范围。源字段及写入边界见 [单一真源约定](SINGLE-SOURCE.md)。
 
-实体、卷、弧线和章节归属都有结构事务入口，不需要手改 `.gnovel/structure.json`。新入口的 CLI 参数、MCP schema 与 HTTP 路由共用 `scripts/core/catalog_api.py`，业务位于 `catalog_commands.py`；已有结构操作仍由 `structure_commands.py` 实现。
+实体、卷、弧线和章节归属都有结构事务入口，不需要手改 `.govel/structure.json`。新入口的 CLI 参数、MCP schema 与 HTTP 路由共用 `scripts/core/catalog_api.py`，业务位于 `catalog_commands.py`；已有结构操作仍由 `structure_commands.py` 实现。
 
 工具提供可计算的证据，模型判断语义，作者作出创作选择与批准。责任边界见 [产品意图](PRODUCT-INTENT.md)。
 
@@ -339,9 +339,9 @@ python3 scripts/novelctl.py project history index-rebuild --project-root /path/t
 python3 scripts/novelctl.py project knowledge index-rebuild
 ```
 
-历史索引是 `.gnovel/cache/history.sqlite3` 中可删除、可重建的投影，不是新任务账本或事件日志。读操作不会偷偷重建；索引缺失、损坏、版本不兼容或输入变化时回退现有文件并标明原因，损坏真源则拒绝。显式重建复用未变化文件的元数据，删除来源后相应记录也消失。查询仅允许固定类型、chapterId、recordId、requestId 筛选，不开放 SQL；预算来自原查询策略，游标绑定筛选和输入版本。
+历史索引是 `.govel/cache/history.sqlite3` 中可删除、可重建的投影，不是新任务账本或事件日志。读操作不会偷偷重建；索引缺失、损坏、版本不兼容或输入变化时回退现有文件并标明原因，损坏真源则拒绝。显式重建复用未变化文件的元数据，删除来源后相应记录也消失。查询仅允许固定类型、chapterId、recordId、requestId 筛选，不开放 SQL；预算来自原查询策略，游标绑定筛选和输入版本。
 
-知识资产以仓库外数据根中的 `knowledge/assets/` Markdown 为真源；配置与目录范围见 [本地资料规范](../knowledge/README.md)。目录元数据按文件身份与策略复用，并可从已校验 SQLite 恢复；重建仅对改变的启用资产重新分词，随后原子替换派生数据库。SQLite 的落盘仍是完整投影替换，不是逐行更新；真正返回知识正文时仍核验实时字节。新增、删除、移动、状态变化、同 mtime 改写和策略变化均会重新校验。原始参考小说与归档原文不进入这两个运行时检索池。
+知识资产以本地数据根（仓库内 `local/` 或仓库外）中的 `knowledge/assets/` Markdown 为真源；配置与目录范围见 [本地资料规范](../knowledge/README.md)。目录元数据按文件身份与策略复用，并可从已校验 SQLite 恢复；重建仅对改变的启用资产重新分词，随后原子替换派生数据库。SQLite 的落盘仍是完整投影替换，不是逐行更新；真正返回知识正文时仍核验实时字节。新增、删除、移动、状态变化、同 mtime 改写和策略变化均会重新校验。原始参考小说与归档原文不进入这两个运行时检索池。
 
 ## 成组执行任务工具
 
@@ -373,7 +373,7 @@ python3 scripts/novelctl.py project workflow repair-context --project-root /path
 python3 scripts/novelctl.py project review report-view --project-root /path/to/书 --chapter-id CH001
 python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids SF-HEIGHT
 python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind prose --chapter-id CH001
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind continuity --chapter-id CH001 --paths .gnovel/aux/story-summary.json
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind continuity --chapter-id CH001 --paths .govel/aux/story-summary.json
 ```
 
 `repair-context` 返回当前正文 hash、每项问题 ID、原报告字段、定位状态、原文与相邻行；机械报告保存 lineDetails 和前轮差异。没有精确锚点的全章规则保留 missing，不伪造行号。过期报告列入 staleReports，全文语义审查仍由工位完成。新机械报告按 hash 保存，前轮报告不覆盖。
@@ -671,14 +671,14 @@ python3 scripts/novelctl.py project structure refactor-references --project-root
 
 `refactor-references` 只读报告旧名在正文与推演中的出现位置；命中只是候选，保留旧称还是改成新称由作者决定，脚本不自动替换正文。`--file-name-strategy` 缺省 `display_only`（只改标题不碰文件）；`sync_safe_paths` 将正文位置与当前绑定一起事务更新；源计划留在结构真源，失败恢复本次写集。
 
-项目文件夹改名/移动是独立的 top-level 文件系统操作（只走 CLI）。预览在 `.gnovel/plans` 落一份带 `operationId` 与 TTL 的计划；执行全程持有 `structure.lock`，锁文件随文件夹一起搬到新位置、释放也跟到新位置：
+项目文件夹改名/移动是独立的 top-level 文件系统操作（只走 CLI）。预览在 `.govel/plans` 落一份带 `operationId` 与 TTL 的计划；执行全程持有 `structure.lock`，锁文件随文件夹一起搬到新位置、释放也跟到新位置：
 
 ```bash
 python3 scripts/novelctl.py project relocate --project-root /path/to/旧书名 --target /path/to/新书名
 python3 scripts/novelctl.py project relocate --project-root /path/to/旧书名 --operation-id <OP> --preview-hash <planHash> --approve
 ```
 
-执行时末次校验 → 一次 `os.rename` → authored 逐字节复核 → 经写集引擎落 `.gnovel/project-locator.json` 收据并消耗该计划。计划过期、被换掉或项目已变动的，一律拒绝（`PLAN_EXPIRED` / `PLAN_HASH_MISMATCH` / `PLAN_NOT_FOUND`）；改名之后任何一步失败都把文件夹改名回去，改回去也失败就报错，不静默。
+执行时末次校验 → 一次 `os.rename` → authored 逐字节复核 → 经写集引擎落 `.govel/project-locator.json` 收据并消耗该计划。计划过期、被换掉或项目已变动的，一律拒绝（`PLAN_EXPIRED` / `PLAN_HASH_MISMATCH` / `PLAN_NOT_FOUND`）；改名之后任何一步失败都把文件夹改名回去，改回去也失败就报错，不静默。
 
 ## 项目诊断（统一 Doctor）
 
@@ -767,6 +767,6 @@ python3 scripts/novelctl.py project logs status
 python3 scripts/novelctl.py project logs configure --mode off
 ```
 
-日志模式以状态返回的当前来源为准。`GNOVEL_LOG_MODE` 可覆盖进程模式，`GNOVEL_LOG_DIR` 指向仓库外诊断目录。完整日志可能保存实际调用参数、返回与错误；凭证脱敏不等于正文内容脱敏。日志只用于本地复盘，不进入发布文件，不改变作品事实、批准或正文归属。
+日志模式以状态返回的当前来源为准。`GOVEL_LOG_MODE` 可覆盖进程模式，`GOVEL_LOG_DIR` 指向本地诊断目录（使用仓库内路径时应放在 `local/`）。完整日志可能保存实际调用参数、返回与错误；凭证脱敏不等于正文内容脱敏。日志只用于本地复盘，不进入发布文件，不改变作品事实、批准或正文归属。
 
 日志缺失或写入失败不替代业务成功或失败判断；缺少结束记录不能自动重放写操作。关闭日志不影响小说项目中的正式证据。

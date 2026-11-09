@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate script for gnovel prose diagnostics.
+"""Aggregate script for govel prose diagnostics.
 
 Runs 4 separate diagnostic scripts and merges their JSON reports:
 1. ai_cliche_linter.py
@@ -48,7 +48,7 @@ def run_script(cmd: list[str], *, environment=None) -> dict:
 
 
 def main():
-    parser = FailClosedArgumentParser(description="Aggregate gnovel prose diagnostics")
+    parser = FailClosedArgumentParser(description="Aggregate govel prose diagnostics")
     parser.add_argument("draft_file", type=Path, help="Draft file to check")
     parser.add_argument("--intensity-level", type=int, required=True, help="Dirty level 1-10")
     parser.add_argument("--mode", type=str, required=True, choices=["plot", "buildUp", "mixed", "peakScene"], help="Scene mode (与 ai_cliche_linter/validate-text 同一词表)")

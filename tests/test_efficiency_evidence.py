@@ -41,18 +41,18 @@ class WorkflowEfficiencyTests(unittest.TestCase):
         first = self.prose('第一版正文。', 'one')
         call_operation('project.workflow.artifact-approve', self.root, {'chapterId': self.chapter,
                        'artifact': ['@' + str(self.root / first['artifactPath'])]})
-        before = (self.root / '.gnovel/workflow.json').read_bytes()
+        before = (self.root / '.govel/workflow.json').read_bytes()
         with patch('scripts.core.artifacts.utc_now', return_value='2099-01-01T00:00:00Z'):
             replay = self.prose('第一版正文。', 'one')
         self.assertEqual(first['artifactSha256'], replay['artifactSha256'])
         self.assertTrue(replay['replayed']); self.assertTrue(replay['approved'])
-        self.assertEqual(before, (self.root / '.gnovel/workflow.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/workflow.json').read_bytes())
         with self.assertRaises(StructureError) as error:
             self.prose('另一稿。', 'one')
         self.assertEqual(error.exception.code, 'ARTIFACT_REQUEST_REUSED')
         self.prose('第一版正文。')
-        source = read_json(self.root / '.gnovel/structure.json'); source['revision'] += 1
-        write_json(self.root / '.gnovel/structure.json', source)
+        source = read_json(self.root / '.govel/structure.json'); source['revision'] += 1
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError) as error:
             self.prose('第一版正文。', 'one')
         self.assertEqual(error.exception.code, 'ARTIFACT_REQUEST_STALE')
@@ -71,9 +71,9 @@ class WorkflowEfficiencyTests(unittest.TestCase):
         self.assertTrue(any(row['location']['spans'] for row in repair['items']))
         self.assertEqual(repair['draftSha256'], sha256_text('他' + '推开沉重的门' * 25 + '。'))
         self.prose('他把钥匙放回桌上。')
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['artifacts'][self.chapter]['diagnostics']['invalidatedBy'] = {'reason': 'candidate activation'}
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         self.assertFalse(evidence_current(self.root, self.chapter)['fresh'])
         second = run_diagnostics(self.root, chapter_id=self.chapter, mode='plot', intensity_level=1, register=True)
         self.assertFalse(second['reused']); self.assertIsNotNone(second['diff'])
@@ -91,11 +91,11 @@ class WorkflowEfficiencyTests(unittest.TestCase):
         self.prose('管理员换了新的登记本。')
         for result in (subprocess.CompletedProcess([], 3, '', 'crash'),
                        subprocess.CompletedProcess([], 0, json.dumps({'passed': False}), '')):
-            before = (self.root / '.gnovel/workflow.json').read_bytes()
+            before = (self.root / '.govel/workflow.json').read_bytes()
             with patch('scripts.core.mechanical_evidence.subprocess.run', return_value=result):
                 with self.assertRaises(StructureError):
                     run_diagnostics(self.root, chapter_id=self.chapter, mode='plot', intensity_level=1, register=True)
-            self.assertEqual(before, (self.root / '.gnovel/workflow.json').read_bytes())
+            self.assertEqual(before, (self.root / '.govel/workflow.json').read_bytes())
 
     def test_selected_ranges_merge_and_keep_every_origin(self):
         prepared = prepare_task(self.root, 'editor', chapter_id=self.chapter)
@@ -151,7 +151,7 @@ class WorkflowEfficiencyTests(unittest.TestCase):
         (self.root / '工作台/prose.txt').write_text('待包装正文。')
         before = {str(path.relative_to(self.root)): path.read_bytes() for path in self.root.rglob('*') if path.is_file()}
         def fail(phase, relative=None):
-            if phase == 'write' and relative.startswith('.gnovel/artifact-requests/'):
+            if phase == 'write' and relative.startswith('.govel/artifact-requests/'):
                 raise RuntimeError('interrupted receipt')
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail), self.assertRaises(RuntimeError):
             pack_artifact(self.root, chapterId=self.chapter, artifactType='candidate_prose',
@@ -177,8 +177,8 @@ class WorkflowEfficiencyTests(unittest.TestCase):
                        limit=2, cursor=page['nextCursor'])
         with self.assertRaises(StructureError):
             read_batch(self.root, task='editor', chapterId=self.chapter, requests=[request], maxBytes=1)
-        source = read_json(self.root / '.gnovel/structure.json'); source['revision'] += 1
-        write_json(self.root / '.gnovel/structure.json', source)
+        source = read_json(self.root / '.govel/structure.json'); source['revision'] += 1
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError):
             read_batch(self.root, task='editor', chapterId=self.chapter, requests=[request],
                        limit=1, cursor=page['nextCursor'])
@@ -220,8 +220,8 @@ class SourceEvidenceAssemblyTests(unittest.TestCase):
         result = pack_evidence(self.root, snapshot=snapshot, decisions=decisions, requestId='review')
         self.assertFalse(result['submitted']); self.assertFalse(result['approved'])
         self.assertTrue(call_operation(result['operation'], self.root, result['arguments'])['ok'])
-        source = read_json(self.root / '.gnovel/structure.json'); source['revision'] += 1
-        write_json(self.root / '.gnovel/structure.json', source)
+        source = read_json(self.root / '.govel/structure.json'); source['revision'] += 1
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError):
             pack_evidence(self.root, snapshot=snapshot, decisions=decisions, requestId='review')
 

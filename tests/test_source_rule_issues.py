@@ -26,7 +26,7 @@ class SourceRuleIssueTests(unittest.TestCase):
         validate_structure(self.source); self.save()
 
     def save(self):
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def current(self, action='publish'):
         return evaluate_rules(self.source, self.cid, action, root=self.root)['items'][0]

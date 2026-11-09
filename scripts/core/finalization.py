@@ -26,11 +26,11 @@ TRANSACTION_PHASES = ("prepare", "prose", "structure", "indexes", "rewrite", "wo
 
 
 def _workflow_path(root: Path) -> Path:
-    return root / ".gnovel" / "workflow.json"
+    return root / ".govel" / "workflow.json"
 
 
 def _transactions_dir(root: Path) -> Path:
-    return root / ".gnovel" / "transactions"
+    return root / ".govel" / "transactions"
 
 
 def _load_workflow(root: Path) -> dict[str, Any]:
@@ -119,7 +119,7 @@ def recover_transactions(root: Path, *, apply: bool = False) -> dict[str, Any]:
         for manifest in rows:
             actions = recover_write_set(root, manifest)
             recovered.append({'transactionId': manifest['transactionId'], 'chapterId': manifest.get('chapterId'),
-                              'preservationPath': f".gnovel/transactions/{manifest['transactionId']}", 'actions': actions})
+                              'preservationPath': f".govel/transactions/{manifest['transactionId']}", 'actions': actions})
     return {"ok": True, "code": "TRANSACTION_RECOVERED", "transactions": recovered, "applied": True}
 
 
@@ -182,7 +182,7 @@ def _finalize_chapter_locked(
     # than read-only guards. A client ignoring the lock must not have its newer
     # source bindings or approval choices adopted by a late output inventory.
     metadata_before = {relative: file_state(safe_project_path(root, relative))
-                       for relative in ('.gnovel/structure.json', '.gnovel/workflow.json')}
+                       for relative in ('.govel/structure.json', '.govel/workflow.json')}
     preflight = preflight_finalization(
         root, chapter_id, title_candidate_id=title_candidate_id, skip_title=skip_title,
         check_lock=False, binding_generation=binding_generation,
@@ -240,7 +240,7 @@ def _finalize_chapter_locked(
     sync = {"candidatePath": None, "rows": rows, "unmappedCount": len(rows)}
     extras = {prose_relative: candidate["text"].encode()}
     source_hashes = {relative: digest(data) for relative, data in extras.items()}
-    source_hashes['.gnovel/structure.json'] = digest(json_bytes(proposed_structure))
+    source_hashes['.govel/structure.json'] = digest(json_bytes(proposed_structure))
     from .candidate_batch import conversion_witness
     workflow.setdefault("continuity", {})[chapter_id] = new_continuity_record(
         root, chapter, sync, artifacts["state_candidate"]["artifactSha256"],
@@ -249,7 +249,7 @@ def _finalize_chapter_locked(
             'artifactSha256': artifacts['stage_b_review']['artifactSha256'],
             'proseSha256': sha256_text(candidate['text']),
             'bindingGeneration': target['proseBinding']['generation']})
-    extras[".gnovel/workflow.json"] = json_bytes(workflow)
+    extras[".govel/workflow.json"] = json_bytes(workflow)
     outputs, _ = derived_outputs(root, proposed_structure, extras=extras, current=structure)
     # TOCTOU close: the locked preflight above proved the prose target was an empty or owned
     # slot while holding project_lock, and captured that exact validated state. A client that

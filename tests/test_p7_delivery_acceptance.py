@@ -78,7 +78,7 @@ class ExternalManuscriptIntakeTests(unittest.TestCase):
                 self.assertIn("byteStart", candidate["sourceLocator"])
                 self.assertIn("byteEnd", candidate["sourceLocator"])
         # 证据副本里不得出现可写结构真源。
-        self.assertFalse((self.target / ".gnovel" / "structure.json").exists())
+        self.assertFalse((self.target / ".govel" / "structure.json").exists())
         self.assertTrue((self.target / "evidence").is_dir())
         self.assertEqual(payload["inventoryHash"], inventory["inventoryHash"])
 
@@ -137,7 +137,7 @@ class InstallerRealityTests(unittest.TestCase):
         self.home = self.base / "家"
         self.gemini = self.home / ".gemini"
         (self.gemini / "config" / "skills").mkdir(parents=True)
-        self.skill_root = self.gemini / "config" / "skills" / "gnovel"
+        self.skill_root = self.gemini / "config" / "skills" / "govel"
         self.original_home = os.environ.get("HOME")
         os.environ["HOME"] = str(self.home)
         self.addCleanup(self._restore_home)
@@ -218,14 +218,14 @@ class InstallerRealityTests(unittest.TestCase):
         module = importlib.reload(importlib.import_module("scripts.install_antigravity"))
         report = module.install()
         self.assertTrue(report["ok"], report["problems"])
-        root = spaced / ".gemini" / "config" / "skills" / "gnovel"
+        root = spaced / ".gemini" / "config" / "skills" / "govel"
         self.assertTrue((root / "SKILL.md").is_symlink())
         self.assertTrue((root / "knowledge").is_symlink())
 
     def test_obsolete_entry_is_removed_but_a_real_one_needs_force(self):
         module = self.installer()
         module.install()
-        obsolete = self.gemini / "config" / "skills" / "gnovel-setup"
+        obsolete = self.gemini / "config" / "skills" / "govel-setup"
         obsolete.mkdir()
         (obsolete / "旧文件.md").write_text("作废", encoding="utf-8")
         blocked = module.install()
@@ -489,7 +489,7 @@ class SkillAndSepiaBoundaryTests(unittest.TestCase):
         banned = ("knowledge ranking", "context assembly", "invalidation", "CAS",
                   "migration ready 判定", "canon guard")
         for station in self.STATIONS:
-            text = (ROOT / f"gnovel-{station}" / "SKILL.md").read_text(encoding="utf-8")
+            text = (ROOT / f"govel-{station}" / "SKILL.md").read_text(encoding="utf-8")
             for phrase in banned:
                 with self.subTest(station=station, phrase=phrase):
                     self.assertNotIn(phrase, text)
@@ -522,7 +522,7 @@ class SkillAndSepiaBoundaryTests(unittest.TestCase):
                     for parts in [command.split()] for size in range(1, len(parts) + 1)}
         invocation = re.compile(r"novelctl(?:\.py)?((?:\s+[a-z][a-z-]*)+)")
         for station in self.STATIONS:
-            text = (ROOT / f"gnovel-{station}" / "SKILL.md").read_text(encoding="utf-8")
+            text = (ROOT / f"govel-{station}" / "SKILL.md").read_text(encoding="utf-8")
             for match in invocation.finditer(text):
                 command = match.group(1).strip()
                 with self.subTest(station=station, command=command):
@@ -532,7 +532,7 @@ class SkillAndSepiaBoundaryTests(unittest.TestCase):
 
 
     def test_editor_keeps_both_write_more_and_prevent_over_organization(self):
-        editor = (ROOT / "gnovel-editor" / "SKILL.md").read_text(encoding="utf-8")
+        editor = (ROOT / "govel-editor" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("G-EXPANSION.md", editor, "字数不足必须走扩写，不许反 AI 味就把文本越删越短")
         self.assertIn("G-OVER-ORGANIZATION.md", editor, "组织过满是独立方向，两个方向都要保留")
 
@@ -544,9 +544,9 @@ class CanonImpactAcceptanceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
-        (self.root / ".gnovel").mkdir()
+        (self.root / ".govel").mkdir()
         source = source_fixture(self.root)
-        write_json(self.root / ".gnovel/project.json", {
+        write_json(self.root / ".govel/project.json", {
             "schemaVersion": 5, "workflowVersion": "5.0", "projectId": source["projectId"],
             "bookName": source["bookName"], "approvalMode": "manual"})
         save_structure(self.root, source)
@@ -587,7 +587,7 @@ class CanonImpactAcceptanceTests(unittest.TestCase):
         mutated = load_structure(self.root)
         next(row for row in mutated["entities"]
              if row["entityId"] == source["entities"][0]["entityId"])["summary"] = "被改过"
-        write_json(self.root / ".gnovel" / "structure.json", mutated)
+        write_json(self.root / ".govel" / "structure.json", mutated)
         with self.assertRaises(StructureError) as error:
             preview_canon_change(
                 self.root, sessionRef=resolved["sessionRef"], fieldPath="summary",

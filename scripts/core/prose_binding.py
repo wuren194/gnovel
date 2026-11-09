@@ -1421,12 +1421,12 @@ def first_finalization_write_set_plan(root: Path, structure: dict, chapter: dict
     proposed = deepcopy(structure)
     proposed["revision"] = revision
     _chapter_by_id(proposed, chapter["chapterId"])["proseBinding"] = sealed
-    structure_state = file_state(safe_project_path(root, ".gnovel/structure.json"))
+    structure_state = file_state(safe_project_path(root, ".govel/structure.json"))
     return [
         {"path": prose_relative, "action": "create", "kind": "prose",
          "before": prose_state,
          "after": {"exists": True, "sha256": digest(prose_bytes), "mode": None}},
-        {"path": ".gnovel/structure.json", "action": "update", "kind": "binding-transition",
+        {"path": ".govel/structure.json", "action": "update", "kind": "binding-transition",
          "before": structure_state,
          "after": {"exists": True, "sha256": digest(json_bytes(proposed)), "mode": None},
          "bindingChange": {"chapterId": chapter["chapterId"],

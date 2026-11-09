@@ -73,7 +73,7 @@ class TaskExecutionDeltaTests(unittest.TestCase):
 
     def test_current_blockers_are_not_inherited_from_held_readiness(self):
         full = preparation(self.execute())
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path)
         workflow['approvedChapterIds'] = []
         write_json(path, workflow)
@@ -88,7 +88,7 @@ class TaskExecutionDeltaTests(unittest.TestCase):
 
     def test_refresh_after_registration_uses_delivered_baseline_not_intermediate_prepare(self):
         full = preparation(self.execute())
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path)
         approvals = workflow['approvals']
         del workflow['artifacts'][self.chapter]['diagnostics']

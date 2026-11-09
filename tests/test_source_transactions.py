@@ -34,7 +34,7 @@ class SourceTransactionTests(unittest.TestCase):
     def test_source_and_pending_impact_commit_together_without_touching_prose_or_views(self):
         original = {p: p.read_bytes() for p in self.root.rglob('*.md')}
         plan = self.preview()
-        self.assertEqual({r['path'] for r in plan['writeSet']}, {'.gnovel/structure.json', REVIEW_PATH})
+        self.assertEqual({r['path'] for r in plan['writeSet']}, {'.govel/structure.json', REVIEW_PATH})
         self.assertFalse((self.root / REVIEW_PATH).exists())
         self.assertEqual(load_structure(self.root)['attributes'][0]['values'][0]['value']['number'], 190)
         self.assertIn('SF-HEIGHT', plan['impact']['reviewFragmentIds'])
@@ -69,7 +69,7 @@ class SourceTransactionTests(unittest.TestCase):
         self.source['fragments'].append({'fragmentId': 'SF-DELETABLE-PLAN', 'ownerId': 'C-ALPHA',
                                          'text': '尚未实施的设想。', 'order': 9, 'contentRole': 'plan',
                                          'contentBindings': ['AT-LIFE']})
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         args = dict(changes=[{'action': 'delete', 'collection': 'fragments', 'id': 'SF-DELETABLE-PLAN'}],
                     requestId='delete-fragment', baseRevision=0, reason='删除经历')
         plan = preview_source_change(self.root, **args)
@@ -110,13 +110,13 @@ class SourceTransactionTests(unittest.TestCase):
         self.assertEqual(relation['relationId'], identity['$relationship'])
 
     def test_dangling_delete_and_revision_race_write_nothing(self):
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         with self.assertRaises(StructureError):
             preview_source_change(self.root, changes=[{'action': 'delete', 'collection': 'attributes', 'id': 'AT-HEIGHT'}],
                                   requestId='bad-delete', baseRevision=0, reason='删除属性')
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         plan = self.preview()
-        self.source['revision'] += 1; write_json(self.root / '.gnovel/structure.json', self.source)
+        self.source['revision'] += 1; write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as error: self.commit(plan)
         self.assertEqual(error.exception.code, 'REVISION_CONFLICT')
         self.assertFalse((self.root / REVIEW_PATH).exists())
@@ -128,18 +128,18 @@ class SourceTransactionTests(unittest.TestCase):
         self.assertEqual(source['attributes'][0]['values'][0]['value']['number'], 190)
         self.assertEqual(source['revision'], 2)
         self.assertEqual(read_json(self.root / REVIEW_PATH)['items']['SF-HEIGHT']['status'], 'pending')
-        self.assertTrue(list((self.root / '.gnovel/undo-receipts').glob('*.json')))
+        self.assertTrue(list((self.root / '.govel/undo-receipts').glob('*.json')))
         self.assertEqual((self.root / '设定/人物设定.md').read_text(), '作者曾经保存的阅读文件。')
 
     def test_mid_write_failure_restores_source_and_pending_items(self):
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         plan = self.preview()
         def fail(phase, relative=None):
-            if phase == 'write' and relative == '.gnovel/structure.json':
+            if phase == 'write' and relative == '.govel/structure.json':
                 raise OSError('simulated write failure')
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail):
             with self.assertRaises(OSError): self.commit(plan)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         self.assertFalse((self.root / REVIEW_PATH).exists())
 
     def test_batch_cannot_bypass_arc_graph_invariants(self):
@@ -162,7 +162,7 @@ class SourceTransactionTests(unittest.TestCase):
             requestId='stale-retry', baseRevision=0, reason='新增经历')
         preview_source_change(self.root, **args)
         self.source['entities'][0]['name'] = '修改了人物名称'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as error:
             preview_source_change(self.root, **args)
         self.assertEqual(error.exception.code, 'SOURCE_REQUEST_STALE')

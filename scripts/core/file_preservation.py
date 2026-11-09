@@ -30,7 +30,7 @@ def parent_directory(path: Path, *, create: bool = False):
                 if not create:
                     raise
                 try:
-                    os.mkdir(part, 0o700 if '.gnovel' in path.parts else 0o777, dir_fd=fd)
+                    os.mkdir(part, 0o700 if '.govel' in path.parts else 0o777, dir_fd=fd)
                     os.fsync(fd)
                 except FileExistsError:
                     pass
