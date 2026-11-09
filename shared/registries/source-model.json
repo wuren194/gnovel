@@ -1,0 +1,177 @@
+{
+  "proseBinding": {
+    "format": "PROSE_BINDING_V1",
+    "states": [
+      "unbound",
+      "managed",
+      "unresolved"
+    ]
+  },
+  "mutationPolicy": {
+    "entities": {
+      "role": "canon_fact",
+      "create": "generic",
+      "existing": "canon_proposal",
+      "delete": "unavailable",
+      "archive": "canon_proposal"
+    },
+    "relations": {
+      "role": "canon_fact",
+      "create": "generic",
+      "existing": "relation_proposal",
+      "delete": "relation_proposal"
+    },
+    "attributes": {
+      "role": "canon_fact",
+      "create": "generic",
+      "existing": "content_proposal",
+      "delete": "content_proposal"
+    },
+    "factFragments": {
+      "role": "canon_fact",
+      "create": "generic",
+      "existing": "content_proposal",
+      "delete": "content_proposal"
+    },
+    "referencedFieldDefinitions": {
+      "role": "canon_semantic_contract",
+      "create": "generic",
+      "existing": "field_definition_proposal",
+      "metadataFields": ["label", "description"],
+      "semanticFields": ["key", "valueType", "appliesTo"],
+      "delete": "migration_required"
+    },
+    "planFragments": {
+      "role": "authorial_plan",
+      "existing": "generic"
+    },
+    "planningCandidates": {
+      "role": "authorial_plan",
+      "existing": "candidate_operation"
+    },
+    "authorDecisions": {
+      "role": "authorial_plan",
+      "existing": "decision_operation"
+    },
+    "presentations": {
+      "role": "narrative_presentation",
+      "existing": "generic_transaction"
+    }
+  },
+  "placementScopes": [
+    "volume",
+    "project"
+  ],
+  "unitMemberTypes": [
+    "chapter",
+    "planning_candidate"
+  ],
+  "pairClassification": {
+    "idPrefix": "PAIR",
+    "assessmentStates": ["unassessed", "assessed", "not_applicable"],
+    "classificationStates": ["unassessed", "unknown", "known", "not_applicable"]
+  },
+  "idSuffixPattern": "[A-Z0-9][A-Z0-9-]{1,63}",
+  "planningCandidates": {
+    "idPrefix": "PC",
+    "statuses": [
+      "draft",
+      "approved",
+      "withdrawn",
+      "materialized"
+    ],
+    "maxSplitParts": 8,
+    "maxMergeSources": 8
+  },
+  "authorDecisions": {
+    "idPrefix": "DR",
+    "statuses": [
+      "draft",
+      "active",
+      "superseded"
+    ]
+  },
+  "collections": {
+    "fieldDefinitions": {
+      "idField": "fieldId",
+      "prefix": "FD"
+    },
+    "attributes": {
+      "idField": "attributeId",
+      "prefix": "AT"
+    },
+    "fragments": {
+      "idField": "fragmentId",
+      "prefix": "SF"
+    },
+    "units": {
+      "idField": "unitId",
+      "prefix": "UN"
+    },
+    "presentations": {
+      "idField": "presentationId",
+      "prefix": "PV"
+    }
+  },
+  "valueIdPrefix": "FV",
+  "valueTypes": [
+    "text",
+    "number",
+    "measurement",
+    "boolean",
+    "reference",
+    "topic"
+  ],
+  "valueStates": [
+    "known",
+    "unknown",
+    "unfilled",
+    "not_applicable"
+  ],
+  "contentRoles": [
+    "fact",
+    "belief",
+    "in_world_text",
+    "plan"
+  ],
+  "recordStatuses": [
+    "active",
+    "archived"
+  ],
+  "presentationKinds": [
+    "reveal",
+    "flashback",
+    "mention"
+  ],
+  "ruleMethods": [
+    "mechanical",
+    "semantic"
+  ],
+  "ruleEnforcements": [
+    "required",
+    "advisory"
+  ],
+  "ruleActions": [
+    "prepare",
+    "draft",
+    "review",
+    "publish"
+  ],
+  "ruleIssueStatuses": [
+    "pending",
+    "confirmed",
+    "deferred",
+    "resolved",
+    "exception"
+  ],
+  "timeSpecKinds": [
+    "relative",
+    "range",
+    "coarse",
+    "unknown"
+  ],
+  "knowledgeModes": [
+    "author",
+    "perspective"
+  ]
+}

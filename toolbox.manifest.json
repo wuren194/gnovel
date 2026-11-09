@@ -1,0 +1,325 @@
+{
+  "name": "gnovel",
+  "version": "1.0.0",
+  "schemaVersion": 5,
+  "workflowVersion": "5.0",
+  "compatibilityVersion": 5,
+  "language": "zh-CN",
+  "skills": [
+    "gnovel-composer",
+    "gnovel-router",
+    "gnovel-planner",
+    "gnovel-writer",
+    "gnovel-editor",
+    "gnovel-titler"
+  ],
+  "sharedProtocols": {
+    "contracts": "shared/contracts",
+    "contractsList": [
+      "G-INTENSITY-SCALE-V2.md",
+      "G-RELATIONSHIP-ROLES.md",
+      "G-RELATIONSHIP-MOTIVES.md",
+      "G-WRITING-BANS.md",
+      "G-CAUSAL.md",
+      "G-VOICE-SIGNATURE.md",
+      "G-RHYTHM.md",
+      "G-EXPANSION.md",
+      "G-LONGFORM.md",
+      "G-CHARACTER-TRANSITION.md",
+      "STYLE-AND-VOICE.md",
+      "TENSION-AND-EMOTION.md",
+      "G-STORY-ARCHITECTURE.md",
+      "G-MULTI-IDENTITY-REVIEW.md",
+      "G-OVER-ORGANIZATION.md",
+      "WORKSTATION-LIFECYCLE.md",
+      "CHAPTER-PIPELINE.md",
+      "RULE-CLASSIFICATION.md",
+      "RUNTIME-CONFIG.md",
+      "G-SINGLE-SOURCE.md"
+    ],
+    "registries": "shared/registries",
+    "workflowPolicy": "shared/registries/workflow.json",
+    "settingsSchema": "shared/registries/settings.json",
+    "worldRenderPolicy": "shared/registries/world-render.json",
+    "gardenAtmospherePolicy": "shared/registries/garden-atmosphere.json",
+    "sourceModel": "shared/registries/source-model.json",
+    "toolRegistry": "shared/registries/tools.json",
+    "projectTemplates": {
+      "agentsMd": "shared/templates/agents-template.md"
+    }
+  },
+  "execution": {
+    "mode": "single-track",
+    "humanApprovalRequired": true
+  },
+  "agileWorkbench": {
+    "persistent": false,
+    "preferredPath": "工作台",
+    "protectedCheckoutPaths": [
+      "正文",
+      ".gnovel/structure.json"
+    ]
+  },
+  "storage": {
+    "projectMarker": ".gnovel/project.json",
+    "cache": ".gnovel/cache",
+    "aux": ".gnovel/aux",
+    "cacheDependencies": [
+      "toolbox.manifest.json",
+      "scripts/state_cache.py",
+      "scripts/core/structure_store.py",
+      "scripts/core/project.py",
+      "scripts/core/source_model.py",
+      "scripts/core/source_validation.py",
+      "scripts/core/source_rules.py",
+      "scripts/core/source_rule_issues.py",
+      "scripts/core/source_time.py",
+      "scripts/core/source_time_constraints.py",
+      "scripts/core/source_selection.py",
+      "scripts/core/source_presets.py",
+      "scripts/core/source_query.py",
+      "scripts/core/source_render.py",
+      "scripts/core/source_links.py",
+      "shared/registries/source-model.json",
+      "scripts/core/prompt_plan.py",
+      "shared/registries/workflow.json",
+      "scripts/core/pair_classification.py",
+      "scripts/core/prompt_conditions.py",
+      "scripts/core/chapter_contract.py",
+      "scripts/core/source_plan.py",
+      "scripts/core/author_decisions.py",
+      "scripts/core/current_candidate.py",
+      "scripts/core/candidate_batch.py",
+      "scripts/core/diagnostic_inputs.py",
+      "scripts/core/relationship_causality.py",
+      "scripts/core/behavior_review.py"
+    ]
+  },
+  "classification": {
+    "visualPolarity": [
+      "角色甲强势",
+      "双方强势",
+      "角色乙强势",
+      "双方克制",
+      "均衡/不以外形为主"
+    ],
+    "dominantRole": [
+      "角色甲主导",
+      "角色乙主导"
+    ]
+  },
+  "humanApproval": {
+    "requiredAtPhase": "APPROVAL_BEFORE_PROTECTED_WRITE",
+    "command": null,
+    "storage": "protected-paths",
+    "actorType": "human",
+    "interactiveOnly": true,
+    "decisions": [
+      "approve",
+      "reject"
+    ],
+    "shaBindings": [
+      "commitCandidateSha256",
+      "finalProseArtifactSha256",
+      "finalProseSha256",
+      "stateCandidateSha256"
+    ]
+  },
+  "projectVersionPolicy": {
+    "supportedSchemaVersions": [
+      5
+    ],
+    "unsupportedErrorCode": "UNSUPPORTED_PROJECT_VERSION"
+  },
+  "corpusRoots": {},
+  "promptPlan": {
+    "gnovel-writer": {
+      "always": [
+        "STYLE-AND-VOICE.md",
+        "G-WRITING-BANS.md",
+        "G-RHYTHM.md"
+      ],
+      "conditional": [],
+      "_note": "writer 有读取能力：文风契约直接读取原文执行，不再由 Router 内联转述。机械门基线读 gnovel-router/references/mechanical-baseline.md。"
+    },
+    "gnovel-editor": {
+      "always": [
+        "STYLE-AND-VOICE.md",
+        "G-WRITING-BANS.md",
+        "G-VOICE-SIGNATURE.md",
+        "TENSION-AND-EMOTION.md",
+        "G-INTENSITY-SCALE-V2.md",
+        "G-RHYTHM.md",
+        "G-MULTI-IDENTITY-REVIEW.md",
+        "G-OVER-ORGANIZATION.md",
+        "G-EXPANSION.md",
+        "G-CAUSAL.md",
+        "CHAPTER-PIPELINE.md"
+      ],
+      "conditional": [
+        {
+          "contract": "G-CHARACTER-TRANSITION.md",
+          "when": {
+            "field": "chapter.arc",
+            "op": "includes",
+            "value": "强者跌落"
+          },
+          "reason": "仅在作者明确声明相应关系或人物变化时装载。"
+        }
+      ]
+    },
+    "gnovel-planner": {
+      "always": [
+        "G-CAUSAL.md",
+        "TENSION-AND-EMOTION.md",
+        "G-INTENSITY-SCALE-V2.md",
+        "G-STORY-ARCHITECTURE.md",
+        "G-MULTI-IDENTITY-REVIEW.md",
+        "G-OVER-ORGANIZATION.md",
+        "G-EXPANSION.md"
+      ],
+      "conditional": [
+        {
+          "contract": "G-RELATIONSHIP-ROLES.md",
+          "when": {
+            "field": "design.pairs[].visualPolarity",
+            "op": "eq",
+            "value": "角色乙强势"
+          },
+          "reason": "仅在作者明确声明相应关系或人物变化时装载。"
+        },
+        {
+          "contract": "G-RELATIONSHIP-MOTIVES.md",
+          "when": {
+            "field": "design.pairs[].visualPolarity",
+            "op": "eq",
+            "value": "角色乙强势"
+          },
+          "reason": "仅在作者明确声明相应关系或人物变化时装载。"
+        }
+      ]
+    },
+    "gnovel-composer": {
+      "always": [
+        "G-INTENSITY-SCALE-V2.md",
+        "G-STORY-ARCHITECTURE.md",
+        "G-MULTI-IDENTITY-REVIEW.md",
+        "G-CAUSAL.md"
+      ],
+      "conditional": [
+        {
+          "contract": "G-RELATIONSHIP-MOTIVES.md",
+          "when": {
+            "field": "design.pairs[].visualPolarity",
+            "op": "eq",
+            "value": "角色乙强势"
+          },
+          "reason": "仅在作者明确声明相应关系或人物变化时装载。"
+        }
+      ]
+    },
+    "gnovel-router": {
+      "always": [
+        "G-LONGFORM.md",
+        "G-MULTI-IDENTITY-REVIEW.md",
+        "WORKSTATION-LIFECYCLE.md",
+        "CHAPTER-PIPELINE.md",
+        "RULE-CLASSIFICATION.md",
+        "RUNTIME-CONFIG.md",
+        "G-SINGLE-SOURCE.md"
+      ],
+      "conditional": []
+    },
+    "gnovel-titler": {
+      "always": [
+        "G-MULTI-IDENTITY-REVIEW.md"
+      ],
+      "conditional": []
+    }
+  },
+  "promptSlices": {
+    "gnovel-composer": {
+      "default": {
+        "G-MULTI-IDENTITY-REVIEW.md": [
+          "common",
+          "seats",
+          "facilitator",
+          "stage-a"
+        ],
+        "G-CAUSAL.md": [
+          "life-baseline"
+        ]
+      }
+    },
+    "gnovel-planner": {
+      "default": {
+        "G-MULTI-IDENTITY-REVIEW.md": [
+          "common",
+          "seats",
+          "facilitator",
+          "stage-a"
+        ]
+      }
+    },
+    "gnovel-editor": {
+      "default": {
+        "G-MULTI-IDENTITY-REVIEW.md": [
+          "common",
+          "seats",
+          "stage-b",
+          "integration"
+        ],
+        "G-CAUSAL.md": [
+          "relationship",
+          "behavior"
+        ],
+        "CHAPTER-PIPELINE.md": [
+          "fact-handoff"
+        ]
+      }
+    },
+    "gnovel-titler": {
+      "default": {
+        "G-MULTI-IDENTITY-REVIEW.md": [
+          "common",
+          "facilitator",
+          "title-seats",
+          "decision-process"
+        ]
+      }
+    },
+    "gnovel-router": {
+      "default": {
+        "G-MULTI-IDENTITY-REVIEW.md": [
+          "common",
+          "seats",
+          "stage-a",
+          "stage-b"
+        ]
+      }
+    }
+  },
+  "onDemandReferences": {
+    "gnovel-planner": [
+      "gnovel-router/references/chapter-outline-review-template.md",
+      "gnovel-router/references/mechanical-baseline.md"
+    ],
+    "gnovel-editor": [
+      "gnovel-editor/references/chapter-acceptance-checklist.md",
+      "gnovel-router/references/mechanical-baseline.md"
+    ],
+    "gnovel-writer": [
+      "gnovel-router/references/mechanical-baseline.md"
+    ],
+    "gnovel-router": [
+      "gnovel-router/references/chapter-outline-review-template.md",
+      "gnovel-router/references/mechanical-baseline.md"
+    ],
+    "gnovel-composer": [
+      "gnovel-composer/references/design-candidate-template.md"
+    ],
+    "gnovel-titler": [
+      "gnovel-titler/references/title-guide.md"
+    ]
+  }
+}

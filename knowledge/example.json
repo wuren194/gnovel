@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "assetId": "KN-EXAMPLE",
+    "title": "旧书店的失物",
+    "kind": "technique",
+    "status": "active",
+    "stations": ["composer", "planner", "writer", "editor"],
+    "intents": ["foreshadowing"],
+    "tags": ["都市生活", "旧书店", "失物"],
+    "source": {"path": "authored", "sha256": ""},
+    "applicability": "用于通过日常物件设置伏笔。",
+    "exclusions": "不用于替代人物动机或作品事实。",
+    "license": "authored-example"
+  },
+  "body": "## 让物件先参与生活\n\n店主在整理旧书时发现一张借书条。他先把纸条夹回书里，照常开门营业。后来的来客认出了字迹，旧事才与当前行动发生联系。\n\n参考重点是物件的两次用途：第一次解决眼前的小事，第二次改变人物掌握的信息。"
+}

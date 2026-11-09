@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "defaultMode": "full",
+  "inlinePayloadBytes": 16384,
+  "maxPayloadBytes": 16777216,
+  "maxMetadataBytes": 65536,
+  "maxStoreBytes": 268435456,
+  "retentionDays": 14,
+  "maxCalls": 5000,
+  "defaultQueryLimit": 50,
+  "maxQueryLimit": 200,
+  "maxDepth": 64,
+  "lockTimeoutSeconds": 1.0,
+  "lockRetrySeconds": 0.01,
+  "credentialFields": [
+    "apiKey", "apiToken", "accessToken", "refreshToken", "idToken",
+    "authToken", "sessionToken", "password", "passwd", "pwd",
+    "clientSecret", "authorization", "proxyAuthorization",
+    "cookie", "setCookie", "xApiKey"
+  ],
+  "stringCredentialFields": ["secret"],
+  "credentialValueExceptions": {
+    "authorization": [
+      "read", "candidate", "author-approval", "repository-maintenance", "station",
+      "发现操作不构成执行或作者批准授权",
+      "仅匹配显式词组，不执行、不推测项目模式或批准。按用途和参数选择后单独调用。",
+      {"type": "string", "enum": ["read", "candidate"]}
+    ]
+  },
+  "credentialTextPatterns": [
+    {
+      "pattern": "(?im)(\\b(?:authorization|proxy-authorization|cookie|set-cookie|x-api-key)\\s*:\\s*)[^\\r\\n]+",
+      "replacement": "\\1[REDACTED]"
+    },
+    {
+      "pattern": "(?i)\\b((?:Bearer|Basic|Token)\\s+)[A-Za-z0-9._~+/=\\-]+",
+      "replacement": "\\1[REDACTED]"
+    },
+    {
+      "pattern": "(?i)(\\b[a-z][a-z0-9+.-]*://)[^\\s/@]+(?::[^\\s/@]*)?@",
+      "replacement": "\\1[REDACTED]@"
+    },
+    {
+      "pattern": "\\b(?:sk-[A-Za-z0-9_\\-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\\b",
+      "replacement": "[REDACTED]"
+    }
+  ]
+}

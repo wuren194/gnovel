@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kinds": {
+    "character": {
+      "title": "人物设定"
+    },
+    "rule": {
+      "title": "世界观"
+    },
+    "location": {
+      "title": "地点设定"
+    },
+    "faction": {
+      "title": "势力设定"
+    },
+    "prop": {
+      "title": "道具设定"
+    },
+    "event": {
+      "title": "事件"
+    },
+    "secret": {
+      "title": "秘密"
+    },
+    "hook": {
+      "title": "伏笔"
+    },
+    "soft_limit": {
+      "title": "软限制"
+    },
+    "time_anchor": {
+      "title": "时间锚"
+    }
+  }
+}

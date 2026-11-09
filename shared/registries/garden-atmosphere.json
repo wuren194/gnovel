@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "seed": 5097,
+  "lighting": {
+    "sunColor": "#ffd39a",
+    "sunIntensity": 3.2,
+    "sunPosition": [
+      -42,
+      19,
+      -28
+    ],
+    "skyColor": "#a4b5b6",
+    "groundColor": "#4a412b",
+    "ambientIntensity": 0.74,
+    "environmentIntensity": 0.32,
+    "fogColor": "#786a50",
+    "fogDensity": 0.009,
+    "environmentSize": 256,
+    "shadowSize": 2048,
+    "shadowExtent": 48
+  },
+  "sky": {
+    "zenith": "#44505b",
+    "horizon": "#d4a172",
+    "sunset": "#ffd299",
+    "ground": "#222c23"
+  },
+  "palette": {
+    "stone": "#f1e4cc",
+    "leaf": "#504d3b",
+    "youngLeaf": "#91836a",
+    "deepLeaf": "#30322b",
+    "stem": "#64543a",
+    "flower": "#f4ecda",
+    "flowerCenter": "#c6a45e"
+  },
+  "pavilion": {
+    "columnCount": 6,
+    "firstColumnAngle": 30,
+    "columnRadius": 0.36,
+    "columnBaseRadius": 0.058,
+    "shaftRadius": 0.029,
+    "shaftBase": 0.27,
+    "entablatureTop": 0.6155,
+    "corniceRadius": 0.427,
+    "railHeight": 0.243
+  },
+  "planting": {
+    "treeCount": 84,
+    "treeRadius": [
+      26,
+      66
+    ],
+    "treeHeight": [
+      11,
+      30
+    ],
+    "treeWidth": [
+      3.2,
+      7.6
+    ],
+    "cypressRatio": 0.22,
+    "innerShrubCount": 48,
+    "innerShrubRadius": [
+      14,
+      19
+    ],
+    "outerShrubCount": 84,
+    "outerShrubRadius": [
+      34,
+      47
+    ],
+    "columnIndices": [
+      0,
+      2,
+      3,
+      4,
+      5
+    ],
+    "stemsPerColumn": 3,
+    "leavesPerMeter": 19,
+    "flowerChance": 0.045,
+    "flowerScale": [
+      0.34,
+      0.66
+    ],
+    "leafSize": [
+      0.19,
+      0.39
+    ],
+    "drapeCount": 22,
+    "balancedRatio": 0.68,
+    "windAmplitude": 0.035,
+    "windSpeed": 0.42
+  },
+  "effects": {
+    "stoneEmission": 0.018,
+    "vegetationEmissionGain": 0.16,
+    "leafBounce": 0.18,
+    "foliageSaturation": 0.28,
+    "sigilGain": 0.34,
+    "mistOpacity": 0.075,
+    "mistColor": "#b5aa87",
+    "moteGain": 0.28,
+    "pendantTrailGain": 0.42
+  }
+}

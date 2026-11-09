@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 4,
+  "compatibilityVersion": 4,
+  "defaultLevel": 1,
+  "minLevel": 1,
+  "maxLevel": 10,
+  "extremeLevel": 10,
+  "levels": [
+    {
+      "level": 1,
+      "name": "等级1",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 2,
+      "name": "等级2",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 3,
+      "name": "等级3",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 4,
+      "name": "等级4",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 5,
+      "name": "等级5",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 6,
+      "name": "等级6",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 7,
+      "name": "等级7",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 8,
+      "name": "等级8",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 9,
+      "name": "等级9",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    },
+    {
+      "level": 10,
+      "name": "等级10",
+      "feature": "由启用的本地规则包解释。",
+      "unlocks": []
+    }
+  ],
+  "ceilingViolations": {},
+  "degradationFloor": {
+    "minLevel": 5,
+    "words": [],
+    "contrast": {
+      "windowSize": 120,
+      "elevationSignals": {},
+      "degradationSignals": []
+    },
+    "thresholds": [
+      {
+        "belowTextSize": 800,
+        "words": 1,
+        "smell": 1,
+        "sensoryStay": 1,
+        "sticky": 1,
+        "contrast": 1
+      },
+      {
+        "belowTextSize": 2000,
+        "words": 2,
+        "smell": 1,
+        "sensoryStay": 1,
+        "sticky": 2,
+        "contrast": 1
+      },
+      {
+        "belowTextSize": null,
+        "words": 3,
+        "smell": 2,
+        "sensoryStay": 2,
+        "sticky": 3,
+        "contrast": 2
+      }
+    ],
+    "level6": {
+      "smallTextBonus": {
+        "words": 1,
+        "sensoryStay": 1,
+        "sticky": 1,
+        "contrast": 1
+      },
+      "largeTextFloor": {
+        "words": 4,
+        "sensoryStay": 3,
+        "sticky": 4,
+        "contrast": 3
+      },
+      "pollutionChain": 1,
+      "voiceLines": 6
+    },
+    "enabled": false
+  },
+  "extremeMarkers": {
+    "words": []
+  },
+  "ambiguousCeilingWords": []
+}

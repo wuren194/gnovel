@@ -1,0 +1,18 @@
+{
+  "artifactType": "title_candidates",
+  "schemaVersion": 1,
+  "projectId": "PROJECT",
+  "chapterId": "CHAPTER",
+  "sourceSha256": null,
+  "createdAt": "2026-08-29T08:11:18.337641+00:00",
+  "producer": "gnovel",
+  "payload": {
+    "candidates": [
+      {
+        "candidateId": "title-1",
+        "title": "待填写标题"
+      }
+    ]
+  },
+  "artifactSha256": "d8e8a85390f418c9654a0293c2e2f03d16c670f1b5f92f8f4250bf09fb0cfabb"
+}

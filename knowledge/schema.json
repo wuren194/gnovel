@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "gnovel knowledge asset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "body"],
+  "properties": {
+    "body": {"type": "string", "minLength": 1},
+    "metadata": {
+      "type": "object",
+      "required": ["assetId", "title", "kind", "status", "stations", "intents", "tags", "source", "applicability", "exclusions", "license"],
+      "properties": {
+        "assetId": {"type": "string", "pattern": "^KN-[A-Z0-9-]+$"},
+        "title": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["technique", "reading_note", "em_card", "style_analysis", "review"]},
+        "status": {"enum": ["draft", "active", "archived"]},
+        "stations": {"type": "array", "items": {"enum": ["composer", "router", "planner", "writer", "editor", "titler"]}},
+        "intents": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "tags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "source": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string"}, "sha256": {"type": "string"}}},
+        "applicability": {"type": "string"},
+        "exclusions": {"type": "string"},
+        "license": {"type": "string"}
+      }
+    }
+  }
+}

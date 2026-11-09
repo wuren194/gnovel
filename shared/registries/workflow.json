@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 2,
+  "chapterLength": {
+    "minHanCharacters": 8500,
+    "maxHanCharacters": 12000
+  },
+  "repair": {
+    "maxAutomaticRounds": 2
+  },
+  "review": {
+    "unfinishedConclusions": [
+      "待填写",
+      "未定",
+      "待审查",
+      "待核验",
+      "TODO",
+      "TBD"
+    ]
+  },
+  "continuation": {
+    "staleSummaryThreshold": 3,
+    "memoryBudgetUnit": "serializedCharacters",
+    "memoryBudgets": {
+      "planner": 24000,
+      "writer": 18000,
+      "editor": 30000,
+      "query": 12000
+    }
+  },
+  "serialPlanning": {
+    "chapterRangeRequired": true,
+    "prewarmNextChapter": false,
+    "currentVolumeOnly": true
+  },
+  "approval": {
+    "defaultMode": "manual",
+    "extremeLevelAlwaysManual": true
+  },
+  "maintenance": {
+    "_comment": "维护类阈值的唯一真源；脚本经 scripts/core/project.py 的访问器读取，不在调用点写字面量。",
+    "structureGcKeepBackups": 20,
+    "structureBatchMaxSteps": 200,
+    "canonProposalBatchMaxItems": 100,
+    "stateCompaction": {
+      "threshold": 500,
+      "oldChapterThreshold": 50
+    }
+  },
+  "query": {
+    "defaultLimit": 20,
+    "searchContextCharacters": 80,
+    "maxLimit": 100,
+    "defaultDepth": 1,
+    "maxDepth": 2,
+    "maxBytes": {
+      "overview": 8192,
+      "schema": 32768,
+      "list": 32768,
+      "detail": 16384,
+      "traverse": 32768
+    }
+  },
+  "protectedPaths": [
+    "正文",
+    ".gnovel/structure.json"
+  ],
+  "userWorkflow": {
+    "stages": {
+      "design": {
+        "label": "设计",
+        "task": "planner",
+        "subtasks": []
+      },
+      "write": {
+        "label": "写章",
+        "task": "writer",
+        "subtasks": []
+      },
+      "revise": {
+        "label": "修改",
+        "task": "editor",
+        "subtasks": [
+          "repair",
+          "titler",
+          "continuity"
+        ]
+      }
+    },
+    "actionTasks": {
+      "planner": "planner",
+      "writer": "writer",
+      "mechanical": "editor",
+      "editor": "editor",
+      "titler": "titler",
+      "continuity": "continuity",
+      "commit": null,
+      "router": null,
+      "await_author": null
+    }
+  }
+}

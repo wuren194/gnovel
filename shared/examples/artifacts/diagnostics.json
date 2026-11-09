@@ -1,0 +1,15 @@
+{
+  "artifactType": "diagnostics",
+  "schemaVersion": 1,
+  "projectId": "PROJECT",
+  "chapterId": "CHAPTER",
+  "sourceSha256": null,
+  "createdAt": "2026-08-29T08:11:18.336882+00:00",
+  "producer": "gnovel",
+  "payload": {
+    "passed": false,
+    "draftSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "inputHash": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "artifactSha256": "99f24b0559f03f31ee4ce6bb09d4c36200e4f71b28d2c2eb8d5270fb42eb0849"
+}

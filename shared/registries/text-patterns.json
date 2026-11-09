@@ -1,0 +1,497 @@
+{
+  "ai": {
+    "regex": [
+      {
+        "name": "不是……而是……",
+        "pattern": "不是[^。\\n]{0,40}而是",
+        "ruleId": "NOT-A-BUT-B",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "与其说……不如说……",
+        "pattern": "与其说[^。\\n]{0,40}不如说",
+        "ruleId": "RATHER-THAN",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "重要的不是……而是",
+        "pattern": "重要的不是[^。\\n]{0,40}而是",
+        "ruleId": "IMPORTANT-NOT-BUT",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "假坦诚开场",
+        "pattern": "(?:说实话|老实讲|讲真)[，,]",
+        "ruleId": "HONEST-OPEN",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "自问自答",
+        "pattern": "[。？]\\s*(?:结果呢|然后呢|为什么呢|怎么办呢)",
+        "ruleId": "SELF-QA",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "元提问绕路",
+        "pattern": "(?:你是不是一直想知道|你有没有想过|你知道这意味着什么吗)",
+        "ruleId": "META-QUESTION",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "上帝解释腔",
+        "pattern": "(?:他不知道的是|殊不知|这意味着|之所以[^。\\n]{0,30}是因为)",
+        "ruleId": "POV-OMNISCIENT",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "抽象心理直说",
+        "pattern": "他(?:感到|意识到|明白了|内心)[^。\\n]{1,24}",
+        "ruleId": "ABSTRACT-EMOTION",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "语气表情库存类比",
+        "pattern": "(?:语气|声音|表情)[^。！？\\n]{0,12}(?:(?:跟|像)[^。！？\\n]{1,12}(?:一样|一般|似的)|仿佛[^。！？\\n]{1,12}(?:一样|一般))",
+        "ruleId": "VOICE-SIMILE",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "身体陈词",
+        "pattern": "(?:喉结(?:滚动|滚了?一下)|薄唇微抿|修长的手指|壁咚|强吻[^。\\n]{0,8}(?:堵住|堵回|封住))",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "具体动作可保留；仅在同段重复或与库存动作成串时改写",
+        "ruleId": "BODY-CLICHE"
+      },
+      {
+        "name": "镜头化套话",
+        "pattern": "(?:每一帧|像慢镜头|画面定格)",
+        "ruleId": "CAMERA-CLICHE",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "那是引导解释腔",
+        "pattern": "那是(?:一种|某种|一个)?(?:代表|意味着|只有|关于)",
+        "ruleId": "THAT-WAS",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "普通指代句保留；仅收窄为解释关系时复核"
+      },
+      {
+        "name": "抽象情绪包",
+        "pattern": "某种[^。\\n]{0,12}复杂情绪",
+        "ruleId": "ABSTRACT-EMOTION-PACK",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "机械 ordinal 计数",
+        "pattern": "(?:第[0-9一二三四五六七八九十]+次|不知[是第]*第?几次|第几次|这已经是第[0-9一二三四五六七八九十]+)",
+        "ruleId": "ORDINAL-COUNT",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 2
+      },
+      {
+        "name": "密集数字数值",
+        "pattern": "(?:百分之[0-9一二三四五六七八九十]+|[0-9]+(?:\\.[0-9]+)?\\s*(?:%|度|厘米|毫米|米|分钟|秒|小时|次|天|(?i:cm|mm|kg|m)(?![a-zA-Z])))",
+        "ruleId": "NUMERIC-DENSITY",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 2
+      },
+      {
+        "name": "库存受惊生理",
+        "pattern": "(?:倒抽(?:了)?一口?凉气|倒吸(?:了)?一口?凉气|吸(?:了)?口冷气|(?:后背|背后)?(?:瞬间|一下|唰地)?(?:浸出|渗出|冒出|洇出)(?:一层)?冷汗|惊出(?:一身|一层)冷汗|冷汗(?:涔涔|直冒|浸湿了?(?:后背|衣衫)))",
+        "ruleId": "SHOCK-PHYSIOLOGY",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "肤浅分析收尾",
+        "pattern": "(?:彰显|折射出|映照出|预示着|昭示着|诉说着|见证着)[^。\\n]{0,20}",
+        "ruleId": "ENDING-ANALYSIS",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "格言化旁白",
+        "pattern": "(?:权力|人性|命运|时间|爱情|动机|真相|尊严)(?:从不|从来不|总是|永远|向来)[^。\\n]{0,20}",
+        "ruleId": "APHORISM-NARRATION",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "name": "正文出现emoji",
+        "pattern": "[\\U0001F300-\\U0001FAFF\\u2600-\\u27BF]",
+        "ruleId": "EMOJI",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "ruleId": "ENDING-SUMMARY",
+        "name": "总结升华",
+        "pattern": "(?:这一刻|在此刻|到了此时)[，,]?他(?:终于)?(?:懂得|明白|意识到|体悟到)",
+        "severity": "blocking",
+        "gate": true,
+        "scope": "narrative",
+        "rewriteHint": "ending-summary"
+      },
+      {
+        "ruleId": "TITLE-LABEL",
+        "name": "标签口号化",
+        "pattern": "(?:我是|变成|作为)(?:雨水)?(?:容器|玩物|性奴)",
+        "severity": "error",
+        "gate": true,
+        "scope": "narrative"
+      },
+      {
+        "ruleId": "ABSTRACT-NOUN",
+        "name": "抽象名词意义夸大",
+        "pattern": "(?:见证了|标志着|为……奠定.{0,12}基础|证明.{0,4}了.{0,4}的|持久(?:的)?渴望|宝贵的|不可磨灭的|命运的齿轮|这一夜注定|持续?不断的演变|深刻(?:的)?而(?:持久|深远))",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "abstract-nouns"
+      },
+      {
+        "ruleId": "CLICHE-EYES",
+        "name": "眼神套句",
+        "pattern": "(?:眼神|眼底)(?:一暗|深邃|闪过|划过|微沉|一凝|陡变|暗了暗|染上)",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "ai-vocab"
+      },
+      {
+        "ruleId": "CLICHE-MOUTH",
+        "name": "嘴角套句",
+        "pattern": "(?:嘴角(?:微微|轻轻)?上扬|勾起(?:一抹|一道)?(?:弧度|笑意|冷笑))",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "ai-vocab"
+      },
+      {
+        "ruleId": "CLICHE-AIR",
+        "name": "空气凝固套句",
+        "pattern": "空气(?:仿佛|似乎|瞬间)?(?:凝固|冰冻|窒息)",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "ai-vocab"
+      },
+      {
+        "ruleId": "CLICHE-HEART",
+        "name": "心头套句",
+        "pattern": "心头(?:不由得?|猛地?|一沉|一紧|一缩)",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "ai-vocab"
+      },
+      {
+        "ruleId": "SIMILE-LINK",
+        "name": "比喻连接词",
+        "pattern": "(?:仿佛|宛如|如同)",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 1,
+        "rewriteHint": "ai-vocab"
+      },
+      {
+        "ruleId": "INANIMATE-AGENCY",
+        "name": "无机物拟人存在感",
+        "pattern": "(?:那(?:条|套|个|项|段|份|则)(?:规则|程序|条款|制度|法规|协议|合同|秘密|记忆|伤疤|承诺|誓言|约定|真相|答案|谎言|过去|历史))(?:一直|始终|从来|永远|依然|仍然|至今|从未|还|还在|就在)?(?:都)?(?:在|等|沉睡|躺|待|留|守|藏|活|存在|停在|住在|驻留|离开)",
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "perParagraphLimit": 0,
+        "rewriteHint": "仅标记有明确抽象名词的候选；代词“它”的指代及普通物品空间位置由语义审查判断，不按“它在”猜拟人。"
+      }
+    ],
+    "triple": {
+      "name": "三项同构排比",
+      "pattern": "((?:[^，。\\n]{1,8}了[，,]){2}[^，。\\n]{1,8}了)",
+      "action_exempt_pattern": "[操顶插射夹捅撞磨蹭咬]"
+    }
+  },
+  "adverb_patch": {
+    "regex": [
+      {
+        "name": "地字修饰堆叠",
+        "pattern": "(?:缓慢|慢慢|缓缓|轻轻|重重|快速|迅速|仔细|认真|谨慎|小心|用力|猛烈|狠狠|死死|紧紧|极其小心)地(?:[、，,] *(?:缓慢|慢慢|缓缓|轻轻|重重|快速|迅速|仔细|认真|谨慎|小心|用力|猛烈|狠狠|死死|紧紧|极其小心)地)+"
+      },
+      {
+        "name": "情绪意图标签修补宽泛动作",
+        "pattern": "(?:(?:非常|十分|极其|异常|格外|无比|极度|明显|显然))?(?:愤怒|悲伤|失望|紧张|讽刺|冷漠|温柔|粗暴|凶狠|挑衅|嘲弄|焦急|慌乱|绝望|意味深长|恶狠狠)地(?:说|问|答|道|笑|看|望|盯|瞪|走|站|坐|摇(?:了)?摇头|点(?:了)?点头|碰|摸|推|拉)"
+      },
+      {
+        "name": "动作方式修补宽泛动词",
+        "pattern": "(?:快速|迅速|飞快|缓慢|慢慢|缓缓|轻轻|重重|大声|小声|仔细|认真|谨慎|小心|极其小心|非常小心|格外小心|用力|猛烈|狠狠|死死|紧紧|冷冷|淡淡|机械|僵硬|不由自主|下意识|本能)地(?:说|问|答|道|走(?:开|出|进|过去|回来)?|离开|看|望|盯|瞪|碰|摸|触|摇(?:了)?摇头|点(?:了)?点头|推|拉|坐|站|转身|抬头|低头|靠近)"
+      },
+      {
+        "name": "程度词直贴抽象标签",
+        "pattern": "(?:(?:非常|十分|极其|异常|格外|无比|极度|尤其|特别|过于|相当|颇为)(?:紧张|愤怒|悲伤|安静|失望|害怕|激动|重要|强烈|剧烈|复杂|微妙|暧昧|压抑(?!的(?:(?:低沉|沙哑|嘶哑|短促|细微|断续)的?)?(?:声音|嗓音|语声|笑声|哭声|抽泣|呜咽|啜泣|叹息|闷哼|低哼|嘶吼|吼声))|尴尬|痛苦|舒服|难受|疼痛)|(?:明显|显然)(?:地)?(?:很|非常|十分|极其|格外|极度)?(?:紧张|愤怒|悲伤|失望|害怕|激动|痛苦|难受))"
+      },
+      {
+        "name": "抽象修饰模板",
+        "pattern": "(?:非常重要|深入探讨|积极推动|显著提升|充分体现|不断优化|更好地满足|有效地解决)"
+      }
+    ]
+  },
+  "transition": {
+    "regex": [
+      {
+        "name": "显性转折词",
+        "pattern": "(?:然而|但是|不过|可是|却(?:是|又|也|还|仍|偏|不|让|把|在|被|将|从|比|并|要|能|会|想))"
+      }
+    ],
+    "per_paragraph_limit": 1,
+    "per_500_chars_limit": 2,
+    "scope": "narrative"
+  },
+  "dialogue_dynamics": {
+    "pattern": "(?!)"
+  },
+  "voice": {
+    "globalBannedInterjections": [
+      "该死",
+      "可恶",
+      "天哪",
+      "老天",
+      "见鬼",
+      "我的天",
+      "不可思议",
+      "怎么会这样"
+    ],
+    "attribution": {
+      "speechVerbs": [
+        "说道",
+        "问道",
+        "答道",
+        "回答",
+        "回应",
+        "反问",
+        "追问",
+        "解释",
+        "提醒",
+        "补充",
+        "喊道",
+        "叫道",
+        "说",
+        "问",
+        "答",
+        "喊"
+      ],
+      "speechModifiers": [
+        "低声",
+        "轻声",
+        "小声",
+        "大声",
+        "冷声",
+        "沉声",
+        "笑着",
+        "接着",
+        "继续",
+        "又",
+        "才",
+        "忽然",
+        "慢慢地",
+        "低低地"
+      ],
+      "speakerPrefixes": [
+        "电话那头的",
+        "电话里的",
+        "听筒里的",
+        "另一头的",
+        "门外的",
+        "门口的"
+      ],
+      "listenerPrefixes": [
+        "对",
+        "向",
+        "冲",
+        "朝"
+      ],
+      "actionPrefixes": [
+        "把",
+        "放下",
+        "推",
+        "抬",
+        "低头",
+        "点头",
+        "摇头",
+        "看",
+        "望",
+        "接起",
+        "拿",
+        "走",
+        "笑",
+        "皱眉",
+        "转",
+        "停"
+      ]
+    }
+  },
+  "word_density": {
+    "name": "功能词密度",
+    "scope": "narrative",
+    "dialogue_exempt": true,
+    "families": [
+      {
+        "id": "zhe",
+        "name": "指示词「这」家族",
+        "pattern": "这",
+        "per_500_chars_limit": 3,
+        "rewrite_hint": "改写方向：省略或换具体所指（那人/对方/当场/具体名词）；同段连续出现必查。→ libraries/de-ai-humanize/sections/07-function-word-density.md"
+      },
+      {
+        "id": "shi",
+        "name": "系动词「是」",
+        "pattern": "是",
+        "per_500_chars_limit": 4,
+        "strip_affixes": [
+          "于是",
+          "可是",
+          "但是",
+          "还是",
+          "不是",
+          "而是",
+          "只是",
+          "要是",
+          "倒是",
+          "算是",
+          "老是",
+          "或是"
+        ],
+        "rewrite_hint": "改写方向：判断句改动作/状态/语序（他是攻→他压上来；房里是黑的→房里黑着；是他先动的手→他先动的手）。→ libraries/de-ai-humanize/sections/07-function-word-density.md"
+      }
+    ]
+  },
+  "schemaVersion": 5,
+  "adjective_stack": {
+    "defChain": {
+      "name": "的字段语四连",
+      "pattern": "(?:(?<![我你他她它们])[一-龥]{1,3}的(?:[^，。！？、\\n]{0,4})?){4,}"
+    },
+    "listChain": {
+      "name": "顿号形容词链三连",
+      "pattern": "(?:[一-龥]{1,3}的、){2,}[一-龥]{1,3}的"
+    }
+  },
+  "diagnosticPolicy": {
+    "proseQuality": {
+      "minScore": 70
+    },
+    "subjectSentence": {
+      "impersonalExistencePattern": "^(?:(?:又|却|仍然|仍|再|还是|已经|终于|忽然)(?:也|还)?)*没(?:有)?(?:(?:任何|一点儿?|一丝|半点)?(?:新的?|别的|其他的?|更多的?)?(?:消息|动静|声音|声响|脚步声|回声|人影|信号)(?=$|[，,；;]|传来|响起|出现)|(?:任何(?:新的?|别的|其他的?|更多的?)?|新的?|别的|其他的?|更多的?)通知(?=$|[，,；;]|传来|响起|出现)|通知(?=传来|响起|出现)|(?:任何人|一个人|人)(?=$|[，,；;]|应门|回答|回应|答话|说话|开口|过来|进来|出现))"
+    },
+    "sentenceLength": {
+      "byMode": {
+        "plot": 45,
+        "buildup": 45,
+        "mixed": 60,
+        "peakscene": 60
+      },
+      "stickyCap": 80,
+      "unpunctuatedCap": 25,
+      "lengthSeverity": "info"
+    },
+    "sensoryDensity": {
+      "minPerKHan": 10,
+      "minChannels": 2,
+      "minTextLength": 200,
+      "severity": "info",
+      "channels": {
+        "触觉": "(?:冰凉|温热|粗糙|光滑|刺痛|发麻)",
+        "温度": "(?:寒冷|温暖|热气|冷风)",
+        "视觉": "(?:光影|明亮|昏暗|颜色|闪烁)",
+        "听觉": "(?:脚步声|钟声|风声|回响)",
+        "嗅觉与味觉": "(?:气味|味道|汗酸|花香|木香|饭香)"
+      }
+    },
+    "paragraphRatio": {
+      "max": 0.2
+    },
+    "dialogueDynamics": {
+      "windowSize": 500,
+      "minLevel": 3,
+      "perLevel": {
+        "3": 1,
+        "4": 2
+      },
+      "defaultPerWindow": 3,
+      "shortTiers": [
+        {
+          "belowTextSize": 300,
+          "required": 1
+        },
+        {
+          "belowTextSize": 800,
+          "required": 2
+        }
+      ],
+      "enabled": false
+    },
+    "factSignals": "(?:[0-9一二三四五六七八九十百千万两]+(?:岁|年|天|万|排|号)|去年|前年|小时候|初[一二三]|高[一二三]|暑假|寒假|注册|粉丝|住在|坐在|靠窗|地下室|快递柜)",
+    "sceneDynamics": {
+      "minIntensityLevel": 2,
+      "minNarrativeLength": 25,
+      "coreActionPattern": "(?!)",
+      "stickyPattern": "(?!)",
+      "stickyMinCommas": 2,
+      "sensoryStayPattern": "(?!)",
+      "sensoryStayMinLength": 25,
+      "stickyMinLength": 20,
+      "enabled": false
+    }
+  },
+  "smellKeywords": [
+    "气味",
+    "味道",
+    "香",
+    "闻",
+    "嗅"
+  ],
+  "synonymGroups": {},
+  "sceneSmellPattern": "(?!)",
+  "sceneSequencePattern": "(?!)"
+}

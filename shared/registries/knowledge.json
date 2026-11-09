@@ -1,0 +1,41 @@
+{
+  "maxResults": 3,
+  "maxExcerptChars": 1800,
+  "maxIntentChars": 800,
+  "minScore": 6,
+  "bodyOnlyMinTokens": 6,
+  "genericDfMax": 14,
+  "legacyMetadataPenalty": 2,
+  "exclusionsMinUnclaimedOverlap": 2,
+  "lexicalWeakTokens": ["阶段"],
+  "exclusionUsePrefixes": ["用", "使用", "按", "按照", "照着", "以", "把", "做成", "写成"],
+  "weakTokens": ["设计", "规范"],
+  "rankingWeights": {
+    "intent": 12,
+    "title": 5,
+    "tag": 4,
+    "body": 2,
+    "applicability": 3
+  },
+  "intents": {
+    "relationship_transition": ["关系推进", "推进关系", "拉近关系", "关系递进", "情感里程碑", "亲密关系变化", "关系更进一步", "拉近距离", "暧昧升级", "暧昧", "感情升温", "亲密度变化", "表白", "告白", "确认关系", "和好", "决裂", "重逢", "恢复联系", "relationship"],
+    "power_dynamics": ["权力动态", "权责关系", "资源变化", "地位逆转", "决策权", "责任分配", "合作分工", "话语权", "身份变化", "权威"],
+    "psychological_change": ["心理描写", "心理变化", "心理转折", "心理演变", "情绪外化", "崩溃", "心防", "防线", "动摇", "挣扎", "受挫", "瓦解"],
+    "foreshadowing": ["伏笔", "铺垫", "回收", "悬念", "暗号", "埋线", "伏线", "线索"],
+    "reversal": ["反转", "认知翻转", "误导"],
+    "opening": ["开篇", "开局", "章首"],
+    "ending": ["结尾", "收束", "余韵", "章末", "结局", "收尾", "完结", "余味"],
+    "pacing": ["节奏", "放慢", "叙事推进", "节奏推进", "转场"]
+  },
+  "strategy": {
+    "defaultMode": "curated",
+    "modes": [
+      "off",
+      "broad",
+      "curated"
+    ],
+    "version": "knowledge-strategy-v1",
+    "broadMaxResults": 6,
+    "broadMaxPackChars": 7200
+  }
+}

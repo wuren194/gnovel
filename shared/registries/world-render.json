@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "activeFps": 60,
+  "idleFps": 30,
+  "interactionTailMs": 250,
+  "frameToleranceMs": 1,
+  "maxDeltaSeconds": 0.06,
+  "walkSettleEpsilon": 0.001,
+  "exposure": 0.96
+}

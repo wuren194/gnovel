@@ -1,0 +1,15 @@
+{
+  "fixture": "review_ready_project, one chapter, editor contract reads and one anchored repair",
+  "units": "compact JSON Unicode characters; Python audit open events; public operation calls",
+  "singleOperationCharacters": 5000,
+  "evidenceReviewRequestBytes": 6500,
+  "evidencePackResponseBytes": 1800,
+  "prepareCharacters": 12000,
+  "prepareColdFileOpens": 250,
+  "firstReadPages": 8,
+  "firstReadFileOpens": 500,
+  "unchangedResponseCharacters": 1500,
+  "requestCharacters": 6000,
+  "totalResponseCharacters": 90000,
+  "totalCalls": 12
+}

@@ -1,0 +1,1265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gnovel.local/schemas/artifacts.json",
+  "title": "gnovel artifact envelopes",
+  "type": "object",
+  "required": [
+    "artifactType",
+    "schemaVersion",
+    "projectId",
+    "chapterId",
+    "sourceSha256",
+    "createdAt",
+    "producer",
+    "payload",
+    "artifactSha256"
+  ],
+  "properties": {
+    "artifactType": {
+      "type": "string",
+      "enum": [
+        "stage_a_review",
+        "candidate_prose",
+        "diagnostics",
+        "stage_b_review",
+        "title_candidates",
+        "repair_plan",
+        "state_candidate"
+      ]
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "projectId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "chapterId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourceSha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactSha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "stage_a_review": {
+      "type": "object",
+      "required": [
+        "decision",
+        "activeSeats",
+        "sourcePlanHash",
+        "consensus",
+        "disagreements",
+        "openItems"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "adopt",
+            "modify",
+            "reject",
+            "pending"
+          ]
+        },
+        "activeSeats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        },
+        "modeLevelReason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consensus": {
+          "type": "array"
+        },
+        "disagreements": {
+          "type": "array"
+        },
+        "openItems": {
+          "type": "array"
+        },
+        "seatReviews": {
+          "type": "object"
+        },
+        "projectExceptions": {
+          "type": "object"
+        },
+        "sourcePlanHash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "relationshipCausalityReviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "conclusion",
+              "evidence"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "conclusion": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "text"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "end": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "page": {
+                      "type": "object"
+                    },
+                    "declarationField": {
+                      "type": "string",
+                      "enum": [
+                        "capabilityAssessment",
+                        "choiceReason",
+                        "complianceCost",
+                        "continuation.reason",
+                        "resistanceCost",
+                        "scope"
+                      ],
+                      "description": "Stage A only; quote the named field of this same declaration without duplicating it in plan text."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Declared chapter relationship decisions, with exact current-plan (A) or candidate-prose (B) quotations; completed reviews require non-placeholder conclusions."
+        },
+        "behaviorCoverage": {
+          "type": "object",
+          "required": [
+            "relationship",
+            "living"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "relationship": {
+              "type": "string",
+              "enum": [
+                "applicable",
+                "insufficient_material",
+                "not_applicable",
+                "unassessed"
+              ]
+            },
+            "living": {
+              "type": "string",
+              "enum": [
+                "applicable",
+                "insufficient_material",
+                "not_applicable",
+                "unassessed"
+              ]
+            }
+          },
+          "description": "Each chapter must assess both domains. Reasons/evidence use existing logic/relationship/continuity seats."
+        },
+        "behaviorReviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "basisIds",
+              "conclusion",
+              "disposition",
+              "evidence",
+              "id",
+              "kind",
+              "origin"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "relationship",
+                  "living"
+                ]
+              },
+              "origin": {
+                "enum": [
+                  "plan",
+                  "prose"
+                ]
+              },
+              "disposition": {
+                "enum": [
+                  "local_repair",
+                  "needs_material",
+                  "replan_required",
+                  "within_plan"
+                ]
+              },
+              "conclusion": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "basisIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "candidateRecipe": {
+          "type": "object",
+          "description": "从已冻结批次请求和实际前章候选证据派生，A起冻结并继承；手填hash不替代当前性核验。"
+        }
+      }
+    },
+    "candidate_prose": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourcePlanHash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stageAArtifactSha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "beatSpans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "start",
+              "end"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^B[0-9]+$"
+              },
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "writingNotes": {
+          "type": "object",
+          "properties": {
+            "deviations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "kind",
+                  "reason"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "intensityLevel",
+                      "requirement",
+                      "wording"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "intensityLevel": {
+                    "type": "integer"
+                  },
+                  "requirementId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "plannedText": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quote": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "newFacts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "statement",
+                  "quote"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "statement": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quote": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "target": {
+                    "type": "object",
+                    "required": [
+                      "document",
+                      "section"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "document": {
+                        "type": "string"
+                      },
+                      "section": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "candidateSelection": {
+          "type": "object",
+          "required": [
+            "basis",
+            "projectRoot",
+            "projectId",
+            "chapterId",
+            "candidateVersion",
+            "activeToken",
+            "bodySha256"
+          ],
+          "properties": {
+            "basis": {
+              "const": "active-candidate-v1"
+            },
+            "projectRoot": {
+              "type": "string"
+            },
+            "projectId": {
+              "type": "string"
+            },
+            "chapterId": {
+              "type": "string"
+            },
+            "candidateVersion": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "activeToken": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "bodySha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "selectionReview": {
+          "type": "object",
+          "properties": {
+            "planApplicabilityReason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "notesDisposition": {
+              "type": "string",
+              "enum": [
+                "retained",
+                "revised",
+                "withdrawn"
+              ]
+            },
+            "notesReason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "planApplicabilityReason"
+          ],
+          "additionalProperties": false
+        },
+        "selectionHandoff": {
+          "type": "object",
+          "description": "工具冻结的转交来源与旧写作说明，不授予批准。"
+        },
+        "candidateRecipe": {
+          "type": "object",
+          "description": "从已冻结批次请求和实际前章候选证据派生，A起冻结并继承；手填hash不替代当前性核验。"
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": [
+        "passed",
+        "draftSha256"
+      ],
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "draftSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "inputHash": {
+          "type": "string"
+        },
+        "runInputs": {
+          "type": "object",
+          "description": "真实运行输入证明，由诊断运行器生成；历史缺失需重跑，不重封。"
+        },
+        "semanticInputs": {
+          "type": "object",
+          "description": "真实运行输入证明，由诊断运行器生成；历史缺失需重跑，不重封。"
+        },
+        "semanticInputHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "stage_b_review": {
+      "type": "object",
+      "required": [
+        "verdict",
+        "slots",
+        "findings"
+      ],
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "REPAIR_REQUIRED",
+            "POLISH_READY",
+            "INCOMPLETE"
+          ]
+        },
+        "slots": {
+          "type": "object",
+          "minProperties": 12,
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "conclusion"
+            ],
+            "properties": {
+              "conclusion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "text"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "end": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "page": {
+                      "type": "object"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "notApplicableReason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "finalProseSha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "candidateArtifactSha256": {
+          "type": "string"
+        },
+        "diagnosticsArtifactSha256": {
+          "type": "string"
+        },
+        "writingDecisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "decision",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "accept",
+                  "reject",
+                  "pending"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "findingId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "factChange": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "reason",
+                  "evidence"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "not_required"
+                    ]
+                  },
+                  "requestId": {
+                    "type": "string"
+                  },
+                  "targetIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "description": "Requires stable findingId. Pending uses exactly one requestId or precise existing targetIds; not_required explicitly resolves this persistence obligation."
+              }
+            }
+          }
+        },
+        "repairScope": {
+          "type": "string",
+          "enum": [
+            "local",
+            "expansion",
+            "structural"
+          ]
+        },
+        "repairReview": {
+          "type": "object",
+          "required": [
+            "candidateSha256",
+            "bodyHash",
+            "decisions",
+            "pendingIssueIds",
+            "unavailableReportCount"
+          ],
+          "properties": {
+            "candidateSha256": {
+              "type": "string"
+            },
+            "bodyHash": {
+              "type": "string"
+            },
+            "pendingIssueIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "unavailableReportCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "decisions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "issueId",
+                  "decision",
+                  "reason",
+                  "evidence",
+                  "bodyHash",
+                  "finding"
+                ],
+                "properties": {
+                  "issueId": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "resolved",
+                      "open",
+                      "needs_information"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "evidence": {
+                    "type": "array"
+                  },
+                  "bodyHash": {
+                    "type": "string"
+                  },
+                  "finding": {
+                    "type": "object"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "relationshipCausalityReviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "conclusion",
+              "evidence"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "conclusion": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "text"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "end": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "page": {
+                      "type": "object"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Declared chapter relationship decisions, with exact current-plan (A) or candidate-prose (B) quotations; completed reviews require non-placeholder conclusions."
+        },
+        "sourcePlanHash": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "Bound by tools; required for completed reviews of relationshipCausality declarations."
+        },
+        "behaviorCoverage": {
+          "type": "object",
+          "required": [
+            "relationship",
+            "living"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "relationship": {
+              "type": "string",
+              "enum": [
+                "applicable",
+                "insufficient_material",
+                "not_applicable",
+                "unassessed"
+              ]
+            },
+            "living": {
+              "type": "string",
+              "enum": [
+                "applicable",
+                "insufficient_material",
+                "not_applicable",
+                "unassessed"
+              ]
+            }
+          },
+          "description": "Each chapter must assess both domains. Reasons/evidence use existing logic/relationship/continuity seats."
+        },
+        "behaviorReviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "basisIds",
+              "conclusion",
+              "disposition",
+              "evidence",
+              "id",
+              "kind",
+              "origin"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "relationship",
+                  "living"
+                ]
+              },
+              "origin": {
+                "enum": [
+                  "plan",
+                  "prose"
+                ]
+              },
+              "disposition": {
+                "enum": [
+                  "local_repair",
+                  "needs_material",
+                  "replan_required",
+                  "within_plan"
+                ]
+              },
+              "conclusion": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "basisIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "factAssessment": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "changes",
+                "insufficient_material",
+                "no_change",
+                "unassessed"
+              ]
+            }
+          },
+          "description": "No implicit assessment. Pending persistence obligations remain findings even when prose is POLISH_READY."
+        },
+        "proseBindingGeneration": {
+          "type": "integer",
+          "description": "Tool-owned current prose binding generation; finalized inventory binds the final generation in its continuity receipt."
+        },
+        "cognitionReviews": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "origin": {
+                "type": "string",
+                "enum": [
+                  "scan",
+                  "semantic"
+                ]
+              },
+              "use": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "start": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "end": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "page": {
+                    "type": "object"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "mentions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "term": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "entityIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "required": [
+                    "term",
+                    "entityIds"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "speakerHint": {
+                "type": "object",
+                "properties": {
+                  "characterId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "certain": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "characterId",
+                  "confidence",
+                  "certain"
+                ],
+                "additionalProperties": false
+              },
+              "characterId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "information": {
+                "type": "string"
+              },
+              "disposition": {
+                "type": "string",
+                "enum": [
+                  "needs_material",
+                  "not_applicable",
+                  "repair_required",
+                  "supported",
+                  "unassessed"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "const": "current_prose"
+                        },
+                        "quote": {
+                          "type": "object",
+                          "required": [
+                            "text"
+                          ],
+                          "properties": {
+                            "text": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "page": {
+                              "type": "object"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "quote"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "const": "prior_prose"
+                        },
+                        "quote": {
+                          "type": "object",
+                          "required": [
+                            "text"
+                          ],
+                          "properties": {
+                            "text": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "page": {
+                              "type": "object"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "chapterId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "proseDigest": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "bindingGeneration": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "quote",
+                        "chapterId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "const": "source_fragment"
+                        },
+                        "quote": {
+                          "type": "object",
+                          "required": [
+                            "text"
+                          ],
+                          "properties": {
+                            "text": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "page": {
+                              "type": "object"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "fragmentId": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "quote",
+                        "fragmentId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "findingId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "origin",
+              "use",
+              "characterId",
+              "information",
+              "disposition",
+              "reason",
+              "sources"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "title_candidates": {
+      "type": "object",
+      "required": [
+        "candidates"
+      ],
+      "properties": {
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "candidateId",
+              "title"
+            ],
+            "properties": {
+              "candidateId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "repair_plan": {
+      "type": "object",
+      "required": [
+        "repairScope",
+        "findings"
+      ],
+      "properties": {
+        "repairScope": {
+          "type": "string",
+          "enum": [
+            "local",
+            "expansion",
+            "structural"
+          ]
+        },
+        "findings": {
+          "type": "array"
+        }
+      }
+    },
+    "state_candidate": {
+      "type": "object",
+      "required": [
+        "baseStateSha256",
+        "designSha256",
+        "sourcePlanHash",
+        "finalProseSha256",
+        "changes"
+      ],
+      "properties": {
+        "baseStateSha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "designSha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finalProseSha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changes": {
+          "type": "array"
+        },
+        "proposedFacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "statement",
+              "quote"
+            ]
+          }
+        },
+        "candidateArtifactSha256": {
+          "type": "string"
+        },
+        "sourcePlanHash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

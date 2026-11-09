@@ -1,0 +1,346 @@
+# gnovel 工具箱规则 ID 注册表（SSOT）
+# mechanical:true 必须有 validate-text 检查器；建议配套 fixture（建议性，未强制落实）
+# source 标明正文定义位置；alias_of 合并重复表述
+
+version: 1
+skills: [gnovel-router, gnovel-composer, gnovel-planner, gnovel-writer, gnovel-editor, gnovel-titler]
+
+params:
+  intensityLevel: {default: 5, min: 1, max: 10}
+  chapterMode: {enum: [plot, buildUp, mixed, peakScene], default_single_scene: peakScene}
+
+rules:
+  # --- 因果与决策（shared/contracts/G-CAUSAL.md）---
+  - id: C-01
+    name: 场景起点
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+  - id: C-02
+    name: 行动者与回应来源
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+  - id: C-03
+    name: 触发证据
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+  - id: C-04
+    name: 尝试与反馈
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+  - id: C-05
+    name: 模式铰链
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+  - id: C-06
+    name: 选择与即时后果
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+  - id: C-07
+    name: 新状态与下一承诺
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/G-CAUSAL.md
+
+  # --- 正文核心与形式规则（shared/contracts/STYLE-AND-VOICE.md / G-RHYTHM.md）---
+  - id: S-06
+    name: 冲突对白贯穿
+    code: "[冲突对白贯穿]"
+    mechanical: true
+    layer: heuristic
+    modes: [peakScene, mixed]
+    checker: check_dialogue_dynamics_density
+    source: shared/contracts/G-INTENSITY-SCALE-V2.md
+    note: 脚本仅密度启发；语义是否绑定动作仍靠 L2
+  - id: S-07
+    name: 反差服务
+    code: "[反差服务]"
+    mechanical: false
+    layer: semantic
+    modes: [plot, buildUp, mixed, peakScene]
+    source: shared/contracts/TENSION-AND-EMOTION.md
+  - id: S-08
+    name: 段落节奏
+    code: "[段落节奏]"
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_paragraph_rhythm
+    source: shared/contracts/G-RHYTHM.md
+    note: 机械子项=单句段连续/任意8段窗/比例/相邻单句/连续12句未换段/超长段保守转换；功能正当性仍由L2判定
+  - id: S-09
+    name: 感官词汇
+    code: "[感官词汇]"
+    mechanical: true
+    layer: heuristic
+    modes: [peakScene, mixed]
+    checker: check_sensory_channels
+    source: shared/contracts/STYLE-AND-VOICE.md
+  - id: S-09b
+    name: 张力等级退化拦截
+    code: "[张力等级退化拦截]"
+    note: "机械地板 check_l5_floor + L2 语义地板(反硬加/过程证据)；见 G-INTENSITY-SCALE-V2。peakScene/mixed 默认 strict FAIL；--no-strict-l5 降 INFO"
+    mechanical: true
+    layer: mechanical
+    modes: [peakScene, mixed]
+    checker: check_l5_floor
+    source: shared/contracts/G-INTENSITY-SCALE-V2.md
+  - id: S-09d
+    name: 感官密度与多通道
+    mechanical: true
+    layer: heuristic
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_sensory_density
+    source: shared/contracts/TENSION-AND-EMOTION.md
+    note: 感官词密度≥10次/千字且覆盖≥2通道；正文<200字豁免
+  - id: S-10
+    name: AI味净化/风格纪律
+    code: "[AI味净化/风格纪律]"
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_ai_patterns
+    also: [check_dash, check_sentence_length]
+    source: shared/contracts/G-WRITING-BANS.md
+    aliases: [A-09]
+  - id: S-10s
+    name: 句子长度
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_sentence_length
+    source: shared/contracts/G-RHYTHM.md
+    note: S-10 风格纪律的句长子项；validate 单独 rule_id
+  - id: S-10q
+    name: 正文质感离线评分
+    mechanical: true
+    layer: heuristic
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_prose_quality
+    source: shared/contracts/G-WRITING-BANS.md
+    note: 100分制扣分（抽象心理/模板过渡/解释腔/库存神态/升华结尾/空洞修饰）+感官加分；通过阈值取 text-patterns.json diagnosticPolicy.proseQuality.minScore，评级阈值独立
+  - id: S-11
+    name: 句式节奏
+    code: "[句式节奏]"
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_subject_sentences
+    source: shared/contracts/G-RHYTHM.md
+    aliases: [A-10]
+    note: 一个checker完整执行500字窗双逗号句+连续5短句+连续3句同主语；对话豁免
+  - id: S-12
+    name: 省略号（放开功能性/阻断滥用）
+    code: "[省略号限数]"
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_ellipsis
+    source: shared/contracts/STYLE-AND-VOICE.md
+    aliases: [A-11]
+
+  # --- 附加机械 ---
+  - id: S-13
+    name: 破折号（放开功能性/阻断滥用）
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_dash
+    source: shared/contracts/STYLE-AND-VOICE.md
+    note: AGENTS 第9条破折号子项；勿 alias A-09（A-09 专绑 S-10 AI味）
+  - id: S-14
+    name: 同义词轮换禁用
+    mechanical: true
+    layer: heuristic
+    modes: [peakScene, mixed]
+    checker: check_synonym_churn
+    source: shared/contracts/G-RHYTHM.md
+    note: 稳定使用一个自然术语不惩罚；只拦短窗口内明显同义词轮换
+  - id: S-15
+    name: 身体反应模板
+    mechanical: true
+    layer: mechanical
+    modes: [peakScene, mixed]
+    checker: check_body_reaction_repetition
+    source: shared/contracts/G-RHYTHM.md
+  - id: S-16
+    name: 低信息副词补丁
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_adverb_patches
+    source: shared/contracts/G-WRITING-BANS.md
+    note: 只拦叙事中的高风险副词补丁；对白与承担时间、逻辑、范围信息的副词不一刀切
+  - id: S-17
+    name: 转折词密度
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_transition_density
+    source: shared/contracts/G-WRITING-BANS.md
+    note: 叙事每段≤1个、每500字≤2个显性转折词；对话行豁免；规则表见 text-patterns.json transition 节
+
+  # --- 项目 AGENTS 对齐（不复制正文，只登记）---
+  - id: A-01
+    name: 动作可行性
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-02
+    name: 读者出戏
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-03
+    name: 场景具体性
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-04
+    name: 信息节制与叙事精度
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-05
+    name: 关系阶段感
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-06
+    name: 套路与陈词
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-07
+    name: 对白与声音
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-08
+    name: 视角与自我承认边界
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: false
+  - id: A-09
+    name: AI味净化（项目）
+    alias_of: S-10
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    note: 仅 AI味；破折号子项见 S-13，勿双绑
+  - id: A-10
+    name: 句式节奏（项目）
+    alias_of: S-11
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+  - id: A-11
+    name: 省略号（项目）
+    alias_of: S-12
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    note: 叙事禁；对话不限（已删「每千字≤3」死文案）
+  - id: A-12
+    name: 软肋锚点
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    package: fall
+  - id: A-13
+    name: 强项在线触发
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    package: fall
+  - id: A-14
+    name: 反思瞬间嵌入
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    package: fall
+  - id: A-15
+    name: 物件权力符号
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    package: fall
+    note: 默认跳过；用户点名才启用；优先无道具
+  - id: A-15b
+    name: 物件功能绑定
+    source: 项目根 AGENTS.md（用户项目可选文件）
+    mechanical: false
+    package: fall
+    note: 仅启用 coreObject 时可选；未启用则跳过不 fail
+  - id: A-16
+    name: 阶梯式失守
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    package: fall
+  - id: A-17
+    name: 呼吸感交替
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    package: fall
+  - id: A-18
+    name: 正文元信息隔离
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    mechanical: true
+    layer: mechanical
+    modes: [plot, buildUp, mixed, peakScene]
+    checker: check_project_meta
+    note: 标题行豁免；故事世界内真实讨论文本的例外由L2复核
+  - id: A-19
+    name: 出戏自检
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    review: true
+  - id: A-20
+    name: 信息节制与心理透明度自检
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    review: true
+  - id: A-21
+    name: 场景具体性自检
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    review: true
+  - id: A-22
+    name: 反差错位自检
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    review: true
+  - id: A-23
+    name: 节奏跳读自检
+    source: 项目根 AGENTS.md（用户项目可选文件，setup 生成模板）
+    review: true
+
+  # --- 跌落执行门扩展（不占用项目 A 编号）---
+  - id: F-01
+    name: 强者反弹保留
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+  - id: F-02
+    name: 旁观者功能
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+  - id: F-03
+    name: FALL-GATE 正文兑现
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+  - id: F-04
+    name: 维度换挡
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+    note: 本场主失守维度须 ≠ 上一场；细则见 G-CHARACTER-TRANSITION.md [EDITOR-FULL] §5 阶梯式失守
+  - id: F-05
+    name: 伪收益
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+    note: 改善借口主轴时每级须可验证小收益；见 G-CHARACTER-TRANSITION.md [EDITOR-FULL] §5.3 收益博弈
+  - id: F-06
+    name: 抬高厚度
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+    note: ≥1落地场景+≥2维度证据+刀前无裂缝；崩坏回收抬高；见 G-CHARACTER-TRANSITION.md [EDITOR-FULL] §2 强项在线触发
+  - id: F-07
+    name: 正面战败可信度
+    source: shared/contracts/G-CHARACTER-TRANSITION.md
+    mechanical: false
+    package: fall
+    note: 正面战败须前置角色甲战力，并排除角色乙降智、放水、体力骤降和临时开挂
+non_goals:
+  - 自动判定关键场景占比精确比例
+  - 自动判定悲剧美感 / 软肋是否成立
+  - 自动判定动作物理可行性
+  - 默认全文加载 14/20/21/76/77

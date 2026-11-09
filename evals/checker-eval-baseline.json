@@ -1,0 +1,924 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "kind": "synthetic-engineering",
+  "suiteDigest": "6c8d42fecb97166ed61652feb40cea5fb5d6bd852e223d50eb219abeaa4d3e4a",
+  "limitations": [
+    "Not a novel-quality score or human-approved calibration",
+    "Only explicitly labeled case-rule pairs are scored",
+    "Repair stages are hand-authored, not model generations",
+    "Cycles mean exact text return or monitored rule disappearance and return"
+  ],
+  "summary": {
+    "cases": 52,
+    "rules": 20,
+    "assertions": 66,
+    "failedCases": 0,
+    "repairs": 6,
+    "failedRepairs": 0,
+    "TP": 26,
+    "FP": 0,
+    "TN": 40,
+    "FN": 0,
+    "precision": 1.0,
+    "recall": 1.0
+  },
+  "perRule": {
+    "cliche/ABSTRACT-EMOTION": {
+      "TP": 2,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/BODY-FIRST": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 2,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/HONEST-OPEN": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/NOT-A-BUT-B": {
+      "TP": 3,
+      "FP": 0,
+      "TN": 5,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/RHYTHM-LOW-VARIANCE": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/AI自指/拒绝语": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/占位符": {
+      "TP": 2,
+      "FP": 0,
+      "TN": 5,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/大纲工程术语泄漏(blocking)": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/工程术语泄漏(blocking)": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/末尾截断": {
+      "TP": 2,
+      "FP": 0,
+      "TN": 6,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/章节引用(advisory)": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/紧邻复读": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 2,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/逐字复读": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 2,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "validator/A-18": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "validator/S-10s": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "validator/S-12": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 2,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "validator/S-13": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 2,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "validator/S-17": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "voice/OOC_VOICE_DRIFT": {
+      "TP": 2,
+      "FP": 0,
+      "TN": 3,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "voice/VOICE-GLOBAL-INTERJECTION": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "cases": [
+    {
+      "id": "contrast-positive",
+      "textDigest": "2432b1baee3c6c15f71923284cd16f6bfb32eea3910320652300457ad74b6c0d",
+      "observed": [
+        "cliche/NOT-A-BUT-B"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "contrast-dialogue-negative",
+      "textDigest": "406803f105d2fae44bc818df0350cda9936e06553de7187fa02647dfdb0ee4cb",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "contrast-markup-negative",
+      "textDigest": "5c834e58a2750efefb3ef130f3a94cecbd60420bef1e883bea688527fddea132",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "honest-positive",
+      "textDigest": "b407437479d6206ce229ac3771df3e602a4dbf1bf66ade26d1eb7431be677e10",
+      "observed": [
+        "cliche/HONEST-OPEN"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "honest-dialogue-negative",
+      "textDigest": "4e266a232c589b80164b4584201b7296cfa4b075ae4c886ccc647b15eb6cf8b1",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "emotion-positive",
+      "textDigest": "1e9e286a9d2f867b7237cefe69a26986fceaf885dfc8b12c12fcd5946f242b0c",
+      "observed": [
+        "cliche/ABSTRACT-EMOTION",
+        "cliche/BODY-FIRST"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "emotion-action-negative",
+      "textDigest": "45fe41374ab0a60300bf5040a5bb508b8bd86cee5264d85955876d78b3479635",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "emotion-body-control",
+      "textDigest": "ea6494f23e2f1eaadface60a991e043e892af8fe59e3022bbcf9af34d64c73f1",
+      "observed": [
+        "cliche/ABSTRACT-EMOTION"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "rhythm-positive",
+      "textDigest": "4d9f47ff8e5f788e8dc015a10c0be9154513762c8686103ba0e4095bad6c5827",
+      "observed": [
+        "cliche/RHYTHM-LOW-VARIANCE"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "rhythm-short-negative",
+      "textDigest": "fb4cd5f37b9b5c04b8c80251e9d8fbeda44650051eb9b54bef2908768b1848af",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repeat-positive",
+      "textDigest": "6360d35a2aa624c559f0b45717108b7256f15e889eb76809b11aedf866e97b4b",
+      "observed": [
+        "degeneration/逐字复读"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repeat-below-count-negative",
+      "textDigest": "27e33f434e21d87fe301f819c3ef6f2af0e80665de108a3f13f305e890487903",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repeat-dialogue-negative",
+      "textDigest": "1e1dacb742e2006dd80ad96310ea82e442a2dea4f87e11ffa906a60958ffa0f7",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "adjacent-positive",
+      "textDigest": "ddc3a67cff2a563b080aad683cfeef95101a27eb8f5eee3d67f930db71c04f70",
+      "observed": [
+        "degeneration/紧邻复读"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "adjacent-distinct-negative",
+      "textDigest": "f5bd1aedf5a3f8fadaa86b097ffc3fea3a0960d0ed9aa0491943185cd004ef39",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "truncation-positive",
+      "textDigest": "172739d1a525478f71f9937e38306cc51d6177593e76cf8611f5752befebe670",
+      "observed": [
+        "degeneration/末尾截断"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "truncation-curly-quote-negative",
+      "textDigest": "ed77f3669d72f22a95440539ffe24f4d38a34a3bddca50cfe69168b0d2b1dea1",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "truncation-corner-quote-negative",
+      "textDigest": "eeafe77ae8bc1d9294574b98a698f20d133acd1c849102d5e54e05c936f0e7eb",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "self-reference-positive",
+      "textDigest": "c2750f5abd603fa3ee130d7f25c45ae88ce3872a8118c12e915fde398f7b0547",
+      "observed": [
+        "degeneration/AI自指/拒绝语"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "self-reference-dialogue-negative",
+      "textDigest": "6b732a382d31bb8616cd537901c38597007d6cd4962805ea84ff3638c5b5b8fc",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "placeholder-positive",
+      "textDigest": "1edcb1086f1828af58458d066f740801679c2bdfb98802d084ca58ca730f7aab",
+      "observed": [
+        "degeneration/占位符"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "placeholder-completed-negative",
+      "textDigest": "bbea02d161e15846854b164e9dc7c5f9c780d515a2d2762a93754db8fba51e7a",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "outline-leak-positive",
+      "textDigest": "98d34bb4cd12479be2d316da50f5b943e263226959fd12d613c975a42fc79c4e",
+      "observed": [
+        "degeneration/大纲工程术语泄漏(blocking)"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "outline-leak-markup-negative",
+      "textDigest": "5c7500db8b50c5eb15e2d8d1b712de364513a5a1b9170c9f0a211e4813d6f76d",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "pipeline-leak-positive",
+      "textDigest": "750a6ad77ce5dda11dea3d299b4dd89aa982665ff8f6895cbf41718492866356",
+      "observed": [
+        "degeneration/工程术语泄漏(blocking)"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "pipeline-leak-dialogue-negative",
+      "textDigest": "edd8d8b16956219b127de72ae10b4be9434db47391051bc06047bffa9ffe961d",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "chapter-reference-positive",
+      "textDigest": "2c98252ca80b80416e688f2e61d04f6833d4ce8f5e2b722b555fb4d3f26d8b9d",
+      "observed": [
+        "degeneration/章节引用(advisory)"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "chapter-reference-dialogue-negative",
+      "textDigest": "e1cba9b17f995e74124bb606a4bdb5f9749134726108f2bccbf046947bf14602",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-global-positive",
+      "textDigest": "5bbdd9919ae8f8d7352c8f0e66dd2ace9922bdf0ace6c2946becf561319d7446",
+      "observed": [
+        "voice/VOICE-GLOBAL-INTERJECTION"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-global-narration-negative",
+      "textDigest": "b01183118600acbf983a4960da5afb98c3630c994e9ba9de1614602b17bac298",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-role-positive",
+      "textDigest": "1f758e7bdcc2a760d6e01e18dde2a39ad8f5aadabdfa81b00a6b23f21757ab14",
+      "observed": [
+        "voice/OOC_VOICE_DRIFT"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-role-lookback-positive",
+      "textDigest": "212b103c3657c4a44528c4b0e5c1b6422060203a08899f484fda0e180d9e72cb",
+      "observed": [
+        "voice/OOC_VOICE_DRIFT"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-role-other-negative",
+      "textDigest": "0dc6893a6587f7b1beb86e6e0ac9a9e1dfdb75bacee814642e42cebc164fd0cd",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-role-ambiguous-negative",
+      "textDigest": "bbbff3bb3806482b8b8f071c7feffac932ddf979cd8792f0cf01cb113592374e",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-role-unattributed-negative",
+      "textDigest": "a367de925978b0c69d6f7fdae49ea42557f0a71cd2f9631862ca6a0afc2521df",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "dash-positive",
+      "textDigest": "23befb5214bc11dba3baafb16f537c83a7a3a23e07d327c94b24fbe4a9e298fa",
+      "observed": [
+        "validator/S-13"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "dash-boundary-negative",
+      "textDigest": "518e5c678677584a18a37415e2ca2031b3697ae4409d5d23c31dc9e68ee943a2",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "dash-dialogue-negative",
+      "textDigest": "52723c0373f5be3b0c3cd2453ce6699e9256c67e0209d8398b2c94be80dd71d2",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "ellipsis-positive",
+      "textDigest": "506c8ddb1f4083bdebbd51bd58a1ff107bffa2661083abc19220b029ffa454f8",
+      "observed": [
+        "validator/S-12"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "ellipsis-boundary-negative",
+      "textDigest": "9365e0c2fcfad40e311a4eec10bfb66c3da5b34423162f3a0ccc9367d4796c5a",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "ellipsis-dialogue-negative",
+      "textDigest": "5505b2e2af71d1032702f1acc3f1d2f84fbff4f84b82f05c6eb74496ba674560",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "long-sentence-positive",
+      "textDigest": "62a2946cb6b3e08960f6dadc729de074276e59a57f1c8b9f4bfcb2aedd38765a",
+      "observed": [
+        "validator/S-10s"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "long-sentence-negative",
+      "textDigest": "575d5fc6b639aa22b50d5ee3d5df23d0336c793b23a45b00054f8f95f14702db",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "meta-positive",
+      "textDigest": "be0509b6cee19a566be9dc77b1eb6233ff5ca8d3042dc05097c92ec504d6505c",
+      "observed": [
+        "validator/A-18"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "meta-title-negative",
+      "textDigest": "8c08db06cac7c74d1101090b415931cec13eaa546309016538c05cf2c24276c0",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "transition-positive",
+      "textDigest": "77c075e434f7d8faa432f4609e1a205e1038c79977bb65d9288762d03328c355",
+      "observed": [
+        "validator/S-17"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "transition-single-negative",
+      "textDigest": "364f74252e639acd5bc130643281f6d174c245583eb730103bb2923eccf84b50",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repair-original",
+      "textDigest": "2432b1baee3c6c15f71923284cd16f6bfb32eea3910320652300457ad74b6c0d",
+      "observed": [
+        "cliche/NOT-A-BUT-B"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repair-clean",
+      "textDigest": "31aa72fe874336ccd600a9b52773c774fb050386834dc0ac536caa44cc172c97",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repair-truncated",
+      "textDigest": "9bb78d2651a468ff857d44bd3279d2df457f5cc6fc9e284cbd388d99fca50a4f",
+      "observed": [
+        "degeneration/末尾截断"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repair-placeholder",
+      "textDigest": "fb6881655684c190a82c896ea46f111640c3b0f210cdfbc8453fbe35e6ee11fb",
+      "observed": [
+        "degeneration/占位符"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repair-rule-return",
+      "textDigest": "9721e2ddce274d7d2efeef71a7418d7153a74d0036f2850257139c17aa10e64c",
+      "observed": [
+        "cliche/NOT-A-BUT-B"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    }
+  ],
+  "repairs": [
+    {
+      "id": "successful-repair",
+      "observed": {
+        "introduced": [
+          []
+        ],
+        "reintroduced": [
+          []
+        ],
+        "textCycles": [],
+        "remaining": []
+      },
+      "expected": {
+        "introduced": [
+          []
+        ],
+        "reintroduced": [
+          []
+        ],
+        "textCycles": [],
+        "remaining": []
+      },
+      "failedFields": [],
+      "passed": true
+    },
+    {
+      "id": "introduced-truncation-then-fixed",
+      "observed": {
+        "introduced": [
+          [
+            "degeneration/末尾截断"
+          ],
+          []
+        ],
+        "reintroduced": [
+          [],
+          []
+        ],
+        "textCycles": [],
+        "remaining": []
+      },
+      "expected": {
+        "introduced": [
+          [
+            "degeneration/末尾截断"
+          ],
+          []
+        ],
+        "reintroduced": [
+          [],
+          []
+        ],
+        "textCycles": [],
+        "remaining": []
+      },
+      "failedFields": [],
+      "passed": true
+    },
+    {
+      "id": "introduced-placeholder-unfixed",
+      "observed": {
+        "introduced": [
+          [
+            "degeneration/占位符"
+          ]
+        ],
+        "reintroduced": [
+          []
+        ],
+        "textCycles": [],
+        "remaining": [
+          "degeneration/占位符"
+        ]
+      },
+      "expected": {
+        "introduced": [
+          [
+            "degeneration/占位符"
+          ]
+        ],
+        "reintroduced": [
+          []
+        ],
+        "textCycles": [],
+        "remaining": [
+          "degeneration/占位符"
+        ]
+      },
+      "failedFields": [],
+      "passed": true
+    },
+    {
+      "id": "exact-text-cycle",
+      "observed": {
+        "introduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "reintroduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "textCycles": [
+          {
+            "stage": 2,
+            "repeatsStage": 0
+          }
+        ],
+        "remaining": [
+          "cliche/NOT-A-BUT-B"
+        ]
+      },
+      "expected": {
+        "introduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "reintroduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "textCycles": [
+          {
+            "stage": 2,
+            "repeatsStage": 0
+          }
+        ],
+        "remaining": [
+          "cliche/NOT-A-BUT-B"
+        ]
+      },
+      "failedFields": [],
+      "passed": true
+    },
+    {
+      "id": "rule-return-with-different-text",
+      "observed": {
+        "introduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "reintroduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "textCycles": [],
+        "remaining": [
+          "cliche/NOT-A-BUT-B"
+        ]
+      },
+      "expected": {
+        "introduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "reintroduced": [
+          [],
+          [
+            "cliche/NOT-A-BUT-B"
+          ]
+        ],
+        "textCycles": [],
+        "remaining": [
+          "cliche/NOT-A-BUT-B"
+        ]
+      },
+      "failedFields": [],
+      "passed": true
+    },
+    {
+      "id": "unchanged-is-not-a-cycle",
+      "observed": {
+        "introduced": [
+          []
+        ],
+        "reintroduced": [
+          []
+        ],
+        "textCycles": [],
+        "remaining": [
+          "cliche/NOT-A-BUT-B"
+        ]
+      },
+      "expected": {
+        "introduced": [
+          []
+        ],
+        "reintroduced": [
+          []
+        ],
+        "textCycles": [],
+        "remaining": [
+          "cliche/NOT-A-BUT-B"
+        ]
+      },
+      "failedFields": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

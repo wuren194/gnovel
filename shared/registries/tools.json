@@ -1,0 +1,1100 @@
+{
+  "schemaVersion": 3,
+  "_comment": "capabilities 是运行时策略，由 tool_catalog/tool_plan 消费；操作参数与效果从 operations.py 或兼容 CLI parser 派生。tools 是脚本类别与父检查器库存，不是按脚本授予执行权。",
+  "discovery": {
+    "maxResults": 3,
+    "maxQueryCharacters": 300,
+    "intents": {
+      "project.structure.insert-preview": [
+        [
+          "创建章节",
+          "新建章节",
+          "新增章节",
+          "create chapter",
+          "new chapter"
+        ]
+      ],
+      "project.workflow.chapter-receipt": [
+        [
+          "定稿预检",
+          "入库预检",
+          "定稿阻塞",
+          "finalization preflight"
+        ]
+      ],
+      "source.export": [
+        [
+          "导出",
+          "保存",
+          "存成",
+          "export",
+          "save"
+        ],
+        [
+          "设定",
+          "规划",
+          "世界观",
+          "settings",
+          "source",
+          "worldbuilding"
+        ]
+      ],
+      "project.export": [
+        [
+          "导出",
+          "合并",
+          "拼成",
+          "export",
+          "compile"
+        ],
+        [
+          "正文",
+          "小说",
+          "成品",
+          "全书",
+          "manuscript",
+          "novel"
+        ]
+      ],
+      "project.settings.show": [
+        [
+          "查看",
+          "读取",
+          "查询",
+          "看看",
+          "show",
+          "read"
+        ],
+        [
+          "人物",
+          "角色",
+          "地点",
+          "势力",
+          "道具",
+          "卡片",
+          "character",
+          "location"
+        ]
+      ],
+      "source.query": [
+        [
+          "查询",
+          "筛选",
+          "结构化",
+          "query",
+          "filter"
+        ],
+        [
+          "设定",
+          "规划",
+          "片段",
+          "settings",
+          "source"
+        ]
+      ],
+      "source.render": [
+        [
+          "阅读",
+          "预览",
+          "阅读版",
+          "render",
+          "preview"
+        ],
+        [
+          "设定",
+          "规划",
+          "世界观",
+          "settings",
+          "source"
+        ]
+      ],
+      "source.search": [
+        [
+          "搜索",
+          "全文",
+          "查找",
+          "检索",
+          "冲突",
+          "矛盾",
+          "不一致",
+          "一致性",
+          "search",
+          "conflict"
+        ],
+        [
+          "设定",
+          "片段",
+          "关键词",
+          "settings",
+          "source"
+        ]
+      ],
+      "project.structure.timeline": [
+        [
+          "矛盾",
+          "冲突",
+          "倒挂",
+          "顺序",
+          "检查",
+          "check"
+        ],
+        [
+          "时间线",
+          "时间顺序",
+          "时间锚",
+          "timeline"
+        ]
+      ],
+      "structure.batch-preview": [
+        [
+          "批量",
+          "一次",
+          "多个",
+          "全部",
+          "batch"
+        ],
+        [
+          "移动章节",
+          "重排章节",
+          "章节顺序",
+          "归档章节",
+          "移动",
+          "移到",
+          "重排",
+          "排序",
+          "归档",
+          "登记实体",
+          "建实体",
+          "chapters",
+          "reorder"
+        ]
+      ],
+      "project.structure.move-preview": [
+        [
+          "移动",
+          "移到",
+          "调整",
+          "挪",
+          "move"
+        ],
+        [
+          "章节",
+          "章节顺序",
+          "顺序",
+          "章",
+          "chapter"
+        ]
+      ],
+      "project.workflow.chapter-status": [
+        [
+          "哪一章",
+          "是哪章",
+          "章节状态",
+          "章节进度",
+          "第几章"
+        ],
+        [
+          "章",
+          "chapter",
+          "status"
+        ]
+      ],
+      "workflow.repair-context": [
+        [
+          "查看",
+          "读取",
+          "定位",
+          "核对",
+          "查看问题",
+          "read"
+        ],
+        [
+          "返修",
+          "诊断问题",
+          "待修",
+          "repair"
+        ]
+      ],
+      "workflow.patch-candidate": [
+        [
+          "替换",
+          "补丁",
+          "修订",
+          "patch"
+        ],
+        [
+          "候选",
+          "原文",
+          "选区",
+          "candidate"
+        ]
+      ],
+      "task.prepare": [
+        [
+          "写下一章",
+          "继续写作",
+          "准备",
+          "开始",
+          "怎么",
+          "prepare"
+        ],
+        [
+          "写下一章",
+          "继续写作",
+          "写章",
+          "创作",
+          "章节任务",
+          "审校",
+          "chapter",
+          "task"
+        ]
+      ],
+      "task.execute": [
+        [
+          "成组执行",
+          "差量执行",
+          "execute"
+        ],
+        [
+          "任务",
+          "工具",
+          "task"
+        ]
+      ],
+      "source.maintenance-prepare": [
+        [
+          "准备",
+          "读取",
+          "分段",
+          "拆分",
+          "prepare",
+          "read"
+        ],
+        [
+          "修订方案",
+          "维护方案",
+          "maintenance document"
+        ]
+      ],
+      "source.maintenance-checklist": [
+        [
+          "生成",
+          "装配",
+          "保存",
+          "assemble",
+          "save"
+        ],
+        [
+          "修订清单",
+          "覆盖清单",
+          "maintenance checklist"
+        ]
+      ],
+      "source.proposal-batch-preview": [
+        [
+          "批量",
+          "成组",
+          "一批",
+          "batch",
+          "写回",
+          "落实修改"
+        ],
+        [
+          "修订设定",
+          "修改设定",
+          "更新属性",
+          "属性和事实",
+          "关系和设定",
+          "settings",
+          "canon",
+          "设定"
+        ]
+      ],
+      "source.commit": [
+        [
+          "提交",
+          "commit",
+          "应用预览"
+        ]
+      ],
+      "source.request-renew": [
+        [
+          "续期",
+          "续用预览",
+          "renew preview"
+        ]
+      ],
+      "source.scan-report": [
+        [
+          "扫描禁用词",
+          "扫描禁词",
+          "banned words"
+        ]
+      ],
+      "source.change-report": [
+        [
+          "查看",
+          "读取",
+          "read",
+          "核对",
+          "检查"
+        ],
+        [
+          "修改依据",
+          "变更明细",
+          "变更回执",
+          "change report",
+          "改动结果",
+          "提交结果"
+        ]
+      ],
+      "capabilities.validate": [
+        [
+          "预检",
+          "校验",
+          "检查",
+          "validate",
+          "preflight"
+        ],
+        [
+          "参数",
+          "批量输入",
+          "arguments",
+          "payload"
+        ]
+      ],
+      "query.aggregate": [
+        [
+          "统计",
+          "汇总",
+          "聚合",
+          "待办",
+          "aggregate"
+        ],
+        [
+          "问题",
+          "影响",
+          "复核",
+          "计划",
+          "issues"
+        ]
+      ],
+      "evidence.prepare": [
+        [
+          "装配",
+          "准备",
+          "assemble",
+          "prepare"
+        ],
+        [
+          "复核材料",
+          "待办材料",
+          "review material"
+        ]
+      ],
+      "summary.read": [
+        [
+          "查看",
+          "读取",
+          "历史",
+          "read"
+        ],
+        [
+          "摘要",
+          "summary"
+        ]
+      ],
+      "summary.commit-delta": [
+        [
+          "差量",
+          "增量",
+          "更新",
+          "delta"
+        ],
+        [
+          "摘要",
+          "summary"
+        ]
+      ],
+      "history.query": [
+        [
+          "查询",
+          "查看",
+          "查找",
+          "query"
+        ],
+        [
+          "操作历史",
+          "证据回执",
+          "历史记录",
+          "history",
+          "receipt"
+        ]
+      ],
+      "knowledge.pack": [
+        [
+          "怎么写",
+          "参考",
+          "技法",
+          "写作方法",
+          "technique"
+        ],
+        [
+          "写作",
+          "资料",
+          "场景",
+          "关系",
+          "writing",
+          "knowledge"
+        ]
+      ],
+      "project.doctor": [
+        [
+          "检查",
+          "诊断",
+          "check",
+          "doctor"
+        ],
+        [
+          "项目",
+          "健康",
+          "环境",
+          "project",
+          "health"
+        ]
+      ],
+      "source.content-proposal-preview": [
+        [
+          "改",
+          "修改",
+          "替换",
+          "修订"
+        ],
+        [
+          "设定里",
+          "规划片段",
+          "片段措辞",
+          "一句话"
+        ]
+      ],
+      "source.content-resolve": [
+        [
+          "解析",
+          "读取",
+          "查看",
+          "局部修改"
+        ],
+        [
+          "长片段",
+          "大记录",
+          "规划片段"
+        ]
+      ],
+      "evidence.pack": [
+        [
+          "复核回执",
+          "生成回执",
+          "装配回执",
+          "组装证据"
+        ],
+        [
+          "复核",
+          "回执",
+          "证据"
+        ]
+      ],
+      "source.change-preview": [
+        [
+          "批量",
+          "多处",
+          "多个"
+        ],
+        [
+          "规划措辞",
+          "规划片段",
+          "规划修改"
+        ]
+      ],
+      "source.content-resolve-batch": [
+        [
+          "批量解析",
+          "一次解析",
+          "多个绑定",
+          "batch resolve"
+        ],
+        [
+          "记录",
+          "规划片段",
+          "规划",
+          "片段",
+          "绑定",
+          "records"
+        ]
+      ],
+      "workflow.artifact-pack": [
+        [
+          "登记候选正文",
+          "候选正文",
+          "正文登记",
+          "candidate_prose",
+          "封装工件",
+          "一键提交",
+          "一步提交",
+          "artifact-pack",
+          "直接登记",
+          "内联正文",
+          "inline artifact"
+        ]
+      ],
+      "diagnostics.rules": [
+        [
+          "规则卡",
+          "生效规则",
+          "哪些会拦",
+          "诊断阈值"
+        ]
+      ],
+      "diagnostics.paragraph": [
+        [
+          "段落检查",
+          "查一段",
+          "即时检查",
+          "局部检查"
+        ]
+      ],
+      "diagnostics.chapter-check": [
+        [
+          "字数核对",
+          "节奏段核对",
+          "必须落地",
+          "新增事实",
+          "前史核对"
+        ]
+      ],
+      "project.quick-init": [
+        [
+          "新建项目",
+          "初始化",
+          "新建小说",
+          "新书",
+          "create project",
+          "quick init"
+        ]
+      ],
+      "source.schema": [
+        [
+          "数据结构",
+          "源schema",
+          "字段定义",
+          "source schema"
+        ]
+      ],
+      "source.pairs": [
+        [
+          "配对分类",
+          "配对评估",
+          "角色乙强势分类",
+          "pair classification"
+        ]
+      ],
+      "summary.export": [
+        [
+          "摘要",
+          "summary"
+        ],
+        [
+          "导出",
+          "阅读",
+          "export"
+        ]
+      ],
+      "workflow.submit": [
+        [
+          "提交本章工件",
+          "批次提交",
+          "恢复提交",
+          "成组登记",
+          "直接提交正文",
+          "提交审校填写",
+          "提交表单修改",
+          "submit chapter artifacts"
+        ]
+      ],
+      "workflow.chapter-preview": [
+        [
+          "建章并提交推演",
+          "创建章节和推演",
+          "建章与推演",
+          "chapter with plan"
+        ]
+      ],
+      "workflow.review-form": [
+        [
+          "审校表单",
+          "审校输入",
+          "阶段A表单",
+          "阶段B表单",
+          "准备阶段 A 审校",
+          "准备阶段 B 审校",
+          "review form"
+        ]
+      ],
+      "workflow.state-prepare": [
+        [
+          "生成状态工件",
+          "自动状态工件",
+          "prepare state artifact"
+        ]
+      ],
+      "workflow.closeout-prepare": [
+        [
+          "章节收尾",
+          "收尾准备",
+          "定稿前检查",
+          "检查为什么不能定稿",
+          "正文归属冲突",
+          "chapter closeout"
+        ]
+      ],
+      "workflow.closeout": [
+        [
+          "执行收尾",
+          "恢复收尾",
+          "resume closeout"
+        ]
+      ],
+      "source.chapter-facts-preview": [
+        [
+          "登记新事实",
+          "新增事实预览",
+          "chapter facts"
+        ]
+      ],
+      "source.chapter-facts-complete": [
+        [
+          "事实引证收尾",
+          "恢复事实登记",
+          "complete chapter facts"
+        ]
+      ]
+    }
+  },
+  "entrypoints": [
+    {
+      "id": "novelctl",
+      "path": "scripts/novelctl.py",
+      "transport": "CLI (JSON stdout)",
+      "audience": "作者、工位与项目维护",
+      "surface": "当前格式项目、源查询与事务、工位准备、正文及工件提交、证据、摘要、定稿与连续性；参数以 operations 注册定义为准；project export 成品导出与 preview → commit 原子事务；workflow finalize-chapter 与 continuity-complete",
+      "mutations": "preview 保存完整写集；commit 需要 planHash 与明确批准；既有 Canon 受共同 diff guard 保护，关系需旧记录提案，引用中的字段定义迁移 fail closed；语义工件登记不等于批准",
+      "notes": "工位的默认入口；三个通道共用 scripts/core/，novelctl 不是唯一实现"
+    },
+    {
+      "id": "mcp-server",
+      "path": "scripts/mcp_server.py",
+      "transport": "stdio MCP",
+      "audience": "创作客户端",
+      "surface": "当前格式项目、源查询与事务、工位准备、正文及工件提交、证据、摘要、定稿与连续性；参数以 operations 注册定义为准；project export 成品导出与 preview → commit 原子事务；workflow finalize-chapter 与 continuity-complete",
+      "mutations": "按 operation 效果生成注解；不接受任意 shell 或 handler",
+      "notes": "与 novelctl 平级的传输层，复用同一 scripts/core/ 与批准边界"
+    },
+    {
+      "id": "dashboard-server",
+      "path": "scripts/dashboard_server.py",
+      "transport": "HTTP (loopback only)",
+      "audience": "本机浏览器",
+      "surface": "兼容结构查询与事务；高级任务能力通过 CLI/MCP",
+      "mutations": "仅 127.0.0.1/localhost 绑定；变更请求使用 HttpOnly SameSite 同源会话 cookie，兼容 X-gnovel-Token 头，跨源请求拒绝",
+      "notes": "静态资源在 dashboard/（index.html + app.js + styles.css）；token 每次启动重新生成，不写入 /api/config 或 stdout"
+    },
+    {
+      "id": "external-manuscript-intake",
+      "path": "scripts/core/importer.py",
+      "transport": "CLI (novelctl project import review / scan / validate / create)",
+      "audience": "作者；外部稿件入库",
+      "surface": "把外部 .txt/.md 稿件变成只读证据副本（章节边界候选、逐字节定位、内容 hash，writableStoryTruthEnabled=false）；或把已校对的 candidate JSON 建成新项目。入口参数是 --source 与 --target-root/--project-root，不是项目内业务操作",
+      "mutations": "evidence-only 副本不创建可写真源、不生成正式 Stable ID、候选一律 unapproved；只有 import create 在显式 --project-root 下新建项目，且 candidate 必须先过 import validate",
+      "notes": "top-level intake/bootstrap 操作：没有 projectRoot 业务语义，因此是已登记的 transport exception——只进 CLI，不进 MCP tool list，也不进 dashboard 路由。这不是影子入口：surface 与 mutations 在此登记，最终现实报告引用本条。"
+    },
+    {
+      "id": "project-relocate",
+      "path": "scripts/core/project_relocate.py",
+      "transport": "CLI (novelctl project relocate --project-root <当前> --target <新绝对路径> 预览；再用返回的 novelctl project relocate --project-root <当前> --operation-id <OP> --preview-hash <planHash> --approve 执行)",
+      "audience": "作者；项目文件夹改名或移动",
+      "surface": "把项目文件夹改名或移动到同一文件系统内的新绝对路径。参数是当前项目根与目标绝对路径，不是项目内业务操作：它改变 projectRoot 本身",
+      "mutations": "预览在 .gnovel/plans 落一份带 operationId 与 TTL 的计划（事务簿记，不计入 authored inventory）；执行全程持有 .gnovel/structure.lock：末次校验 → 一次 os.rename（同文件系统内原子）→ authored 逐字节复核 → 经写集引擎落 .gnovel/project-locator.json 收据（记 operationId/planHash/rootAtOperation/currentLocator/actor）并消耗该计划 → 释放锁。锁文件在树内，随文件夹一起搬走，释放也跟到新位置，两端都不留残锁。rename 之后任何失败都把文件夹改名回去，改回去也失败就报错而非静默。projectId、全部 Stable ID 与 authored 字节不变；跨设备以 PROJECT_RELOCATE_CROSS_DEVICE_UNSUPPORTED fail closed，不悄悄退化成 copy+delete",
+      "notes": "top-level filesystem operation：没有 projectRoot 业务语义，因此是已申报的 transport exception——只进 CLI，不进 MCP tool list，也不进 dashboard 路由。这不是影子入口：surface 与 mutations 在此登记。与 book rename 是两件事：后者改显示元数据，走 project structure book-rename-preview；二者可在同一次预览里组合，commit 在同一把锁下先改文件夹、再落一份把 project-locator.json 一起算进去的库内写集，写集失败由引擎按 before-image 全部还原，文件夹再改回去。"
+    }
+  ],
+  "tools": [
+    {
+      "id": "check-release-contents",
+      "path": "scripts/check_release_contents.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "benchmark-single-source",
+      "path": "scripts/benchmark_single_source.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "evaluate-checkers",
+      "path": "scripts/evaluate_checkers.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "install-antigravity",
+      "path": "scripts/install_antigravity.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "check-mcp-registration",
+      "path": "scripts/check_mcp_registration.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "aggregate-diagnostics",
+      "path": "scripts/aggregate_diagnostics.py",
+      "kind": "operation"
+    },
+    {
+      "id": "ai-cliche-linter",
+      "path": "scripts/ai_cliche_linter.py",
+      "kind": "internal",
+      "parent": "aggregate-diagnostics"
+    },
+    {
+      "id": "validate-text",
+      "path": "scripts/validate-text.py",
+      "kind": "internal",
+      "parent": "aggregate-diagnostics"
+    },
+    {
+      "id": "check-voice-lexicon",
+      "path": "scripts/check_voice_lexicon.py",
+      "kind": "internal",
+      "parent": "aggregate-diagnostics"
+    },
+    {
+      "id": "check-degeneration",
+      "path": "scripts/check_degeneration.py",
+      "kind": "internal",
+      "parent": "aggregate-diagnostics"
+    },
+    {
+      "id": "debug-validation",
+      "path": "scripts/debug_validation.py",
+      "kind": "internal",
+      "parent": "aggregate-diagnostics"
+    },
+    {
+      "id": "continuation-context",
+      "path": "scripts/continuation_context.py",
+      "kind": "operation"
+    },
+    {
+      "id": "story-summarizer",
+      "path": "scripts/story_summarizer.py",
+      "kind": "operation"
+    },
+    {
+      "id": "state-compactor",
+      "path": "scripts/state_compactor.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "surgical-editor",
+      "path": "scripts/surgical_editor.py",
+      "kind": "operation"
+    },
+    {
+      "id": "generate-wrappers",
+      "path": "scripts/generate_wrappers.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "sync-garden-atmosphere",
+      "path": "scripts/sync_garden_atmosphere.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "sync-world-render-policy",
+      "path": "scripts/sync_world_render_policy.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "local-ci",
+      "path": "scripts/local_ci.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "sepia-bridge",
+      "path": "scripts/sepia_bridge.py",
+      "kind": "operation"
+    },
+    {
+      "id": "package-toolbox",
+      "path": "scripts/package_toolbox.py",
+      "kind": "maintenance"
+    },
+    {
+      "id": "provider",
+      "path": "scripts/provider.py",
+      "kind": "maintenance",
+      "description": "创建或验证仓库外的本地数据包"
+    },
+    {
+      "id": "release-audit",
+      "path": "scripts/release_audit.py",
+      "kind": "maintenance",
+      "description": "使用外部审核词表检查公开源码"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "chapter.prepare",
+      "description": "只读任务准备清单：必读材料、就绪判断、缺项与工具动作计划。",
+      "binding": {
+        "kind": "operation",
+        "ref": "task.prepare"
+      },
+      "audiences": [
+        "author",
+        "router",
+        "planner",
+        "writer",
+        "editor",
+        "titler"
+      ],
+      "tasks": [
+        "planner",
+        "writer",
+        "editor",
+        "repair",
+        "titler",
+        "continuity"
+      ],
+      "when": {
+        "fact": "project.initialized",
+        "op": "eq",
+        "value": true,
+        "reason": "任务开始前需要确定读什么、缺什么、下一步做什么"
+      },
+      "requiredFor": [],
+      "evidence": null
+    },
+    {
+      "id": "chapter.mechanical",
+      "description": "为当前候选章取得机械证据；设定、规则、实现或正文变化后重跑。",
+      "binding": {
+        "kind": "operation",
+        "ref": "diagnostics.aggregate"
+      },
+      "audiences": [
+        "router",
+        "editor"
+      ],
+      "tasks": [
+        "editor",
+        "repair",
+        "titler"
+      ],
+      "when": {
+        "fact": "diagnostics.current",
+        "op": "eq",
+        "value": false,
+        "reason": "当前正文没有完整且新鲜的机械证据"
+      },
+      "requiredFor": [
+        "chapter.review",
+        "chapter.finalize"
+      ],
+      "evidence": "diagnostics"
+    },
+    {
+      "id": "editor.narrative-review",
+      "description": "Editor 按当前作品要求完成阶段 B 语义审阅，结论与作者批准分别处理。",
+      "binding": {
+        "kind": "skill",
+        "ref": "gnovel-editor/SKILL.md"
+      },
+      "audiences": [
+        "editor"
+      ],
+      "tasks": [
+        "editor",
+        "repair",
+        "titler"
+      ],
+      "when": {
+        "fact": "review.current",
+        "op": "eq",
+        "value": false,
+        "reason": "当前正文需要阶段 B 语义审校"
+      },
+      "requiredFor": [
+        "chapter.finalize"
+      ],
+      "evidence": "stage_b_review"
+    },
+    {
+      "id": "story.timeline",
+      "description": "检查故事时间倒挂，区分章节顺序和故事时间。",
+      "binding": {
+        "kind": "operation",
+        "ref": "query.timeline"
+      },
+      "audiences": [
+        "author",
+        "router",
+        "planner",
+        "editor"
+      ],
+      "tasks": [
+        "planner",
+        "editor",
+        "repair"
+      ],
+      "when": {
+        "fact": "timeline.hasInversion",
+        "op": "eq",
+        "value": true,
+        "reason": "时间挂载中记录了倒挂，需判断是否为有意倒叙"
+      },
+      "requiredFor": [],
+      "evidence": null
+    },
+    {
+      "id": "story.logic",
+      "description": "独立查询世界规则、适用范围和登记引用。",
+      "binding": {
+        "kind": "operation",
+        "ref": "query.logic"
+      },
+      "audiences": [
+        "author",
+        "composer",
+        "planner",
+        "editor"
+      ],
+      "tasks": [
+        "planner",
+        "editor"
+      ],
+      "when": {
+        "fact": "project.initialized",
+        "op": "eq",
+        "value": true,
+        "reason": "从规则概览开始，按需读取当前规则"
+      },
+      "requiredFor": [],
+      "evidence": null
+    },
+    {
+      "id": "story.attributes",
+      "description": "从实体 fields 真源查询标准与项目自定义字段。",
+      "binding": {
+        "kind": "operation",
+        "ref": "query.attributes"
+      },
+      "audiences": [
+        "author",
+        "composer",
+        "planner",
+        "writer",
+        "editor"
+      ],
+      "tasks": [
+        "planner",
+        "writer",
+        "editor"
+      ],
+      "when": {
+        "fact": "project.initialized",
+        "op": "eq",
+        "value": true,
+        "reason": "属性概览与字段投影无需依赖渲染卡片"
+      },
+      "requiredFor": [],
+      "evidence": null
+    },
+    {
+      "id": "story.nodes",
+      "description": "通过稳定 ID 遍历实体关系、章引用和时间挂载。",
+      "binding": {
+        "kind": "operation",
+        "ref": "query.nodes"
+      },
+      "audiences": [
+        "author",
+        "planner",
+        "editor"
+      ],
+      "tasks": [
+        "planner",
+        "editor",
+        "repair"
+      ],
+      "when": {
+        "fact": "project.initialized",
+        "op": "eq",
+        "value": true,
+        "reason": "有界查看本章关联范围，不把未记录当作从未使用"
+      },
+      "requiredFor": [],
+      "evidence": null
+    },
+    {
+      "id": "story.summary",
+      "description": "准备过期摘要的输入；实际摘要由工位生成，提交是独立写操作。",
+      "binding": {
+        "kind": "operation",
+        "ref": "summary.prepare"
+      },
+      "audiences": [
+        "router",
+        "planner"
+      ],
+      "tasks": [
+        "planner",
+        "writer",
+        "continuity"
+      ],
+      "when": {
+        "fact": "summary.stale",
+        "op": "eq",
+        "value": true,
+        "reason": "摘要缺失或依赖已变化，需要重新准备和生成"
+      },
+      "requiredFor": [],
+      "evidence": null
+    },
+    {
+      "id": "chapter.context",
+      "description": "准备只读续写上下文；不暗中修复项目。",
+      "binding": {
+        "kind": "operation",
+        "ref": "context.read"
+      },
+      "audiences": [
+        "router",
+        "planner",
+        "writer",
+        "editor"
+      ],
+      "tasks": [
+        "planner",
+        "writer",
+        "editor"
+      ],
+      "when": {
+        "fact": "project.initialized",
+        "op": "eq",
+        "value": true,
+        "reason": "任务需要当前章节与设定上下文"
+      },
+      "requiredFor": [],
+      "evidence": null
+    }
+  ]
+}

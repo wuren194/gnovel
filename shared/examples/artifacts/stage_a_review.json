@@ -1,0 +1,26 @@
+{
+  "artifactType": "stage_a_review",
+  "schemaVersion": 1,
+  "projectId": "PROJECT",
+  "chapterId": "CHAPTER",
+  "sourceSha256": null,
+  "createdAt": "2026-08-29T08:11:18.335577+00:00",
+  "producer": "gnovel",
+  "payload": {
+    "decision": "pending",
+    "activeSeats": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      10
+    ],
+    "consensus": [],
+    "disagreements": [],
+    "openItems": [],
+    "sourcePlanHash": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "artifactSha256": "58c72ede74f27a80adf86e502997790efa2da6912e32c075eff8d8a116d39886"
+}

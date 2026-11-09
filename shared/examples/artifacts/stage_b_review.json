@@ -1,0 +1,53 @@
+{
+  "artifactType": "stage_b_review",
+  "schemaVersion": 1,
+  "projectId": "PROJECT",
+  "chapterId": "CHAPTER",
+  "sourceSha256": null,
+  "createdAt": "2026-08-29T08:11:18.337121+00:00",
+  "producer": "gnovel",
+  "payload": {
+    "verdict": "INCOMPLETE",
+    "slots": {
+      "writer": {
+        "conclusion": "待填写"
+      },
+      "reader": {
+        "conclusion": "待填写"
+      },
+      "scene_design": {
+        "conclusion": "待填写"
+      },
+      "logic": {
+        "conclusion": "待填写"
+      },
+      "positioning": {
+        "conclusion": "待填写"
+      },
+      "voice": {
+        "conclusion": "待填写"
+      },
+      "relationship": {
+        "conclusion": "待填写"
+      },
+      "serial_editor": {
+        "conclusion": "待填写"
+      },
+      "continuity": {
+        "conclusion": "待填写"
+      },
+      "quality": {
+        "conclusion": "待填写"
+      },
+      "cognition": {
+        "conclusion": "待填写"
+      },
+      "organization": {
+        "conclusion": "待填写"
+      }
+    },
+    "findings": [],
+    "finalProseSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "artifactSha256": "8ac02f70a11cbaede74e1188dd8bb85e516c153141cf1199e03a9da37edb3306"
+}
