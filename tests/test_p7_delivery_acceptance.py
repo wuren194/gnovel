@@ -250,16 +250,23 @@ class LocalPackageTests(unittest.TestCase):
     def packager_module(self):
         return importlib.import_module("scripts.package_toolbox")
 
-    def test_plan_reports_local_ready_but_public_blocked(self):
+    def test_public_plan_includes_chosen_license_and_notices(self):
         module = self.packager_module()
-        manifest = module.build_manifest(mode="local-personal", local_paths={})
+        manifest = module.build_manifest(
+            mode="public-audit",
+            local_paths=module._local_path_references(module.collect()["packaged"]),
+        )
         readiness = manifest["readiness"]
         self.assertTrue(readiness["localPersonalReleaseReady"])
-        self.assertFalse(readiness["publicReleaseReady"])
-        self.assertEqual(readiness["license"], "PUBLIC_RELEASE_LICENSE_UNDECIDED")
-        self.assertIn("PUBLIC_RELEASE_LICENSE_UNDECIDED",
-                      {row["code"] for row in readiness["publicReleaseBlockers"]},
-                      "没有根许可证时必须明确报未决定，不能推定可公开")
+        self.assertTrue(readiness["publicReleaseReady"],
+                        readiness["publicReleaseBlockers"])
+        self.assertTrue(readiness["rootLicensePresent"])
+        self.assertEqual(readiness["license"], "ROOT_LICENSE_PRESENT")
+        self.assertEqual(readiness["publicReleaseBlockers"], [])
+        packaged = {row["path"] for row in manifest["files"]}
+        self.assertTrue(
+            {"LICENSE", "THIRD_PARTY_NOTICES.md", "LICENSES/sepia-MIT.txt"} <= packaged
+        )
 
     def test_private_and_credential_paths_are_excluded_by_category(self):
         module = self.packager_module()

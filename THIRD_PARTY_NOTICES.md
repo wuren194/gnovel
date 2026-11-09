@@ -1,6 +1,6 @@
 # 第三方来源与许可
 
-本文件记录随 gnovel 分发内容涉及的第三方来源，不为 gnovel 整体选择许可证。
+本文件记录随 gnovel 分发内容涉及的第三方来源及其原有许可。gnovel 自有部分采用 AGPL-3.0-only，范围见 [README.md](README.md#许可证)，完整条款见 [LICENSE](LICENSE)。
 
 ## Sepia
 

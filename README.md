@@ -42,4 +42,12 @@ python3 scripts/local_ci.py
 
 接入规范见 [knowledge/README.md](knowledge/README.md)，职责边界见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
-第三方表面文本指标的来源及许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+## 许可证
+
+Copyright (C) 2026 wuren194 and gnovel contributors.
+
+除 [第三方来源与许可](THIRD_PARTY_NOTICES.md) 单独注明的部分外，本仓库代码、规则、文档及原创示例采用 GNU Affero General Public License 第 3 版，仅限该版本（`AGPL-3.0-only`）。完整条款见 [LICENSE](LICENSE)。
+
+该许可证允许使用、修改、分发和商业使用。分发受许可证约束的作品时，应按条款提供相应源码；修改后的程序支持远程网络交互时，应向与其交互的用户提供获取对应版本源码的机会。具体义务以许可证原文为准。
+
+用户独立的本地小说、参考资料及数据包不会仅因被引擎读取而自动适用本仓库许可证，其权利与授权由各自权利人管理。
