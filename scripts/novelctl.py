@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gnovel schema-5 project command line interface."""
+"""govel schema-5 project command line interface."""
 
 from __future__ import annotations
 
@@ -147,7 +147,7 @@ class NovelError(Exception):
 
 
 def _project_json(root: Path) -> dict:
-    path = root / ".gnovel" / "project.json"
+    path = root / ".govel" / "project.json"
     try:
         marker = read_json(path)
     except (OSError, json.JSONDecodeError) as exc:
@@ -158,7 +158,7 @@ def _project_json(root: Path) -> dict:
 
 
 def _workflow_path(root: Path) -> Path:
-    return root / ".gnovel" / "workflow.json"
+    return root / ".govel" / "workflow.json"
 
 
 def _workflow_default() -> dict:
@@ -200,7 +200,7 @@ def _initialize(root: Path, *, project_id: str, book_name: str, idempotency_key:
     except ImportError:
         from core.data_provider import binding as provider_binding
     selected_provider = provider_binding()
-    marker_path = root / ".gnovel" / "project.json"
+    marker_path = root / ".govel" / "project.json"
     if marker_path.is_file():
         existing = _project_json(root)
         if existing.get("initIdempotencyKey") == idempotency_key and existing.get("projectId") == project_id and existing.get("bookName") == book_name.strip():
@@ -213,7 +213,7 @@ def _initialize(root: Path, *, project_id: str, book_name: str, idempotency_key:
         if unexpected:
             raise NovelError("PROJECT_NOT_EMPTY", "target directory must be empty", {"entries": unexpected})
     for rel in REQUIRED_PROJECT_DIRS:
-        if rel == ".gnovel":
+        if rel == ".govel":
             continue  # marker 写入时自动建父目录；与 import 路径共用同一份目录清单
         (root / rel).mkdir(parents=True, exist_ok=True)
     marker = {
@@ -602,8 +602,8 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
                 from scripts.core.write_sets import capture_guards, file_state
             except ImportError:
                 from core.write_sets import capture_guards, file_state
-            registration_before = {'.gnovel/workflow.json': file_state(_workflow_path(root))}
-            registration_guards = capture_guards(root, ['.gnovel/structure.json'])
+            registration_before = {'.govel/workflow.json': file_state(_workflow_path(root))}
+            registration_guards = capture_guards(root, ['.govel/structure.json'])
         workflow = _read_workflow(root)
         if args.workflow_action == "show":
             return {"ok": True, "code": "WORKFLOW_STATE", **workflow}
@@ -802,7 +802,7 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
                 extreme = intensity_registry.extreme_level()
                 approve_artifacts(
                     workflow, args.chapter_id, artifact_hashes=hashes,
-                    approval_mode=read_json(root / ".gnovel" / "project.json").get("approvalMode", "manual"),
+                    approval_mode=read_json(root / ".govel" / "project.json").get("approvalMode", "manual"),
                     intensity_level=args.intensity_level, extreme_level=extreme,
                     artifact_paths={key: row["artifactPath"] for key, row in workflow.get("artifacts", {}).get(args.chapter_id, {}).items() if row.get("artifactPath")},
                     project_root=root,
@@ -838,7 +838,7 @@ class MachineArgumentParser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = MachineArgumentParser(prog="novelctl", description="gnovel schema-5 project service CLI")
+    parser = MachineArgumentParser(prog="novelctl", description="govel schema-5 project service CLI")
     groups = parser.add_subparsers(dest="group", required=True)
     project = groups.add_parser("project")
     sub = project.add_subparsers(dest="action", required=True)
@@ -892,8 +892,8 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_plan = sub.add_parser("prompt-plan", help="解析工位实际契约装载计划")
     prompt_plan.add_argument("--project-root", default=".")
     prompt_plan.add_argument("--station", required=True, choices=[
-        "gnovel-composer", "gnovel-router", "gnovel-planner",
-        "gnovel-writer", "gnovel-editor", "gnovel-titler",
+        "govel-composer", "govel-router", "govel-planner",
+        "govel-writer", "govel-editor", "govel-titler",
     ])
     prompt_plan.add_argument("--decision-type", choices=["design", "arc", "chapter", "title", "stage_b"])
     prompt_plan.add_argument("--chapter-id", help="为章节条件装载当前章的关联弧线标题与标签")

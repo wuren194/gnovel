@@ -29,7 +29,7 @@ class ChapterReferenceTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         self.data = StructureCommandTests()._project(self.root)
-        write_json(self.root / ".gnovel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0",
+        write_json(self.root / ".govel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0",
                                                          "projectId": "project-1", "bookName": "测试"})
         self.first, self.second = (row["chapterId"] for row in self.data["chapters"])
 
@@ -88,7 +88,7 @@ class ChapterReferenceTests(unittest.TestCase):
     def test_preview_plans_store_only_stable_ids(self) -> None:
         code, moved = cli("project", "structure", "move-preview", "--project-root", str(self.root), "--chapter-id", "CH001")
         self.assertEqual(code, 0, moved)
-        plan = json.loads((self.root / ".gnovel/plans" / f"{moved['operationId']}.json").read_text(encoding="utf-8"))
+        plan = json.loads((self.root / ".govel/plans" / f"{moved['operationId']}.json").read_text(encoding="utf-8"))
         self.assertNotIn("CH001", json.dumps(plan["parameters"]))
 
 

@@ -5,10 +5,10 @@
   "chapterId": "CHAPTER",
   "sourceSha256": null,
   "createdAt": "2026-08-29T08:11:18.337999+00:00",
-  "producer": "gnovel",
+  "producer": "govel",
   "payload": {
     "repairScope": "local",
     "findings": []
   },
-  "artifactSha256": "2e37706f96aaa43611fadffb461fc444da7bf8d8a2e6bf1eeb86629a96ebe09e"
+  "artifactSha256": "9dba7b0e86b70f86bb0d20ef8d4e7004d80cb86d6b54805b49b2b5afa1557b20"
 }

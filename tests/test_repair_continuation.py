@@ -23,10 +23,10 @@ class RepairContinuationTests(unittest.TestCase):
         self.root = Path(temp.name).resolve()
         self.cid = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
         # Scope this fixture to semantic repair findings, not setup diagnostics.
-        workflow = read_json(self.root/'.gnovel/workflow.json')
+        workflow = read_json(self.root/'.govel/workflow.json')
         workflow['artifacts'][self.cid].pop('diagnostics', None)
         workflow['approvals'][self.cid]['artifactHashes'].pop('diagnostics', None)
-        write_json(self.root/'.gnovel/workflow.json', workflow)
+        write_json(self.root/'.govel/workflow.json', workflow)
         self.text = 'Before.\r\nAlpha opens door.\r\nSame.\r\nSame.\r\nBeta closes book.\r\nAfter.'
         self.candidate(self.text)
         self.payload = {'verdict': 'REPAIR_REQUIRED', 'repairScope': 'local',
@@ -168,12 +168,12 @@ class RepairContinuationTests(unittest.TestCase):
         payload.update(self.complete_payload())
         payload['findings'] = [{**row['finding'], 'findingId': row['issueId'], 'severity': 'S3'}
                                for row in old.values()]
-        before = (self.root / '.gnovel/workflow.json').read_bytes()
+        before = (self.root / '.govel/workflow.json').read_bytes()
         with self.assertRaises(StructureError) as caught:
             self.register(payload)
         self.assertEqual(caught.exception.code, 'REPAIR_REVIEW_INCOMPLETE')
         self.assertEqual(set(caught.exception.details['pendingIssueIds']), {row['issueId'] for row in old.values()})
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), before)
 
     def test_old_completed_envelope_cannot_resolve_later_reopened_issue(self):
         from scripts.core.structure_store import load_structure
@@ -187,7 +187,7 @@ class RepairContinuationTests(unittest.TestCase):
             decision = next(row for row in old['payload']['repairReview']['decisions'] if row['finding']['ruleId'] == finding['ruleId'])
             finding['findingId'] = decision['issueId']
         self.register(reopened)
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         before = deepcopy(workflow)
         with self.assertRaises(WorkflowError) as caught:
             record_artifact(workflow, self.cid, old, structure=load_structure(self.root),
@@ -207,7 +207,7 @@ class RepairContinuationTests(unittest.TestCase):
         reopened = deepcopy(self.payload)
         reopened['findings'][0]['findingId'] = old['payload']['repairReview']['decisions'][0]['issueId']
         self.register(reopened)
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         before = deepcopy(workflow)
         with self.assertRaises(WorkflowError) as caught:
             record_artifact(workflow, self.cid, old, structure=load_structure(self.root),
@@ -219,7 +219,7 @@ class RepairContinuationTests(unittest.TestCase):
     def test_restoring_old_candidate_identity_does_not_revive_resolved_history(self):
         from scripts.core.structure_store import load_structure
         from scripts.core.workflow import record_artifact
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         original = read_json(workflow_path)['artifacts'][self.cid]['candidate_prose']
         candidate_path = Path(original['artifactPath'])
         candidate = read_json(candidate_path)
@@ -295,7 +295,7 @@ class RepairContinuationTests(unittest.TestCase):
         self.assertEqual(self.material()[0]['coverage']['totalFindings'], 0)
         self.assertFalse(result['approvalPerformed'])
         with self.assertRaises(WorkflowError):
-            require_approved_artifact(read_json(self.root / '.gnovel/workflow.json'), self.cid, 'stage_b_review')
+            require_approved_artifact(read_json(self.root / '.govel/workflow.json'), self.cid, 'stage_b_review')
         from scripts.core.transport_cache import _directory
         (_directory() / (payload['repairRef'].replace(':', '-') + '.json')).unlink()
         replay = pack_artifact(self.root, chapterId=self.cid, artifactType='stage_b_review',
@@ -348,7 +348,7 @@ class RepairContinuationTests(unittest.TestCase):
         original = packing.record_artifact
         path = self.root / self.report['artifactPath']
         changed = path.read_bytes() + b'\n'
-        before_workflow = (self.root / '.gnovel/workflow.json').read_bytes()
+        before_workflow = (self.root / '.govel/workflow.json').read_bytes()
 
         def mutate(*args, **kwargs):
             result = original(*args, **kwargs)
@@ -358,7 +358,7 @@ class RepairContinuationTests(unittest.TestCase):
         with patch.object(packing, 'record_artifact', side_effect=mutate), self.assertRaises(StructureError):
             self.register(payload)
         self.assertEqual(path.read_bytes(), changed)
-        self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), before_workflow)
+        self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), before_workflow)
 
     def test_schema_decisions_and_explicit_finding_ids_match_runtime(self):
         from scripts.core.project import TOOLBOX_ROOT

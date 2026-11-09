@@ -13,7 +13,7 @@ from .query import _size
 from .source_selection import select_project_content
 from .structure_store import StructureError, canonical_json
 
-SNAPSHOT_PREFIX = '<!-- gnovel-SNAPSHOT '
+SNAPSHOT_PREFIX = '<!-- govel-SNAPSHOT '
 
 
 def _hash(text: str) -> str:

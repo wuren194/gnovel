@@ -31,21 +31,21 @@ class VolumeSerialPlanningTests(unittest.TestCase):
             self.assertIn(phrase, text, f"章节流水线缺少卷化串行锁：{phrase}")
 
     def test_router_points_to_pipeline_and_recovery_state(self) -> None:
-        text = (ROOT / "gnovel-router/SKILL.md").read_text(encoding="utf-8")
+        text = (ROOT / "govel-router/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("CHAPTER-PIPELINE.md", text)
         self.assertIn("批准范围", text)
         self.assertIn("唯一 `nextAction`", text)
         self.assertNotIn("最近提交", text)
 
     def test_planner_keeps_role_specific_volume_boundary(self) -> None:
-        text = (ROOT / "gnovel-planner/SKILL.md").read_text(encoding="utf-8")
+        text = (ROOT / "govel-planner/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("只对当前卷做 hard planning", text)
         self.assertIn("普通正式续写与约定候选批次分别遵守", text)
         self.assertIn("不为续写候选提前正式定稿", text)
         self.assertIn("CHAPTER-PIPELINE.md", text)
 
     def test_no_ch001_arc_exemption_anywhere(self) -> None:
-        planner = (ROOT / "gnovel-planner/SKILL.md").read_text(encoding="utf-8")
+        planner = (ROOT / "govel-planner/SKILL.md").read_text(encoding="utf-8")
         pipeline = PIPELINE.read_text(encoding="utf-8")
         for false_rule in (
             "确实是故事起点且无段落意图才保持空壳",
@@ -58,7 +58,7 @@ class VolumeSerialPlanningTests(unittest.TestCase):
         self.assertIn("CH001 前必须存在已填实的 ARC001", planner)
 
     def test_composer_mode_does_not_exempt_first_arc(self) -> None:
-        text = (ROOT / "gnovel-composer/SKILL.md").read_text(encoding="utf-8")
+        text = (ROOT / "govel-composer/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("当前卷弧线", text)
         self.assertIn("不提前硬规划未来卷", text)
 

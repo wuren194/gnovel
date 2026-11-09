@@ -30,12 +30,12 @@ class ReviewSources:
         self.guard_formal_locators = guard_formal_locators
         self.observations: dict[str, dict] = {}
         self._artifacts: dict[str, dict | None] = {}
-        self.structure = self.read_json('.gnovel/structure.json')
+        self.structure = self.read_json('.govel/structure.json')
         validate_structure(self.structure)
         self.chapter = next((row for row in self.structure['chapters'] if row['chapterId'] == chapter_id), None)
         if self.chapter is None:
             raise StructureError('CHAPTER_NOT_FOUND', 'unknown review chapter', {'chapterId': chapter_id})
-        self.workflow = normalize_workflow(self.read_json('.gnovel/workflow.json'))
+        self.workflow = normalize_workflow(self.read_json('.govel/workflow.json'))
         self.entries = self.workflow['artifacts'].get(chapter_id, {})
         if not isinstance(self.entries, dict):
             raise StructureError('WORKFLOW_STATE_INVALID', 'chapter artifacts must be an object')

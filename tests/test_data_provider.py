@@ -1,6 +1,8 @@
-"""External data boundaries, real material reading and dependency invalidation."""
+"""Local data boundaries, real material reading and dependency invalidation."""
+from contextlib import redirect_stdout
 from copy import deepcopy
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -32,7 +34,7 @@ class ProviderTests(unittest.TestCase):
         (self.root / 'provider.json').write_text(json.dumps(self.manifest))
 
     def environment(self):
-        return patch.dict(os.environ, {'GNOVEL_PROVIDER_CONFIG': str(self.config)})
+        return patch.dict(os.environ, {'GOVEL_PROVIDER_CONFIG': str(self.config)})
 
     def material(self, *, when=None):
         path = self.root / 'rules/note.md'
@@ -51,16 +53,16 @@ class ProviderTests(unittest.TestCase):
         return path
 
     def fresh_python(self, code, **extra):
-        environment = {**os.environ, 'GNOVEL_PROVIDER_CONFIG': str(self.config),
+        environment = {**os.environ, 'GOVEL_PROVIDER_CONFIG': str(self.config),
                        'PROBE_ROOT': str(self.root), 'PROBE_BASE': str(self.base),
-                       'PYTHONDONTWRITEBYTECODE': '1', 'GNOVEL_LOG_MODE': 'off', **extra}
+                       'PYTHONDONTWRITEBYTECODE': '1', 'GOVEL_LOG_MODE': 'off', **extra}
         result = subprocess.run([sys.executable, '-c', code], cwd=provider.ROOT,
                                 env=environment, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return json.loads(result.stdout)
 
     def test_absent_provider_has_no_implicit_dataset(self):
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {'GOVEL_DATA_HOME': str(self.base / 'empty')}, clear=True):
             self.assertIsNone(provider.active_provider())
             self.assertEqual(provider.materials('writer'), [])
 
@@ -72,8 +74,8 @@ class ProviderTests(unittest.TestCase):
 
     def test_bad_configuration_keeps_discovery_available_and_operations_fail_closed(self):
         self.config.unlink()
-        environment = {**os.environ, 'GNOVEL_PROVIDER_CONFIG': str(self.config),
-                       'PYTHONDONTWRITEBYTECODE': '1', 'GNOVEL_LOG_MODE': 'off'}
+        environment = {**os.environ, 'GOVEL_PROVIDER_CONFIG': str(self.config),
+                       'PYTHONDONTWRITEBYTECODE': '1', 'GOVEL_LOG_MODE': 'off'}
         requests = [
             {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2024-11-05',
              'capabilities': {}, 'clientInfo': {'name': 'test', 'version': '1'}}},
@@ -97,11 +99,69 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)['code'], 'PROVIDER_UNREADABLE')
         self.assertNotIn('Traceback', result.stderr)
 
-    def test_configuration_cannot_live_inside_the_source_checkout(self):
-        with patch.dict(os.environ, {'GNOVEL_PROVIDER_CONFIG': str(provider.ROOT / 'README.md')}), \
+    def test_configuration_cannot_live_in_public_source_paths(self):
+        with patch.dict(os.environ, {'GOVEL_PROVIDER_CONFIG': str(provider.ROOT / 'README.md')}), \
              self.assertRaises(provider.ProviderError) as caught:
             provider.active_provider()
         self.assertEqual(caught.exception.code, 'PROVIDER_CONFIG_INVALID')
+
+    def test_checkout_local_provider_reads_relative_to_config_and_survives_relocation(self):
+        self.material()
+        checkout = self.base / 'checkout'
+        local = checkout / 'local'
+        local.mkdir(parents=True)
+        self.root.rename(local / 'provider')
+        self.config = local / 'provider-config.json'
+        self.config.write_text(json.dumps({'schemaVersion': 1, 'root': 'provider'}))
+        with patch.object(provider, 'ROOT', checkout), self.environment():
+            before = provider.binding()
+            self.assertEqual(provider.storage_root(), local / 'provider')
+            self.assertEqual(provider.materials('writer')[0]['id'], 'RULE-EXAMPLE')
+        moved = self.base / 'moved-checkout'
+        checkout.rename(moved)
+        self.config = moved / 'local/provider-config.json'
+        with patch.object(provider, 'ROOT', moved), self.environment():
+            self.assertEqual(provider.binding(), before)
+            self.assertEqual(provider.storage_root(), moved / 'local/provider')
+            note = moved / 'local/provider/rules/note.md'
+            note.write_text('Changed material')
+            with self.assertRaises(provider.ProviderError) as caught:
+                provider.materials('writer')
+            self.assertEqual(caught.exception.code, 'PROVIDER_RESOURCE_CHANGED')
+
+    def test_local_config_cannot_point_to_public_source_or_escape_relatively(self):
+        checkout = self.base / 'checkout'
+        local = checkout / 'local'
+        local.mkdir(parents=True)
+        self.root.rename(checkout / 'public-data')
+        self.config = local / 'provider-config.json'
+        with patch.object(provider, 'ROOT', checkout), self.environment():
+            for root, code in [(str(checkout / 'public-data'), 'PROVIDER_ROOT_INVALID'),
+                               ('../public-data', 'PROVIDER_PATH_UNSAFE')]:
+                self.config.write_text(json.dumps({'schemaVersion': 1, 'root': root}))
+                with self.assertRaises(provider.ProviderError) as caught:
+                    provider.active_provider()
+                self.assertEqual(caught.exception.code, code)
+            (local / 'alias').symlink_to(checkout / 'public-data', target_is_directory=True)
+            self.config.write_text(json.dumps({'schemaVersion': 1, 'root': 'alias'}))
+            with self.assertRaises(provider.ProviderError) as caught:
+                provider.active_provider()
+            self.assertEqual(caught.exception.code, 'PROVIDER_PATH_UNSAFE')
+
+    def test_create_accepts_local_directory_but_rejects_public_source_directory(self):
+        from scripts import provider as provider_cli
+        checkout = self.base / 'checkout'
+        (checkout / 'knowledge').mkdir(parents=True)
+        (checkout / 'knowledge/example.json').write_bytes((provider.ROOT / 'knowledge/example.json').read_bytes())
+        with patch.object(provider, 'ROOT', checkout):
+            for target, expected in [(checkout / 'public-data', 1), (checkout / 'local/example', 0)]:
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(provider_cli.main(['create', '--root', str(target)]), expected)
+            self.config = checkout / 'local/example/config.json'
+            self.assertEqual(json.loads(self.config.read_text())['root'], '.')
+            with self.environment():
+                self.assertEqual(provider.binding()['providerId'], 'local-example')
+            self.assertFalse((checkout / 'public-data').exists())
 
     def test_resource_bytes_are_checked(self):
         path = self.material()
@@ -144,7 +204,7 @@ class ProviderTests(unittest.TestCase):
         self.material(when={'field': 'checks[].ready', 'op': 'eq', 'value': True})
         from scripts.core.prompt_plan import resolve_prompt_plan
         with self.environment():
-            plan = resolve_prompt_plan(self.base, 'gnovel-writer', design={'checks': [{'ready': True}, {}]})
+            plan = resolve_prompt_plan(self.base, 'govel-writer', design={'checks': [{'ready': True}, {}]})
         self.assertTrue(plan['providerMaterials'][0]['active'])
         self.assertFalse(plan['complete'])
         self.assertIn('PROVIDER_CONDITION_UNRESOLVED', [row['code'] for row in plan['warnings']])
@@ -176,7 +236,7 @@ class ProviderTests(unittest.TestCase):
         project.mkdir()
         with self.environment():
             create_schema5_project(project, chapter_count=1)
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {'GOVEL_DATA_HOME': str(self.base / 'empty')}, clear=True):
             from scripts.core.structure_store import load_structure
             with self.assertRaises(provider.ProviderError) as caught:
                 load_structure(project)
@@ -185,11 +245,11 @@ class ProviderTests(unittest.TestCase):
     def test_example_can_be_created_and_retrieved_in_fresh_process(self):
         target = self.base / 'example'
         environment = {**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'}
-        environment.pop('GNOVEL_PROVIDER_CONFIG', None)
+        environment.pop('GOVEL_PROVIDER_CONFIG', None)
         result = subprocess.run([sys.executable, 'scripts/provider.py', 'create', '--root', str(target)],
                                 cwd=provider.ROOT, env=environment, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        environment['GNOVEL_PROVIDER_CONFIG'] = str(target / 'config.json')
+        environment['GOVEL_PROVIDER_CONFIG'] = str(target / 'config.json')
         result = subprocess.run([sys.executable, 'scripts/novelctl.py', 'project', 'knowledge', 'pack',
                                  '--planning-intent', '伏笔', '--station', 'planner'],
                                 cwd=provider.ROOT, env=environment, text=True, capture_output=True)
@@ -229,7 +289,7 @@ import os, json
 from pathlib import Path
 from scripts.core import knowledge_store as store
 from scripts.core.structure_store import StructureError
-os.environ['GNOVEL_PROVIDER_CONFIG'] = str(Path(os.environ['PROBE_BASE']) / 'second-config.json')
+os.environ['GOVEL_PROVIDER_CONFIG'] = str(Path(os.environ['PROBE_BASE']) / 'second-config.json')
 try:
     store.create_asset(title='普通示例', kind='technique', stations=['writer'],
                        intents=['foreshadowing'], tags=[], body='中性测试正文')
@@ -335,7 +395,7 @@ print(json.dumps({'before': before, 'after': validator.check_ai_patterns('新信
 
     def test_disabled_scene_rules_report_not_applicable(self):
         from scripts.text import validator
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {'GOVEL_DATA_HOME': str(self.base / 'empty')}, clear=True):
             _, checks, _ = validator.build_checks('peakScene', False, 5)
             selected = [(name, check) for name, check in checks if name in validator.ADULT_CHECK_NAMES]
             self.assertTrue(selected)
@@ -347,7 +407,8 @@ print(json.dumps({'before': before, 'after': validator.check_ai_patterns('新信
     def test_pinned_diagnostic_rejects_even_an_empty_provider_mismatch(self):
         with self.environment():
             expected = provider.binding()
-        with patch.dict(os.environ, {provider.EXPECTED_PROVIDER_ENV: json.dumps(expected)}, clear=True), \
+        with patch.dict(os.environ, {provider.EXPECTED_PROVIDER_ENV: json.dumps(expected),
+                                     'GOVEL_DATA_HOME': str(self.base / 'empty')}, clear=True), \
              self.assertRaises(provider.ProviderError) as caught:
             provider.binding()
         self.assertEqual(caught.exception.code, 'PROVIDER_CHANGED')

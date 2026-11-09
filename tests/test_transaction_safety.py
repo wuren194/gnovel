@@ -62,7 +62,7 @@ class TransactionSafetyTests(unittest.TestCase):
         chapter = next((c for c in load_structure(self.root)['chapters'] if c['chapterId'] == chapter_id), None)
         if chapter:
             self.tokens[result['operationId']] = chapter['proseBinding']['generation']
-        return read_json(self.root/f".gnovel/operations/{result['operationId']}.json") | {
+        return read_json(self.root/f".govel/operations/{result['operationId']}.json") | {
             'code': result['code'], 'ok': True, **({'chapter': chapter} if chapter else {})}
 
     def move(self):
@@ -91,7 +91,7 @@ class TransactionSafetyTests(unittest.TestCase):
     def test_undo_rejects_newer_authored_source_and_prose(self) -> None:
         result = self.move()
         self.assertEqual(set(result['afterFiles']), set(result['backupFiles']))
-        source_path = self.root/'.gnovel/structure.json'; source_bytes = source_path.read_bytes()
+        source_path = self.root/'.govel/structure.json'; source_bytes = source_path.read_bytes()
         source = read_json(source_path); source['bookName'] = 'new authored name'; write_json(source_path, source)
         self.assert_rejected_unchanged(lambda: self.undo(result['operationId']), 'UNDO_NOT_CHAIN_TOP')
         source_path.write_bytes(source_bytes)
@@ -148,7 +148,7 @@ class TransactionSafetyTests(unittest.TestCase):
 
     def test_legacy_journal_is_not_automatically_undoable(self) -> None:
         result = self.move()
-        journal_path = self.root / f".gnovel/operations/{result['operationId']}.json"
+        journal_path = self.root / f".govel/operations/{result['operationId']}.json"
         for version in (1, 2):
             with self.subTest(version=version):
                 journal = read_json(journal_path)
@@ -173,7 +173,7 @@ class TransactionSafetyTests(unittest.TestCase):
     def test_pending_finalization_blocks_all_structure_writers(self) -> None:
         result = self.move()
         plan = self.preview()
-        tx = interrupted_write_set(self.root, {'.gnovel/structure.json': (self.root/'.gnovel/structure.json').read_bytes()})
+        tx = interrupted_write_set(self.root, {'.govel/structure.json': (self.root/'.govel/structure.json').read_bytes()})
         actions = (
             lambda: self.commit(plan),
             lambda: self.undo(result["operationId"]),
@@ -186,7 +186,7 @@ class TransactionSafetyTests(unittest.TestCase):
         for action in actions:
             self.assert_rejected_unchanged(action, "TRANSACTION_INCOMPLETE")
         self.assertEqual(finalization.recover_transactions(self.root, apply=True)["code"], "TRANSACTION_RECOVERED")
-        self.assertTrue((self.root/f".gnovel/transactions/{tx['transactionId']}/completed.json").is_file())
+        self.assertTrue((self.root/f".govel/transactions/{tx['transactionId']}/completed.json").is_file())
         # 恢复未改当前源字节；同一冻结计划仍可提交。
         self.assertEqual(self.commit(plan)['code'], 'STRUCTURE_COMMITTED')
 
@@ -196,15 +196,15 @@ class TransactionSafetyTests(unittest.TestCase):
         acquire = locks._acquire
         def acquire_and_interrupt(path):
             fd = acquire(path)
-            interrupted_write_set(self.root, {'.gnovel/structure.json': (self.root/'.gnovel/structure.json').read_bytes()}, lock_held=True)
+            interrupted_write_set(self.root, {'.govel/structure.json': (self.root/'.govel/structure.json').read_bytes()}, lock_held=True)
             return fd
-        original = (self.root / ".gnovel/structure.json").read_bytes()
+        original = (self.root / ".govel/structure.json").read_bytes()
         with patch.object(locks, "_acquire", side_effect=acquire_and_interrupt):
             with self.assertRaises(StructureError) as caught:
                 self.commit(plan)
         self.assertEqual(caught.exception.code, "TRANSACTION_INCOMPLETE")
-        self.assertEqual((self.root / ".gnovel/structure.json").read_bytes(), original)
-        self.assertFalse(list((self.root / ".gnovel/backups").iterdir()))
+        self.assertEqual((self.root / ".govel/structure.json").read_bytes(), original)
+        self.assertFalse(list((self.root / ".govel/backups").iterdir()))
 
     def test_recovery_preflights_all_backups_before_restoring_any_target(self) -> None:
         first, second, created = (self.root / "工作台" / name for name in ("first", "second", "created"))
@@ -215,7 +215,7 @@ class TransactionSafetyTests(unittest.TestCase):
             second.relative_to(self.root).as_posix(): b'second-after',
             created.relative_to(self.root).as_posix(): b'created-after'},
             phase='write', relative=second.relative_to(self.root).as_posix())
-        source = self.root / f".gnovel/transactions/{tx['transactionId']}/before" / second.relative_to(self.root)
+        source = self.root / f".govel/transactions/{tx['transactionId']}/before" / second.relative_to(self.root)
         original = source.read_bytes()
         for mode in ("missing", "damaged"):
             with self.subTest(mode=mode):
@@ -232,7 +232,7 @@ class TransactionSafetyTests(unittest.TestCase):
         self.assertFalse(created.exists())
 
     def test_recovery_keeps_unreadable_and_identity_mismatched_manifests(self) -> None:
-        path = self.root / ".gnovel/transactions/TX-broken.json"
+        path = self.root / ".govel/transactions/TX-broken.json"
         path.parent.mkdir(exist_ok=True)
         for content in ("not json", "[]", '{"transactionId": "TX-other", "files": []}'):
             path.write_text(content, encoding="utf-8")
@@ -243,7 +243,7 @@ class TransactionSafetyTests(unittest.TestCase):
         target.write_bytes(b"original")
         interrupted_write_set(self.root, {target.relative_to(self.root).as_posix(): b'changed'},
                               phase='write', relative=target.relative_to(self.root).as_posix())
-        write_json(self.root / ".gnovel/transactions/TX-Z.json", {"transactionId": "TX-Z", "files": []})
+        write_json(self.root / ".govel/transactions/TX-Z.json", {"transactionId": "TX-Z", "files": []})
         self.assert_rejected_unchanged(lambda: finalization.recover_transactions(self.root, apply=True), "TRANSACTION_RECOVERY_BLOCKED")
 
     def test_recovery_refuses_external_edits_after_interruption(self) -> None:
@@ -259,14 +259,14 @@ class TransactionSafetyTests(unittest.TestCase):
         target = self.root/'工作台/guarded'
         target.write_bytes(b'before')
         tx = interrupted_write_set(self.root, {'工作台/guarded': b'after'}, phase='write', relative='工作台/guarded')
-        path = self.root/f".gnovel/transactions/{tx['transactionId']}.json"
+        path = self.root/f".govel/transactions/{tx['transactionId']}.json"
         original = path.read_bytes()
         bad = read_json(path); bad['files'][0]['path'] = '../outside'
         write_json(path, bad)
         self.assert_rejected_unchanged(lambda: finalization.recover_transactions(self.root, apply=True),
                                        'PATH_OUTSIDE_PROJECT')
         path.write_bytes(original)
-        backup = self.root/f".gnovel/transactions/{tx['transactionId']}/before/工作台/guarded"
+        backup = self.root/f".govel/transactions/{tx['transactionId']}/before/工作台/guarded"
         outside = self.base/'outside-backup'
         backup.rename(outside)
         backup.symlink_to(outside)
@@ -278,7 +278,7 @@ class TransactionSafetyTests(unittest.TestCase):
         target = self.root/'工作台/protocol'
         target.write_bytes(b'before')
         tx = interrupted_write_set(self.root, {'工作台/protocol': b'after'}, phase='write', relative='工作台/protocol')
-        path = self.root/f".gnovel/transactions/{tx['transactionId']}.json"
+        path = self.root/f".govel/transactions/{tx['transactionId']}.json"
         tx['schemaVersion'] = 1
         write_json(path, tx)
         self.assert_rejected_unchanged(lambda: finalization.recover_transactions(self.root, apply=True),
@@ -295,7 +295,7 @@ class TransactionSafetyTests(unittest.TestCase):
         plan = self.preview()
         outside = self.base / "outside"
         outside.mkdir()
-        shutil.copy2(self.root / f".gnovel/plans/{plan['operationId']}.json", outside / "OP-COPIED.json")
+        shutil.copy2(self.root / f".govel/plans/{plan['operationId']}.json", outside / "OP-COPIED.json")
         self.assert_rejected_unchanged(lambda: call_tool("commit_structure_plan", {
             "projectRoot": str(self.root), "operationId": "../../../outside/OP-COPIED",
             "planHash": plan["planHash"], "approve": True,
@@ -304,20 +304,20 @@ class TransactionSafetyTests(unittest.TestCase):
     def test_plan_and_journal_ids_must_match_requested_id(self) -> None:
         plan = self.preview()
         copied_id = "OP-" + "F" * 16
-        copied = self.root / f".gnovel/plans/{copied_id}.json"
-        shutil.copy2(self.root / f".gnovel/plans/{plan['operationId']}.json", copied)
+        copied = self.root / f".govel/plans/{copied_id}.json"
+        shutil.copy2(self.root / f".govel/plans/{plan['operationId']}.json", copied)
         self.assert_rejected_unchanged(lambda: commands.commit_plan(self.root, operation_id=copied_id, plan_hash=plan["planHash"], approved=True), "OPERATION_ID_MISMATCH", before_lock=True)
         self.commit(plan)
-        shutil.copy2(self.root / f".gnovel/operations/{plan['operationId']}.json", self.root / f".gnovel/operations/{copied_id}.json")
+        shutil.copy2(self.root / f".govel/operations/{plan['operationId']}.json", self.root / f".govel/operations/{copied_id}.json")
         self.assert_rejected_unchanged(lambda: self.undo(copied_id), "OPERATION_ID_MISMATCH", before_lock=True)
 
     def test_commit_rejects_symlinks_in_all_control_and_target_paths(self) -> None:
         plan = self.insert()
         relatives = [
-            f".gnovel/plans/{plan['operationId']}.json", '.gnovel/plans',
-            '.gnovel/operations', f".gnovel/operations/{plan['operationId']}.json",
-            '.gnovel/backups', f".gnovel/backups/{plan['operationId']}",
-            '.gnovel/structure.json', '.gnovel/workflow.json', '.gnovel/source-review.json',
+            f".govel/plans/{plan['operationId']}.json", '.govel/plans',
+            '.govel/operations', f".govel/operations/{plan['operationId']}.json",
+            '.govel/backups', f".govel/backups/{plan['operationId']}",
+            '.govel/structure.json', '.govel/workflow.json', '.govel/source-review.json',
         ]
         for relative in relatives:
             for external in (False, True):
@@ -344,7 +344,7 @@ class TransactionSafetyTests(unittest.TestCase):
     def test_undo_rejects_unsafe_journal_paths_and_symlinks(self) -> None:
         result = self.move()
         operation_id = result["operationId"]
-        journal_path = self.root / f".gnovel/operations/{operation_id}.json"
+        journal_path = self.root / f".govel/operations/{operation_id}.json"
         original = read_json(journal_path)
         journal = read_json(journal_path)
         journal["backupPath"] = "../../../outside"
@@ -358,7 +358,7 @@ class TransactionSafetyTests(unittest.TestCase):
             write_json(journal_path, journal)
             self.assert_rejected_unchanged(lambda: self.undo(operation_id), "ABSOLUTE_PATH_FORBIDDEN" if relative.startswith("/") else "PATH_OUTSIDE_PROJECT")
         write_json(journal_path, original)
-        relatives = [str(journal_path.relative_to(self.root)), '.gnovel/operations', result['backupPath'],
+        relatives = [str(journal_path.relative_to(self.root)), '.govel/operations', result['backupPath'],
                      result['backupPath']+'/structure.json', result['chapter']['filePath']]
         for relative in relatives:
             with self.subTest(relative=relative):
@@ -407,8 +407,8 @@ class DashboardPreviewSafetyTests(unittest.TestCase):
         headers = (
             {"Content-Type": "text/plain", "Origin": "https://evil.example"},
             {"Content-Type": "application/json"},
-            {"X-gnovel-Token": "private-token", "Origin": "https://evil.example"},
-            {"Cookie": "gnovelMutation=private-token", "Origin": "http://localhost:1"},
+            {"X-govel-Token": "private-token", "Origin": "https://evil.example"},
+            {"Cookie": "govelMutation=private-token", "Origin": "http://localhost:1"},
         )
         before = snapshot(self.root)
         for path in paths:

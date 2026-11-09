@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install and verify the gnovel toolbox for Antigravity.
+"""Install and verify the govel toolbox for Antigravity.
 
 Antigravity 的定制发现机制（见 `~/.gemini/antigravity/builtin/skills/agy-customizations`）：
 
@@ -36,7 +36,7 @@ except ImportError:
 REPO = Path(__file__).resolve().parent.parent
 GEMINI = Path.home() / ".gemini"
 # 官方文档声明的全局定制位置；antigravity/skills 是它的同步视图。
-SKILL_ROOT = GEMINI / "config" / "skills" / "gnovel"
+SKILL_ROOT = GEMINI / "config" / "skills" / "govel"
 MCP_CONFIG = GEMINI / "config" / "mcp_config.json"
 
 def _skill_links() -> tuple[dict[str, str], str | None]:
@@ -69,8 +69,8 @@ LINKS, MANIFEST_ERROR = _skill_links()
 
 # 已作废、不得留在 skills 目录的条目。
 OBSOLETE = {
-    "gnovel-roundtable": "自称替代 G-MULTI-IDENTITY-REVIEW v2.3.0，且依赖 GEMINI.md 全局规则；现行契约为 v2.6.0，双真源风险",
-    "gnovel-setup": "目录已删除，agents-template.md 迁至 shared/templates/",
+    "govel-roundtable": "自称替代 G-MULTI-IDENTITY-REVIEW v2.3.0，且依赖 GEMINI.md 全局规则；现行契约为 v2.6.0，双真源风险",
+    "govel-setup": "目录已删除，agents-template.md 迁至 shared/templates/",
 }
 
 MCP_SERVER = REPO / "scripts" / "mcp_server.py"
@@ -89,7 +89,7 @@ def _mcp_status() -> dict:
         if snapshot['raw'] is None:
             report['problems'] = [{'code': 'MCP_CONFIG_MISSING', 'message': '官方全局 MCP 配置文件不存在'}]
         else:
-            entry = snapshot['data'].get('mcpServers', {}).get("gnovel")
+            entry = snapshot['data'].get('mcpServers', {}).get("govel")
             report.update(inspect_entry(entry, MCP_SERVER))
     except (RegistrationError, OSError) as exc:
         report['problems'] = [{'code': getattr(exc, 'code', 'MCP_CONFIG_UNREADABLE'),
@@ -138,7 +138,7 @@ def check() -> dict:
             fixes.append(f"作废条目残留：{name}（{why}）")
 
     # 4. 工作区级适配（随仓库走，只报告不修）
-    for rel in (".agents/skills.json", ".agents/skills/gnovel/SKILL.md"):
+    for rel in (".agents/skills.json", ".agents/skills/govel/SKILL.md"):
         if not (REPO / rel).is_file():
             problems.append(f"仓库缺少工作区适配文件：{rel}")
 
@@ -231,7 +231,7 @@ def install(*, force: bool = False) -> dict:
     try:
         registration = install_registration(MCP_CONFIG, MCP_SERVER)
         if registration['changed']:
-            actions.append(f"registered MCP gnovel: {MCP_CONFIG}")
+            actions.append(f"registered MCP govel: {MCP_CONFIG}")
     except (RegistrationError, OSError, ValueError) as exc:
         problems.append('MCP：' + (str(exc) if isinstance(exc, RegistrationError) else '注册保存失败，原配置不被作为成功接入证据'))
         registration['errorCode'] = getattr(exc, 'code', 'MCP_REGISTRATION_FAILED')

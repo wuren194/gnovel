@@ -133,7 +133,7 @@ class ContentProposalTests(unittest.TestCase):
 
     def test_cli_and_mcp_resolve_same_current_record_without_writes(self):
         project = Path(__file__).resolve().parents[1]
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         cli = subprocess.run([sys.executable, str(project / 'scripts/novelctl.py'), 'project',
                               'source', 'content-resolve', '--project-root', str(self.root),
                               '--record-id', 'AT-HEIGHT', '--kind', 'attribute'],
@@ -148,7 +148,7 @@ class ContentProposalTests(unittest.TestCase):
         self.assertEqual(mcp.returncode, 0, mcp.stderr)
         actual = json.loads(json.loads(mcp.stdout.splitlines()[-1])['result']['content'][0]['text'])
         self.assertEqual(json.loads(cli.stdout), actual)
-        self.assertEqual(before, (self.root / '.gnovel/structure.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/structure.json').read_bytes())
 
 
 if __name__ == '__main__':

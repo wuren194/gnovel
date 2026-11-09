@@ -27,7 +27,7 @@ class EvidenceReferenceTests(unittest.TestCase):
         base = self.source['fragments'][0]
         self.rows = [{**deepcopy(base), 'fragmentId': f'SF-EFF{i:03d}', 'text': f'第{i}项明确的测试事实。'} for i in range(40)]
         self.source['fragments'] = self.rows
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def prepared(self, count=40):
         return call_operation('evidence.prepare', self.root, {'kind': 'review',
@@ -104,9 +104,9 @@ class EvidenceReferenceTests(unittest.TestCase):
         original = submit_review
         def first_then_change(root, **arguments):
             answer = original(root, **arguments)
-            source = read_json(root / '.gnovel/structure.json')
+            source = read_json(root / '.govel/structure.json')
             source['fragments'][1]['text'] = '准备之后改动。'
-            write_json(root / '.gnovel/structure.json', source)
+            write_json(root / '.govel/structure.json', source)
             return answer
         with patch('scripts.core.source_review.submit_review', side_effect=first_then_change):
             partial = call_operation('evidence.submit', self.root, {'submissionRef': result['submissionRef']})
@@ -140,17 +140,17 @@ class EvidenceReferenceTests(unittest.TestCase):
         writes = 0
         def change_during_write(phase, relative=None):
             nonlocal writes
-            if phase == 'write' and relative == '.gnovel/source-review-receipts.json':
+            if phase == 'write' and relative == '.govel/source-review-receipts.json':
                 writes += 1
                 if writes == 3:
-                    source = read_json(self.root / '.gnovel/structure.json')
+                    source = read_json(self.root / '.govel/structure.json')
                     source['fragments'][1]['text'] = '提交窗口内的外部修改。'
-                    write_json(self.root / '.gnovel/structure.json', source)
+                    write_json(self.root / '.govel/structure.json', source)
         with patch('scripts.core.write_sets.checkpoint', side_effect=change_during_write):
             partial = call_operation('evidence.submit', self.root, {'submissionRef': result['submissionRef']})
         self.assertFalse(partial['ok']); self.assertEqual(partial['recordedCount'], 1)
         self.assertEqual(len(_receipts(self.root)['receipts']), 1)
-        self.assertEqual(read_json(self.root / '.gnovel/structure.json')['fragments'][1]['text'], '提交窗口内的外部修改。')
+        self.assertEqual(read_json(self.root / '.govel/structure.json')['fragments'][1]['text'], '提交窗口内的外部修改。')
 
     def test_invalid_or_unrenderable_submit_budget_has_no_writes(self):
         packed = self.packed(count=1)
@@ -214,12 +214,12 @@ class EvidenceReferenceTests(unittest.TestCase):
             prepared = call_operation('evidence.prepare', root, {'kind': 'continuity', 'chapterId': chapter})
             decisions = confirmation_for(continuity_preview(root, chapter))
             packed = call_operation('evidence.pack', root, {'snapshotRef': prepared['snapshotRef'], 'decisions': decisions})
-            before = (root / '.gnovel/workflow.json').read_bytes()
+            before = (root / '.govel/workflow.json').read_bytes()
             with self.assertRaises(StructureError):
                 call_operation('evidence.submit', root, {'submissionRef': packed['submissionRef']})
             with self.assertRaises(StructureError):
                 call_operation('evidence.confirm-continuity', root, {'submissionRef': packed['submissionRef'], 'approve': False})
-            self.assertEqual(before, (root / '.gnovel/workflow.json').read_bytes())
+            self.assertEqual(before, (root / '.govel/workflow.json').read_bytes())
             result = call_operation('evidence.confirm-continuity', root, {'submissionRef': packed['submissionRef'], 'approve': True})
             self.assertTrue(result['readyForContinuation'])
 
@@ -239,9 +239,9 @@ class EvidenceReferenceTests(unittest.TestCase):
     def test_completed_receipts_remain_queryable_after_source_changes(self):
         result = self.packed(count=1)
         self.assertTrue(call_operation('evidence.submit', self.root, {'submissionRef': result['submissionRef']})['submitted'])
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['fragments'][0]['text'] = '随后发生的明确修改。'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         with patch('scripts.core.source_review.submit_review', side_effect=AssertionError('must not replay history')):
             history = call_operation('evidence.submit', self.root, {'requestId': 'batch'})
         self.assertTrue(history['submitted']); self.assertTrue(history['historicalReceipt'])

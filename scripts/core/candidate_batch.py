@@ -24,7 +24,7 @@ def _workflow(root):
 
 def _record_path(root, request_id, project_id):
     identity = sha256_json({'projectId': project_id, 'requestId': request_id, 'purpose': 'candidate-batch'})
-    return f'.gnovel/artifact-submissions/candidate-batch-{identity}.json'
+    return f'.govel/artifact-submissions/candidate-batch-{identity}.json'
 
 
 def prepare_candidate_batch(root, *, requestId, chapterIds=None):
@@ -55,7 +55,7 @@ def prepare_candidate_batch(root, *, requestId, chapterIds=None):
                       'sourcePlans': {cid: chapter_plan(source, cid)['sourcePlanHash'] for cid in chapterIds}}
             record['requestHash'] = sha256_json(record)
             apply_write_set(root, {relative: json_bytes(record)}, operation='candidate_batch_request',
-                guards=capture_guards(root, ['.gnovel/structure.json', '.gnovel/workflow.json']))
+                guards=capture_guards(root, ['.govel/structure.json', '.govel/workflow.json']))
         reference = {'path': relative, 'requestHash': record['requestHash']}
         return {'ok': True, 'code': 'CANDIDATE_BATCH_PREPARED', 'batchRef': reference,
                 'chapterIds': record['chapterIds'], 'requestId': requestId, 'formalApprovalPerformed': False,
@@ -386,7 +386,7 @@ def committed_conversion_receipt(root, chapter_id, witness, *, stage):
     """
     from .write_sets import digest, PUBLICATION_PROTOCOL
     operation = {'finalize': 'finalize_chapter', 'continuity': 'complete_continuity'}[stage]
-    directory = safe_project_path(root, '.gnovel/transactions')
+    directory = safe_project_path(root, '.govel/transactions')
     for terminal in sorted(directory.glob('TX-*/completed.json')):
         relative = terminal.relative_to(root).as_posix()
         manifest = read_json(safe_project_path(root, relative))
@@ -407,7 +407,7 @@ def committed_conversion_receipt(root, chapter_id, witness, *, stage):
             row = by_path.get(path)
             if not row or row.get('after', {}).get('exists') is not True:
                 raise ValueError('required output missing')
-            location = f'.gnovel/transactions/{txid}/after/{path}'
+            location = f'.govel/transactions/{txid}/after/{path}'
             raw = safe_project_path(root, location).read_bytes()
             if digest(raw) != row['after'].get('sha256'):
                 raise ValueError('immutable output image changed')
@@ -415,14 +415,14 @@ def committed_conversion_receipt(root, chapter_id, witness, *, stage):
             return raw
 
         try:
-            workflow = json.loads(image('.gnovel/workflow.json'))
+            workflow = json.loads(image('.govel/workflow.json'))
             record = workflow.get('continuity', {}).get(chapter_id, {})
             if record.get('candidateConversion') != witness:
                 continue
             from .continuity import validated_continuity_record
             validated_continuity_record(workflow, chapter_id)
             if stage == 'finalize':
-                source = json.loads(image('.gnovel/structure.json'))
+                source = json.loads(image('.govel/structure.json'))
                 chapter = next(c for c in source['chapters'] if c['chapterId'] == chapter_id)
                 if (source['projectId'] != witness['projectId'] or chapter['proseBinding'] != witness['formalBinding']
                         or chapter['status'] != 'stable' or chapter['filePath'] != witness['filePath']
@@ -445,7 +445,7 @@ def list_candidate_batches(root):
     root = Path(root).expanduser().resolve()
     source = load_structure(root)
     rows = []
-    directory = safe_project_path(root, '.gnovel/artifact-submissions')
+    directory = safe_project_path(root, '.govel/artifact-submissions')
     for path in sorted(directory.glob('candidate-batch-*.json')):
         record = read_json(path)
         _validate_record(root, source, record)

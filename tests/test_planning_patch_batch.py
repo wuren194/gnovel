@@ -22,7 +22,7 @@ class PlanningPatchBatchTests(unittest.TestCase):
         self.source['fragments'] = [{'fragmentId': 'SF-PLAN' + str(i), 'ownerId': self.source['projectId'],
             'text': 'Alpha guards the gate. ' + ('Long original paragraph.\r\n' * 1200 if i == 0 else ''),
             'order': i, 'contentRole': 'plan', 'contentBindings': ['AT-PLAN']} for i in range(2)]
-        validate_structure(self.source); write_json(self.root / '.gnovel/structure.json', self.source)
+        validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
 
     def changes(self):
         return [{'action': 'patch', 'collection': 'fragments', 'id': row['fragmentId'],
@@ -50,7 +50,7 @@ class PlanningPatchBatchTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             commit_plan(self.root, operation_id=preview['operationId'], plan_hash=preview['planHash'], approved=False)
         commit_plan(self.root, operation_id=preview['operationId'], plan_hash=preview['planHash'], approved=True)
-        current = read_json(self.root / '.gnovel/structure.json')
+        current = read_json(self.root / '.govel/structure.json')
         for old, new in zip(self.source['fragments'], current['fragments']):
             self.assertEqual(new, {**old, 'text': old['text'].replace('guards', 'leaves')})
 
@@ -61,8 +61,8 @@ class PlanningPatchBatchTests(unittest.TestCase):
         for changes in (bad_hash, owner, fact, self.changes() * 2):
             with self.subTest(changes=changes[0]['patch']), self.assertRaises(StructureError):
                 self.preview(changes)
-        self.assertFalse(list((self.root / '.gnovel/plans').glob('OP-*.json')))
+        self.assertFalse(list((self.root / '.govel/plans').glob('OP-*.json')))
         self.source['fragments'][0]['contentRole'] = 'fact'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError):
             self.preview()

@@ -50,7 +50,7 @@ def source_fixture(root: Path | None = None) -> dict:
     ]
     validate_structure(source)
     if root is not None:
-        write_json(root / '.gnovel/structure.json', source)
+        write_json(root / '.govel/structure.json', source)
     return source
 
 

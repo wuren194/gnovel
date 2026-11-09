@@ -18,7 +18,7 @@ import tempfile
 import unittest
 
 
-ISOLATED_ROOT_ENV = 'GNOVEL_TEST_COPY_ROOT'
+ISOLATED_ROOT_ENV = 'GOVEL_TEST_COPY_ROOT'
 MARKER = '.test-toolbox-copy.json'
 
 
@@ -159,7 +159,7 @@ class IsolatedModuleSuite(unittest.TestSuite):
         tests = {test.id(): test for test in _flatten(self)}
         if len(tests) != self.countTestCases():
             raise RuntimeError('Duplicate test IDs in isolated module')
-        with tempfile.TemporaryDirectory(prefix='gnovel-test-copy-') as temporary:
+        with tempfile.TemporaryDirectory(prefix='govel-test-copy-') as temporary:
             copy = (Path(temporary) / 'toolbox').resolve()
             copy_toolbox(self.source, copy)
             # Package/doctor checks enumerate the actual worktree through Git.

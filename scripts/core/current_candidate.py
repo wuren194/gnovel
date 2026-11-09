@@ -133,7 +133,7 @@ def prepare_candidate_handoff(root, *, chapterId):
     root = Path(root).expanduser().resolve()
     with project_lock_reentrant(root):
         require_no_pending(root)
-        guards = capture_guards(root, ['.gnovel/structure.json', '.gnovel/workflow.json'])
+        guards = capture_guards(root, ['.govel/structure.json', '.govel/workflow.json'])
         structure, workflow = load_structure(root), _workflow(root)
         if not any(c['chapterId'] == chapterId and c.get('status') != 'archived' for c in structure['chapters']):
             raise StructureError('CHAPTER_NOT_FOUND', 'handoff requires an active chapter')

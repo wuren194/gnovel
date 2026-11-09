@@ -91,7 +91,7 @@ def toolbox_signature():
     for directory in ('scripts', 'shared', 'knowledge/assets', 'libraries'):
         paths.extend(p for p in (TOOLBOX_ROOT / directory).rglob('*')
                      if p.suffix in {'.py', '.md', '.json'} and '__pycache__' not in p.parts)
-    paths.extend(TOOLBOX_ROOT.glob('gnovel-*/SKILL.md'))
+    paths.extend(TOOLBOX_ROOT.glob('govel-*/SKILL.md'))
     paths.append(TOOLBOX_ROOT / 'knowledge/catalog.json')
     paths.extend(TOOLBOX_ROOT / f'knowledge/.cache/search.sqlite3{suffix}' for suffix in ('', '-wal', '-shm'))
     manifest = cached_json(TOOLBOX_ROOT / 'toolbox.manifest.json')

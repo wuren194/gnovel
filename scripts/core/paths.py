@@ -20,12 +20,12 @@ def recorded_project_roots(root: Path) -> set[str]:
     import json
     base = root.expanduser().resolve()
     roots = {str(base)}
-    receipt_path = safe_project_path(base, '.gnovel/project-locator.json')
+    receipt_path = safe_project_path(base, '.govel/project-locator.json')
     if not receipt_path.is_file():
         return roots
     try:
         receipt = json.loads(receipt_path.read_bytes())
-        marker = json.loads(safe_project_path(base, '.gnovel/project.json').read_bytes())
+        marker = json.loads(safe_project_path(base, '.govel/project.json').read_bytes())
         if (receipt.get('schemaVersion') != 1 or receipt.get('kind') != 'project_locator'
                 or receipt.get('projectId') != marker.get('projectId') or not marker.get('projectId')
                 or receipt.get('currentLocator') != str(base) or not isinstance(receipt.get('history'), list)

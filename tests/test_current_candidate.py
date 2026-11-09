@@ -47,7 +47,7 @@ class CurrentCandidateTests(unittest.TestCase):
         self.source = load_structure(self.root)
 
     def workflow(self):
-        return read_json(self.root / '.gnovel/workflow.json')
+        return read_json(self.root / '.govel/workflow.json')
 
     def activate(self, text=NEW, *, base=None, token=0, request='selection'):
         result = save_candidate_version(self.root, self.cid, body=text, request_id=request, base_candidate_version=base)
@@ -64,7 +64,7 @@ class CurrentCandidateTests(unittest.TestCase):
         workflow = self.workflow()
         approve_artifacts(workflow, self.cid, artifact_hashes={kind: workflow['artifacts'][self.cid][kind]['artifactSha256'] for kind in kinds},
                           approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
 
     def test_saving_unselected_candidate_keeps_current_execution_and_approvals(self):
         before = self.workflow()
@@ -157,7 +157,7 @@ class CurrentCandidateTests(unittest.TestCase):
         frozen = prepare_candidate_handoff(self.root, chapterId=self.cid)
         workflow = self.workflow()
         workflow['approvals'][self.cid]['approved'] = False
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         current = prepare_candidate_handoff(self.root, chapterId=self.cid)
         self.assertFalse(current['stageAApproved'])
         for reference in (frozen['selectionRef'], current['selectionRef']):
@@ -239,13 +239,13 @@ class CurrentCandidateTests(unittest.TestCase):
         frozen = prepare_candidate_handoff(self.root, chapterId=self.cid)
         original = self.workflow()
         def interrupt(phase, path=None):
-            if phase == 'write' and path == '.gnovel/workflow.json':
+            if phase == 'write' and path == '.govel/workflow.json':
                 raise RuntimeError('injected after publication before commit')
         with patch('scripts.core.write_sets.checkpoint', side_effect=interrupt), self.assertRaises(RuntimeError):
             pack_artifact(self.root, chapterId=self.cid, artifactType='candidate_prose', text=NEW,
                 selectionRef=frozen['selectionRef'], selectionReview=REVIEW, requestId='interrupted-handoff')
         self.assertEqual(self.workflow(), original)
-        body = self.root / '.gnovel/workbench/candidates' / self.cid / saved['fileName']
+        body = self.root / '.govel/workbench/candidates' / self.cid / saved['fileName']
         self.assertEqual(body.read_text(), NEW)
         body.write_text('外改候选的字节。')
         for operation in (lambda: candidate_prose(self.root, self.cid), lambda: prepare_candidate_handoff(self.root, chapterId=self.cid)):
@@ -272,7 +272,7 @@ class CurrentCandidateTests(unittest.TestCase):
         try:
             connection = http.client.HTTPConnection('127.0.0.1', server.server_port)
             connection.request('GET', '/api/candidate/handoff?chapterId=' + self.cid,
-                               headers={'X-gnovel-Token': server.mutation_token})
+                               headers={'X-govel-Token': server.mutation_token})
             response = connection.getresponse()
             http_result = json.loads(response.read())
             self.assertEqual(response.status, 200, http_result)

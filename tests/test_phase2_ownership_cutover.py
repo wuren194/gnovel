@@ -49,11 +49,11 @@ def _walk_to_review(root: Path, chapter_id: str, prose: str) -> None:
     walk binds the authored source plan fragment.
     """
     from scripts.core.source_plan import outline_binding
-    structure = read_json(root / ".gnovel" / "structure.json")
+    structure = read_json(root / ".govel" / "structure.json")
     chapter = next(row for row in structure["chapters"] if row["chapterId"] == chapter_id)
-    workflow = read_json(root / ".gnovel" / "workflow.json")
+    workflow = read_json(root / ".govel" / "workflow.json")
     workflow["approvedChapterIds"] = list(dict.fromkeys([*workflow.get("approvedChapterIds", []), chapter_id]))
-    write_json(root / ".gnovel" / "workflow.json", workflow)
+    write_json(root / ".govel" / "workflow.json", workflow)
     binding = outline_binding(root, structure, chapter)
     plan_field, plan_hash = binding["field"], binding["hash"]
     register_and_approve(root, chapter_id, "stage_a_review", {
@@ -67,11 +67,11 @@ def _walk_to_review(root: Path, chapter_id: str, prose: str) -> None:
     from scripts.core.mechanical_evidence import run_diagnostics
     result = run_diagnostics(root, chapter_id=chapter_id, mode='plot', intensity_level=1,
                              register=True, advance_lifecycle=True)
-    workflow = read_json(root/'.gnovel/workflow.json')
+    workflow = read_json(root/'.govel/workflow.json')
     from scripts.core.workflow import approve_artifacts
     approve_artifacts(workflow, chapter_id, artifact_hashes={
         'diagnostics': workflow['artifacts'][chapter_id]['diagnostics']['artifactSha256']}, approval_mode='manual')
-    write_json(root/'.gnovel/workflow.json', workflow)
+    write_json(root/'.govel/workflow.json', workflow)
     register_and_approve(root, chapter_id, "stage_b_review", {
         "verdict": "POLISH_READY",
         "slots": evidenced_slots(prose),
@@ -99,7 +99,7 @@ def binding_project(root: Path, *, chapter_id: str = fx.CHAPTER_B, state: str = 
                                               empty_structure, validate_structure)
     from scripts.core.prose_binding import seal_binding
     root.mkdir(parents=True, exist_ok=True)
-    for relative in (".gnovel", "正文", "规划", "设定", "工作台"):
+    for relative in (".govel", "正文", "规划", "设定", "工作台"):
         (root / relative).mkdir(parents=True, exist_ok=True)
     structure = empty_structure(fx.PROJECT_ID, "绑定测试")
     structure["volumes"] = [{"volumeId": fx.VOLUME_A, "ordinal": 1, "title": "第一卷", "status": "planned"}]
@@ -125,16 +125,16 @@ def binding_project(root: Path, *, chapter_id: str = fx.CHAPTER_B, state: str = 
                                        generation=revision, expected_content_digest=digest)
     if prose is not None:
         (root / "正文" / f"{chapter_id}.md").write_text(prose, encoding="utf-8")
-    write_json(root / ".gnovel" / "project.json", {
+    write_json(root / ".govel" / "project.json", {
         "schemaVersion": PROJECT_SCHEMA_VERSION, "workflowVersion": WORKFLOW_VERSION,
         "projectId": fx.PROJECT_ID, "bookName": "绑定测试", "projectRevision": revision,
         "createdAt": "2026-09-28T00:00:00Z", "approvalMode": "manual"})
-    write_json(root / ".gnovel" / "workflow.json", {
+    write_json(root / ".govel" / "workflow.json", {
         "schemaVersion": 2, "approvedChapterIds": [], "chapterStates": {}, "artifacts": {},
         "approvals": {}, "repairRounds": {}, "nextAction": None,
         "updatedAt": "2026-09-28T00:00:00Z"})
     validate_structure(structure)
-    write_json(root / ".gnovel" / "structure.json", structure)
+    write_json(root / ".govel" / "structure.json", structure)
     return structure
 
 
@@ -246,7 +246,7 @@ class ObservationTests(SyntheticProjectCase):
         self.assertEqual(self.observation(fx.CHAPTER_C)["state"], prose_binding.NEEDS_CONFIRMATION)
 
     def test_a7_corrupt_integrity_is_binding_invalid(self) -> None:
-        path = self.root / ".gnovel" / "structure.json"
+        path = self.root / ".govel" / "structure.json"
         on_disk = read_json(path)
         on_disk["chapters"][1]["proseBinding"]["integrityDigest"] = "sha256:" + "0" * 64
         write_json(path, on_disk)
@@ -260,7 +260,7 @@ class ObservationTests(SyntheticProjectCase):
         self.assertEqual(self.observation(fx.CHAPTER_B)["state"], prose_binding.CONFLICT)
 
     def test_a9_pending_transaction_outranks_everything(self) -> None:
-        transactions = self.root / ".gnovel" / "transactions"
+        transactions = self.root / ".govel" / "transactions"
         transactions.mkdir(parents=True, exist_ok=True)
         write_json(transactions / "TX-DEADBEEF.json",
                    {"transactionId": "TX-DEADBEEF", "phase": "prepared", "files": []})
@@ -269,9 +269,9 @@ class ObservationTests(SyntheticProjectCase):
         self.assertEqual(receipt["nextSafeAction"], "workflow_recover")
 
     def test_a10_observation_is_never_persisted(self) -> None:
-        before = (self.root / ".gnovel" / "structure.json").read_bytes()
+        before = (self.root / ".govel" / "structure.json").read_bytes()
         self.observation(fx.CHAPTER_A)
-        self.assertEqual((self.root / ".gnovel" / "structure.json").read_bytes(), before)
+        self.assertEqual((self.root / ".govel" / "structure.json").read_bytes(), before)
 
 
 # ---------------------------------------------------------------------------
@@ -310,13 +310,13 @@ class FirstFinalizationTests(TempRootCase):
                              binding_generation=self.chapter(fx.CHAPTER_B)["proseBinding"]["generation"])
         self.assertEqual(len(seen), 1)
         self.assertIn(f"正文/{fx.CHAPTER_B}.md", seen[0])
-        self.assertIn(".gnovel/structure.json", seen[0])
+        self.assertIn(".govel/structure.json", seen[0])
 
     def test_b3_target_appearing_after_locked_preflight_is_refused(self) -> None:
         sentinel = "外部抢占字节".encode("utf-8")
         from scripts.core import derived_views
         real = derived_views.derived_outputs
-        structure_before = (self.root / ".gnovel" / "structure.json").read_bytes()
+        structure_before = (self.root / ".govel" / "structure.json").read_bytes()
 
         def racing(*args, **kwargs):
             self.prose_path.write_bytes(sentinel)
@@ -330,9 +330,9 @@ class FirstFinalizationTests(TempRootCase):
                 {"PROSE_TARGET_NOT_OWNED", "WRITE_SET_CONFLICT", "WRITE_SET_MISMATCH"})
         # 抢占进来的字节一个字节都没被覆盖；结构、事务目录与状态都没有被半途改动。
         self.assertEqual(self.prose_path.read_bytes(), sentinel)
-        self.assertEqual((self.root / ".gnovel" / "structure.json").read_bytes(), structure_before)
+        self.assertEqual((self.root / ".govel" / "structure.json").read_bytes(), structure_before)
         self.assertEqual(self.chapter(fx.CHAPTER_B)["proseBinding"]["state"], "unbound")
-        self.assertFalse(list((self.root / ".gnovel" / "transactions").glob("*.json")))
+        self.assertFalse(list((self.root / ".govel" / "transactions").glob("*.json")))
 
     def test_b4_target_appearing_with_identical_bytes_is_still_refused(self) -> None:
         from scripts.core import derived_views
@@ -519,14 +519,14 @@ class ExternalModificationTests(TempRootCase):
         self.assertEqual(staged["nextAction"]["action"], "planner")
 
     def test_d6_prose_dependent_approvals_are_invalidated_by_the_transaction(self) -> None:
-        workflow = read_json(self.root / ".gnovel" / "workflow.json")
+        workflow = read_json(self.root / ".govel" / "workflow.json")
         workflow.setdefault("approvals", {})[fx.CHAPTER_A] = {
             "approved": True, "artifactHashes": {"stage_b_review": "x"}, "finalized": True,
         }
         workflow.setdefault("artifacts", {})[fx.CHAPTER_A] = {
             "stage_b_review": {"artifactSha256": "x"}, "stage_a_review": {"artifactSha256": "y"}}
         workflow.setdefault("continuity", {})[fx.CHAPTER_A] = {"batchHash": "kept"}
-        write_json(self.root / ".gnovel" / "workflow.json", workflow)
+        write_json(self.root / ".govel" / "workflow.json", workflow)
         plan = preview_accept_external_modification(self.root, chapter_id=fx.CHAPTER_A, actor="author")
         after = self._staged_workflow(plan["operationId"])
         approval = after["approvals"][fx.CHAPTER_A]
@@ -565,7 +565,7 @@ class ExternalModificationTests(TempRootCase):
 
     def _staged_workflow(self, operation_id: str) -> dict:
         """The workflow half the transaction would stage — read from the real staged plan."""
-        staged = self.root / f".gnovel/plans/{operation_id}.files/.gnovel/workflow.json"
+        staged = self.root / f".govel/plans/{operation_id}.files/.govel/workflow.json"
         self.assertTrue(staged.is_file(), "accept-external plan must stage its workflow invalidation")
         return read_json(staged)
 
@@ -595,11 +595,11 @@ class AcceptExternalCapabilitySeparationTests(TempRootCase):
 
     def _side_effects(self) -> dict:
         return {
-            "structure": (self.root / ".gnovel/structure.json").read_bytes(),
-            "workflow": (self.root / ".gnovel/workflow.json").read_bytes(),
+            "structure": (self.root / ".govel/structure.json").read_bytes(),
+            "workflow": (self.root / ".govel/workflow.json").read_bytes(),
             "prose": self.prose_path.read_bytes(),
-            "journal": (self.root / f".gnovel/operations/{self.plan['operationId']}.json").exists(),
-            "backup": (self.root / f".gnovel/backups/{self.plan['operationId']}").exists(),
+            "journal": (self.root / f".govel/operations/{self.plan['operationId']}.json").exists(),
+            "backup": (self.root / f".govel/backups/{self.plan['operationId']}").exists(),
             "plan": self.plan_path.is_file(),
         }
 
@@ -977,19 +977,19 @@ class CurrentUndoRoutingTests(unittest.TestCase):
 
 class HistoryIndependenceTests(SyntheticProjectCase):
     def test_i1_damaged_history_does_not_change_current_ownership(self) -> None:
-        for relative in (".gnovel/operations", ".gnovel/backups", ".gnovel/undo-receipts",
-                         ".gnovel/undo-operations"):
+        for relative in (".govel/operations", ".govel/backups", ".govel/undo-receipts",
+                         ".govel/undo-operations"):
             directory = self.root / relative
             directory.mkdir(parents=True, exist_ok=True)
             (directory / "damaged.json").write_text("{ not json", encoding="utf-8")
-        workflow = read_json(self.root / ".gnovel" / "workflow.json")
+        workflow = read_json(self.root / ".govel" / "workflow.json")
         workflow["continuity"] = {fx.CHAPTER_A: {"damaged": True}}
-        write_json(self.root / ".gnovel" / "workflow.json", workflow)
+        write_json(self.root / ".govel" / "workflow.json", workflow)
         self.assertEqual(self.observation(fx.CHAPTER_A)["state"], prose_binding.OWNED_CLEAN)
 
     def test_i2_damaged_history_does_not_block_a_locator_move(self) -> None:
-        (self.root / ".gnovel" / "operations").mkdir(parents=True, exist_ok=True)
-        (self.root / ".gnovel" / "operations" / "junk.json").write_text("{", encoding="utf-8")
+        (self.root / ".govel" / "operations").mkdir(parents=True, exist_ok=True)
+        (self.root / ".govel" / "operations" / "junk.json").write_text("{", encoding="utf-8")
         plan = refactor.preview_relocate_chapter_paths(self.root, chapter_id=fx.CHAPTER_A,
                                                        file_path="正文/搬家.md")
         refactor.commit_refactor(self.root, operation_id=plan["operationId"],
@@ -1032,7 +1032,7 @@ class CaseOnlyRenameTests(SyntheticProjectCase):
 
     def test_k2b_decomposed_equivalent_locator_stays_deferred(self) -> None:
         # NFC 归一后等价的两种拼写（e + U+0301 vs U+00E9）也是 normalization-only rename。
-        path = self.root / ".gnovel" / "structure.json"
+        path = self.root / ".govel" / "structure.json"
         on_disk = read_json(path)
         chapter = on_disk["chapters"][1]
         chapter["filePath"] = "正文/\u00e9.md"

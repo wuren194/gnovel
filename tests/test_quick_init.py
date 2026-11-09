@@ -44,8 +44,8 @@ class QuickInitTests(unittest.TestCase):
             self.assertEqual(result["project"]["bookName"], "测试书名")
             self.assertEqual(result["doctor"]["healthy"], True)
             self.assertEqual(result["doctor"]["code"], "DOCTOR_OK")
-            self.assertTrue((root / ".gnovel" / "workflow.json").is_file())
-            marker = json.loads((root / ".gnovel" / "project.json").read_text(encoding="utf-8"))
+            self.assertTrue((root / ".govel" / "workflow.json").is_file())
+            marker = json.loads((root / ".govel" / "project.json").read_text(encoding="utf-8"))
             uuid.UUID(marker["projectId"])
             self.assertTrue((root / "AGENTS.md").is_file())
 
@@ -121,7 +121,7 @@ class WorkflowStateTests(unittest.TestCase):
     def _init_with_chapter(self, root: Path) -> str:
         code, result = run_cli(["project", "quick-init", "--project-root", str(root), "--book-name", "范围测试"])
         self.assertEqual(code, 0, result)
-        data = json.loads((root/".gnovel/structure.json").read_text())
+        data = json.loads((root/".govel/structure.json").read_text())
         code, preview = run_cli(["project", "structure", "insert-preview", "--project-root", str(root),
             "--title", "第一章", "--volume-id", data['volumes'][0]['volumeId'],
             "--primary-arc-id", data['arcs'][0]['arcId']])
@@ -170,7 +170,7 @@ class StructureTransactionCliTests(unittest.TestCase):
             ["project", "quick-init", "--project-root", str(root), "--book-name", "事务测试"]
         )
         self.assertEqual(code, 0)
-        structure_path = root / ".gnovel" / "structure.json"
+        structure_path = root / ".govel" / "structure.json"
         data = json.loads(structure_path.read_text(encoding="utf-8"))
         data["volumes"].append({"volumeId": "VOL-TX000001", "title": "第一卷", "summary": "", "status": "planned"})
         data["arcs"].append({"arcId": "ARC-TX000001", "title": "主线", "summary": "", "status": "planned", "volumeIds": ["VOL-TX000001"]})
@@ -195,7 +195,7 @@ class StructureTransactionCliTests(unittest.TestCase):
             ])
             self.assertEqual(code, 0, result)
             self.assertEqual(result["code"], "STRUCTURE_COMMITTED")
-            data = json.loads((root / ".gnovel" / "structure.json").read_text(encoding="utf-8"))
+            data = json.loads((root / ".govel" / "structure.json").read_text(encoding="utf-8"))
             self.assertEqual(len(data["chapters"]), 1)
             self.assertEqual(data["chapters"][0]["displayCode"], "CH001")
 

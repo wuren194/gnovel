@@ -14,7 +14,7 @@ from .structure_store import StructureError, canonical_json, load_structure
 from .write_sets import apply_write_set, digest, json_bytes, safe_project_path
 from .jsonio import read_json
 
-RECEIPTS_PATH = '.gnovel/source-review-receipts.json'
+RECEIPTS_PATH = '.govel/source-review-receipts.json'
 DECISIONS = {'compatible', 'conflict', 'needs_information', 'not_checked'}
 
 

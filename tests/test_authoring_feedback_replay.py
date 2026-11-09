@@ -47,7 +47,7 @@ class AuthoringSurfaceTests(unittest.TestCase):
     def test_append_singular_chapter_argument_resolves_display_code(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            write_json(root / '.gnovel/structure.json', {'chapters': [
+            write_json(root / '.govel/structure.json', {'chapters': [
                 {'chapterId': 'CH-STABLE', 'displayOrdinal': 1, 'status': 'planned'}]})
             args = {'chapter_id': ['CH001']}
             resolved = resolve_chapter_arguments(root, args)
@@ -107,7 +107,7 @@ class SourceContractReplayTests(unittest.TestCase):
     def test_existing_local_plan_prose_budget_reaches_diagnostics(self):
         self.source['fragments'][-1].pop('chapterContract', None)
         self.source['fragments'][-1]['text'] = '字数：8500–10000汉字。\nB01 4000字：进门。\nB02 5000：出门。'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         facts = inspect_outline(self.root, chapterId=self.cid)
         self.assertEqual(facts['targetRange'], [8500, 10000])
         self.assertEqual(facts['beatBudgetSum'], 9000)
@@ -133,7 +133,7 @@ class SourceContractReplayTests(unittest.TestCase):
                     'requirements': ['值班员关门'], 'quotedTargets': ['明天再来']}
         self.source['fragments'][-1]['chapterContract'] = contract
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         self.assertNotEqual(chapter_plan(self.source, self.cid)['sourcePlanHash'], before)
         report = audit_chapter(self.root, self.source, self.cid, '值班员合上门，告诉来人明天再来。')
         self.assertTrue(report['passed'])
@@ -187,9 +187,9 @@ class PackHandoffTests(unittest.TestCase):
         self.assertEqual(caught.exception.details['example']['notes'], '工作台/写作说明.json')
 
     def test_wording_note_requires_quotes_from_both_plan_and_candidate(self):
-        source = read_json(self.root/'.gnovel/structure.json')
+        source = read_json(self.root/'.govel/structure.json')
         source['fragments'][0]['text'] = '原计划台词：明天再来。'
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         note = {'deviations': [{'id': 'W1', 'kind': 'wording', 'plannedText': '明天再来',
                               'quote': '稍后再来', 'reason': '提议呈现措辞，阶段B仍需判断是否改动事实。'}]}
         validate_notes(note, '甲说：“稍后再来。”')

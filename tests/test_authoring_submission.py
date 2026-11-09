@@ -42,7 +42,7 @@ class InlineArtifactTests(unittest.TestCase):
         text = '值班员把钥匙放在桌上。\r\n交班登记已经填好。\r\n'
         args = {'chapterId': self.cid, 'artifactType': 'candidate_prose', 'text': text,
                 'writingNotes': {'newFacts': [], 'deviations': []}, 'requestId': 'inline-body'}
-        before = read_json(self.root/'.gnovel/workflow.json')['approvals']
+        before = read_json(self.root/'.govel/workflow.json')['approvals']
         packed = call_operation('workflow.artifact-pack', self.root, args)
         artifact = read_json(self.root/packed['artifactPath'])
         self.assertEqual(artifact['payload']['text'], text)
@@ -53,7 +53,7 @@ class InlineArtifactTests(unittest.TestCase):
         replay = call_operation('workflow.artifact-pack', self.root, args)
         self.assertTrue(replay['replayed'])
         self.assertEqual(inventory(self.root), after)
-        self.assertEqual(read_json(self.root/'.gnovel/workflow.json')['approvals'], before)
+        self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals'], before)
 
     def test_invalid_inline_review_rolls_back_all_generated_inputs(self):
         before = inventory(self.root)
@@ -97,7 +97,7 @@ class InlineArtifactTests(unittest.TestCase):
                         appeared.append(path)
                 return real_inventory(root, outputs, **kwargs)
 
-            workflow = (self.root/'.gnovel/workflow.json').read_bytes()
+            workflow = (self.root/'.govel/workflow.json').read_bytes()
             with self.subTest(suffix=suffix), patch.object(module, 'inventory', side_effect=race):
                 with self.assertRaises(StructureError) as caught:
                     pack_artifact(self.root, chapterId=self.cid, artifactType='candidate_prose',
@@ -105,7 +105,7 @@ class InlineArtifactTests(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 'ARTIFACT_INPUT_OVERWRITE')
             self.assertTrue(appeared)
             self.assertTrue(all(path.read_bytes() == sentinel for path in appeared))
-            self.assertEqual((self.root/'.gnovel/workflow.json').read_bytes(), workflow)
+            self.assertEqual((self.root/'.govel/workflow.json').read_bytes(), workflow)
             for path in appeared:
                 path.unlink()
 
@@ -148,14 +148,14 @@ class SubmissionRecoveryTests(unittest.TestCase):
             {'requestId': 'reviews-1', 'chapterId': self.cid, 'artifacts': self.reviews, **kwargs})
 
     def test_review_group_is_ordered_and_does_not_approve(self):
-        before = read_json(self.root/'.gnovel/workflow.json')['approvals']
+        before = read_json(self.root/'.govel/workflow.json')['approvals']
         result = self.submit()
         self.assertTrue(result['ok'], result)
         self.assertEqual([row['artifactType'] for row in result['stages']],
                          ['stage_b_review', 'state_candidate', 'title_candidates'])
         self.assertFalse(result['approvalsPerformed'])
         self.assertFalse(result['semanticReviewComplete'])
-        self.assertEqual(read_json(self.root/'.gnovel/workflow.json')['approvals'], before)
+        self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals'], before)
         self.assertEqual(len(result['approvalAction']['arguments']['artifact']), 3)
         before_retry = inventory(self.root)
         replay = call_operation('workflow.submit', self.root, {'requestId': 'reviews-1'})
@@ -227,7 +227,7 @@ class SubmissionRecoveryTests(unittest.TestCase):
         self.assertFalse(replay['ok'])
         self.assertEqual(replay['error']['code'], 'SUBMISSION_SUPERSEDED')
         self.assertEqual(inventory(self.root), before)
-        current = read_json(self.root/'.gnovel/workflow.json')['artifacts'][self.cid]['candidate_prose']
+        current = read_json(self.root/'.govel/workflow.json')['artifacts'][self.cid]['candidate_prose']
         self.assertEqual(current['artifactSha256'], new['stages'][0]['artifactSha256'])
 
     def test_partial_review_group_cannot_overwrite_a_newer_pending_title(self):
@@ -247,11 +247,11 @@ class SubmissionRecoveryTests(unittest.TestCase):
         self.assertEqual(inventory(self.root), before)
 
     def test_source_changed_after_freeze_never_rebinds_the_review(self):
-        old_workflow = (self.root/'.gnovel/workflow.json').read_bytes()
+        old_workflow = (self.root/'.govel/workflow.json').read_bytes()
         def race(root, **kwargs):
-            source = read_json(root/'.gnovel/structure.json')
+            source = read_json(root/'.govel/structure.json')
             next(f for f in source['fragments'] if f['ownerId'] == self.cid)['text'] = '作者改为离开仓库。'
-            write_json(root/'.gnovel/structure.json', source)
+            write_json(root/'.govel/structure.json', source)
             return pack_artifact(root, **kwargs)
         with patch('scripts.core.authoring_submission.pack_artifact', side_effect=race):
             result = call_operation('workflow.submit', self.root, {'requestId': 'freeze-race', 'chapterId': self.cid,
@@ -260,9 +260,9 @@ class SubmissionRecoveryTests(unittest.TestCase):
                     'disagreements': [], 'openItems': []}}]})
         self.assertFalse(result['ok'])
         self.assertEqual(result['error']['code'], 'TRANSACTION_GUARD_DRIFT')
-        self.assertEqual((self.root/'.gnovel/workflow.json').read_bytes(), old_workflow)
+        self.assertEqual((self.root/'.govel/workflow.json').read_bytes(), old_workflow)
         self.assertTrue(all(row['status'] == 'pending' for row in result['stages']))
-        self.assertEqual(next(f for f in read_json(self.root/'.gnovel/structure.json')['fragments']
+        self.assertEqual(next(f for f in read_json(self.root/'.govel/structure.json')['fragments']
                              if f['ownerId'] == self.cid)['text'], '作者改为离开仓库。')
 
     def test_authorization_change_is_not_hidden_by_candidate_lifecycle_normalization(self):
@@ -270,9 +270,9 @@ class SubmissionRecoveryTests(unittest.TestCase):
                 'artifacts': [{'artifactType': 'candidate_prose', 'text': BODY}], 'advanceLifecycle': True}
         with patch('scripts.core.authoring_submission.pack_artifact', side_effect=OSError('before publication')):
             call_operation('workflow.submit', self.root, args)
-        workflow = read_json(self.root/'.gnovel/workflow.json')
+        workflow = read_json(self.root/'.govel/workflow.json')
         workflow['approvedChapterIds'] = []
-        write_json(self.root/'.gnovel/workflow.json', workflow)
+        write_json(self.root/'.govel/workflow.json', workflow)
         before = inventory(self.root)
         replay = call_operation('workflow.submit', self.root, {'requestId': 'authorized-draft'})
         self.assertFalse(replay['ok'])
@@ -395,16 +395,16 @@ class ChapterCreationFlowTests(unittest.TestCase):
             with self.subTest(single=single), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve(); source = self.make_project(root, single)
                 args = self.chapter_args(source, single)
-                before = (root/'.gnovel/structure.json').read_bytes()
+                before = (root/'.govel/structure.json').read_bytes()
                 preview = call_operation('workflow.chapter-preview', root, args)
-                self.assertEqual((root/'.gnovel/structure.json').read_bytes(), before)
+                self.assertEqual((root/'.govel/structure.json').read_bytes(), before)
                 replay = call_operation('workflow.chapter-preview', root, args)
                 self.assertEqual(replay['operationId'], preview['operationId'])
                 self.assertEqual(replay['identities'], preview['identities'])
                 denied = deepcopy(preview['nextAction']['arguments']); denied['approve'] = False
                 with self.assertRaises(ValueError): call_operation('source.commit', root, denied)
                 commit(root, preview)
-                current = read_json(root/'.gnovel/structure.json')
+                current = read_json(root/'.govel/structure.json')
                 self.assertEqual(len(current['chapters']), 1)
                 cid = current['chapters'][0]['chapterId']
                 self.assertEqual(cid, preview['identities']['chapterId'])
@@ -444,7 +444,7 @@ class ChapterCreationFlowTests(unittest.TestCase):
             self.assertLessEqual(len(json.dumps(preview, ensure_ascii=False, separators=(',', ':')).encode()),
                                  query_policy()['maxBytes']['detail'])
             commit(root, preview)
-            source = read_json(root/'.gnovel/structure.json')
+            source = read_json(root/'.govel/structure.json')
             self.assertEqual(source['fragments'][0]['text'], args['outlineText'])
 
     def test_current_layouts_reach_finalization_and_closeout_without_caller_files(self):
@@ -473,7 +473,7 @@ class ChapterCreationFlowTests(unittest.TestCase):
                 if single:
                     # Source truth must work without optional legacy projections.
                     for name in ('story-state.json', 'story-design.json'):
-                        (root/'.gnovel/cache'/name).unlink(missing_ok=True)
+                        (root/'.govel/cache'/name).unlink(missing_ok=True)
                 reviews = call_operation('workflow.submit', root, {'requestId': 'reviews', 'chapterId': cid, 'artifacts': [
                     {'artifactType': 'stage_b_review', 'payload': {'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}, 'factAssessment': {'status': 'no_change'}, 'verdict': 'POLISH_READY',
                         'slots': evidenced_slots(BODY), 'findings': []}},
@@ -507,7 +507,7 @@ class ChapterCreationFlowTests(unittest.TestCase):
 
     def source_fact_handoff(self, root, cid):
         """Caller supplies semantics; existing tools own IDs, hashes and offsets."""
-        source = read_json(root/'.gnovel/structure.json')
+        source = read_json(root/'.govel/structure.json')
         changes = [
             {'action': 'put', 'collection': 'entities', 'record': {'entityId': '$event',
                 'entityType': 'event', 'name': '交班完成', 'status': 'active', 'aliases': []}},

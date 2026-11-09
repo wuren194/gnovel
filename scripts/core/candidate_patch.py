@@ -96,10 +96,10 @@ def patch_candidate(root: Path, *, patches: list | None = None, chapterId: str |
             guards.append({'path': relative, **state})
             return json.loads(raw)
 
-        source = observe('.gnovel/structure.json')
+        source = observe('.govel/structure.json')
         if anchor_version is not None and anchor_version['projectId'] != source['projectId']:
             raise StructureError('EDIT_ANCHOR_SCOPE_MISMATCH', 'anchor belongs to another project')
-        workflow = observe('.gnovel/workflow.json')
+        workflow = observe('.govel/workflow.json')
         workflow_hash = guards.pop()['sha256']
         entry = workflow.get('artifacts', {}).get(chapterId, {}).get('candidate_prose', {})
         if entry.get('artifactSha256') != candidateSha256 or entry.get('invalidatedBy'):
@@ -181,9 +181,9 @@ def _resume_arguments(root, request_id):
     from .write_sets import digest
     if not isinstance(request_id, str) or not request_id.strip():
         raise StructureError('PATCH_RESUME_INVALID', 'provide patches or an existing requestId')
-    source = read_json(safe_project_path(root, '.gnovel/structure.json'))
+    source = read_json(safe_project_path(root, '.govel/structure.json'))
     identity = sha256_json({'projectId': source['projectId'], 'requestId': request_id})
-    request = read_json(safe_project_path(root, f'.gnovel/artifact-requests/{identity}.json'))
+    request = read_json(safe_project_path(root, f'.govel/artifact-requests/{identity}.json'))
     if request.get('requestHash') != sha256_json({k: v for k, v in request.items() if k != 'requestHash'}):
         raise StructureError('ARTIFACT_REQUEST_INVALID', 'stored request receipt changed')
     path = str(Path(request['inputIdentity']['inputPath']).with_suffix('.receipt.json'))
@@ -198,9 +198,9 @@ def _resume_arguments(root, request_id):
 
 def _replay_patch(root, request_id, request_hash, advance_lifecycle, diagnostics, automatic_repair):
     from .jsonio import read_json
-    source = read_json(safe_project_path(root, '.gnovel/structure.json'))
+    source = read_json(safe_project_path(root, '.govel/structure.json'))
     identity = sha256_json({'projectId': source['projectId'], 'requestId': request_id})
-    path = safe_project_path(root, f'.gnovel/artifact-requests/{identity}.json')
+    path = safe_project_path(root, f'.govel/artifact-requests/{identity}.json')
     if not path.exists():
         return None
     request = read_json(path)
@@ -214,7 +214,7 @@ def _replay_patch(root, request_id, request_hash, advance_lifecycle, diagnostics
     receipt = json.loads(receipt_raw)
     if receipt.get('requestHash') != request_hash:
         raise StructureError('ARTIFACT_REQUEST_REUSED', 'requestId identifies different patch inputs')
-    workflow = read_json(safe_project_path(root, '.gnovel/workflow.json'))
+    workflow = read_json(safe_project_path(root, '.govel/workflow.json'))
     current = workflow.get('artifacts', {}).get(receipt['chapterId'], {}).get('candidate_prose', {})
     if current.get('invalidatedBy') or current.get('artifactSha256') != request['receipt']['artifactSha256']:
         raise StructureError('PATCH_BASE_STALE', 'the patched candidate is no longer current')

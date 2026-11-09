@@ -75,7 +75,7 @@ class CandidateFeedbackTests(unittest.TestCase):
         self.cid = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
         self.body = '他把钥匙放回桌上，合上了登记本。'
 
-    def workflow(self): return read_json(self.root / '.gnovel/workflow.json')
+    def workflow(self): return read_json(self.root / '.govel/workflow.json')
 
     def outline(self, *, mode='buildUp', level=5):
         source = load_structure(self.root)
@@ -86,7 +86,7 @@ class CandidateFeedbackTests(unittest.TestCase):
             'beats': [{'id': 'B01', 'budget': 4500}, {'id': 'B02', 'budget': 4500}],
             'requirements': ['值班员取回钥匙。', '关键台词“明天再来”。'], 'quotedTargets': ['明天再来'],
             'slowdownReserve': '在取钥匙的阻力处展开。'}
-        path = self.root/'.gnovel/structure.json'; write_json(path, source)
+        path = self.root/'.govel/structure.json'; write_json(path, source)
         from scripts.core.source_plan import chapter_plan
         register_and_approve(self.root, self.cid, 'stage_a_review', {
             'decision': 'adopt', 'activeSeats': list(range(1, 11)),
@@ -127,7 +127,7 @@ class CandidateFeedbackTests(unittest.TestCase):
         self.assertEqual(result['stageAArtifactSha256'], self.workflow()['artifacts'][self.cid]['stage_a_review']['artifactSha256'])
         source = load_structure(self.root)
         next(f for f in source['fragments'] if f['ownerId'] == self.cid)['text'] = '改过的推演。'
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         with self.assertRaises(ValueError) as caught: candidate_prose(self.root, self.cid)
         self.assertEqual(caught.exception.code, 'CANDIDATE_PLAN_STALE')
         self.assertIn('CANDIDATE_PLAN_STALE', {r['code'] for r in preflight_finalization(self.root, self.cid).blockers})
@@ -150,7 +150,7 @@ class CandidateFeedbackTests(unittest.TestCase):
         self.assertEqual(board['writingNotes'], notes)
         # A stale report's suggested rerun must leave the effective level to the runner.
         structure = load_structure(self.root); structure['chapters'][0]['status'] = 'draft'; structure['revision'] += 1
-        write_json(self.root / '.gnovel/structure.json', structure)
+        write_json(self.root / '.govel/structure.json', structure)
         board = chapter_status(self.root, self.cid)
         action = next(row for row in board['nextActions'] if row.get('operation') == 'diagnostics.aggregate')
         self.assertNotIn('intensityLevel', action['arguments'])
@@ -195,7 +195,7 @@ class CandidateFeedbackTests(unittest.TestCase):
     def test_one_call_is_retryable_and_never_approves(self):
         workflow = self.workflow(); before = deepcopy(workflow['approvals'])
         structure = load_structure(self.root); structure['chapters'][0]['status'] = 'planned'
-        write_json(self.root / '.gnovel/structure.json', structure)
+        write_json(self.root / '.govel/structure.json', structure)
         kwargs = {'advanceLifecycle': True, 'diagnostics': {'mode': 'plot', 'intensityLevel': 1}, 'requestId': 'one-call'}
         result = self.pack(**kwargs)
         self.assertEqual(result['lifecycleStatus'], 'review')
@@ -211,7 +211,7 @@ class CandidateFeedbackTests(unittest.TestCase):
         source = load_structure(self.root)
         character = next(c for c in source['entities'] if c['entityType'] == 'character')
         character['voiceProfile'] = {'bannedPhrasesForRole': ['本少爷', '小爷', '人家']}
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         characters = characters_for_project(self.root)
         loaded = next(c for c in characters if c['characterId'] == character['entityId'])
         self.assertEqual(loaded['bannedPhrases'], ['本少爷', '小爷', '人家'])
@@ -233,20 +233,20 @@ class CandidateFeedbackTests(unittest.TestCase):
         state = pack_artifact(self.root, chapterId=self.cid, artifactType='state_candidate', payload={'changes': []})
         self.assertEqual(read_json(self.root/state['artifactPath'])['payload']['changes'], [])
         self.assertFalse(state['approvalPerformed'])
-        before = (self.root/'.gnovel/structure.json').read_bytes()
+        before = (self.root/'.govel/structure.json').read_bytes()
         with self.assertRaises(ValueError) as caught:
             self.pack(notes={'newFacts': [{'id': 'F1', 'statement': '登记本放在桌上', 'quote': '合上了登记本'}]})
         self.assertEqual(caught.exception.code, 'SOURCE_FACTS_REQUIRE_PROPOSAL')
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
 
     def test_fact_scan_is_read_only_and_proposals_are_not_changes(self):
         text = '八岁时他住在旧街，去年搬到了门房。'
         self.pack(text=text)
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         result = chapter_check(self.root, chapterId=self.cid)
         self.assertTrue(result['factCandidates'])
         self.assertEqual(result['stateCandidateDraft']['changes'], [])
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
 
     def test_new_body_invalidates_diagnostics_even_for_a_small_edit(self):
         self.pack(); run_diagnostics(self.root, chapter_id=self.cid, mode='plot', intensity_level=1, register=True)
@@ -261,7 +261,7 @@ class CandidateFeedbackTests(unittest.TestCase):
         result = pack_artifact(self.root, chapterId=self.cid, artifactType='stage_b_review', input='工作台/review.json')
         workflow = self.workflow(); workflow['approvals'][self.cid]['artifactHashes'].pop('diagnostics', None)
         approve_artifacts(workflow, self.cid, artifact_hashes={'stage_b_review': result['artifactSha256']}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         report = preflight_finalization(self.root, self.cid, skip_title=True)
         diag = next(r for r in report.artifacts if r['artifactType'] == 'diagnostics')
         self.assertEqual(diag['approvalCoveredBy'], 'stage_b_review')

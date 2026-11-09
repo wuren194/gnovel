@@ -1,4 +1,4 @@
-"""gnovel toolbox tests."""
+"""govel toolbox tests."""
 
 import os
 import tempfile
@@ -8,14 +8,14 @@ import sys
 
 # Keep direct unittest runs out of the user's diagnostic history as well as
 # local_ci workers. Dedicated logging tests supply their own mode and directory.
-os.environ["GNOVEL_LOG_MODE"] = "off"
+os.environ["GOVEL_LOG_MODE"] = "off"
 
 # All subprocesses inherit this process-owned directory. Tests cannot write to
 # the user's provider or application data while running the public suite.
-_data_directory = tempfile.TemporaryDirectory(prefix='gnovel-test-data-')
+_data_directory = tempfile.TemporaryDirectory(prefix='govel-test-data-')
 atexit.register(_data_directory.cleanup)
-os.environ['GNOVEL_DATA_HOME'] = str(Path(_data_directory.name).resolve())
-os.environ.pop('GNOVEL_PROVIDER_CONFIG', None)
+os.environ['GOVEL_DATA_HOME'] = str(Path(_data_directory.name).resolve())
+os.environ.pop('GOVEL_PROVIDER_CONFIG', None)
 
 # Direct unittest discovery can import a product module before this package.
 # Rebind only those test-process modules before any test body runs.

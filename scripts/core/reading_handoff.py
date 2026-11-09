@@ -81,7 +81,7 @@ def handoff(root: Path, report: dict, arguments: dict) -> dict:
                 state, raw = guard_observation(TOOLBOX_ROOT / canonical)
                 metadata = _parse(raw, canonical)[0] if raw is not None else None
                 if (metadata is None or metadata['status'] != 'active'
-                        or report['station'].removeprefix('gnovel-') not in metadata['stations']):
+                        or report['station'].removeprefix('govel-') not in metadata['stations']):
                     references.append({'path': canonical, 'referencePath': entry['path'],
                                        'available': False, 'code': 'KNOWLEDGE_ASSET_NOT_ACTIVE_FOR_STATION'})
                     continue

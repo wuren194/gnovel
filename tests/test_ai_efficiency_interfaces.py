@@ -38,7 +38,7 @@ class InterfaceConsistencyTests(unittest.TestCase):
         payload.update(storySummary='因果摘要', plotLine=[{'chapterId': fixture['chapterIds'][0], 'summary': '推进'}])
         path = self.root / 'summary.json'; path.write_text(json.dumps(payload))
         _commit_summary(self.root, str(path))
-        saved = (self.root / '.gnovel/aux/story-summary.json').read_bytes()
+        saved = (self.root / '.govel/aux/story-summary.json').read_bytes()
         self.assertTrue(_prepare_context(self.root)['upToDate'])
         self.assertFalse(summary_freshness(self.root, load_structure(self.root))['stale'])
         from scripts.core.context_builder import _load_story_summary
@@ -49,7 +49,7 @@ class InterfaceConsistencyTests(unittest.TestCase):
                 path.write_text(json.dumps({**payload, 'schemaVersion': version}))
                 with self.assertRaises(StorySummarizerError):
                     _commit_summary(self.root, str(path))
-                self.assertEqual(saved, (self.root / '.gnovel/aux/story-summary.json').read_bytes())
+                self.assertEqual(saved, (self.root / '.govel/aux/story-summary.json').read_bytes())
 
     def test_exact_operation_lookup_is_bounded_and_matches_registered_schema(self):
         spec = next(s for s in operations() if s.id == 'workflow.patch-candidate')

@@ -32,5 +32,5 @@ def check_settings(root: Path, *, structure: dict | None = None) -> dict:
     structure = load_structure(root) if structure is None else structure
     validate_structure(structure)
     return {'schemaVersion': structure['schemaVersion'], 'valid': True, 'ready': True,
-            'sources': ['.gnovel/structure.json'], 'errors': [], 'warnings': [],
+            'sources': ['.govel/structure.json'], 'errors': [], 'warnings': [],
             'coverage': {'structuralBindingsValidated': True, 'semanticReviewComplete': False}}

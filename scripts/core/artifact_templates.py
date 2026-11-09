@@ -183,7 +183,7 @@ def review_skeleton_payload(root: Path, *, chapterId: str, artifactType: str,
     if chapter is None or chapter.get('status') == 'archived':
         raise StructureError('CHAPTER_NOT_FOUND', 'review requires an active chapter')
     plan = resolve_effective_review_plan(
-        'gnovel-planner' if artifactType == 'stage_a_review' else 'gnovel-editor',
+        'govel-planner' if artifactType == 'stage_a_review' else 'govel-editor',
         'chapter' if artifactType == 'stage_a_review' else 'stage_b', chapter=chapter)
     if artifactType == 'stage_a_review':
         from .review_plan import chapter_stage_a_plan
@@ -263,7 +263,7 @@ def write_review_skeleton(root: Path, *, chapterId: str, artifactType: str, outp
     from .write_sets import apply_write_set, inventory, json_bytes, safe_project_path, guard_observation
     root = root.resolve()
     with project_lock_reentrant(root):
-        state, _ = guard_observation(root / '.gnovel/structure.json')
+        state, _ = guard_observation(root / '.govel/structure.json')
         payload, _ = review_skeleton_payload(root, chapterId=chapterId, artifactType=artifactType, repairRef=repairRef)
         path = safe_project_path(root, output)
         relative = str(path.relative_to(root))
@@ -275,6 +275,6 @@ def write_review_skeleton(root: Path, *, chapterId: str, artifactType: str, outp
         if any(row['before']['exists'] for row in expected):
             raise StructureError('ARTIFACT_INPUT_OVERWRITE', 'skeleton output appeared during preparation')
         apply_write_set(root, outputs, expected=expected,
-                        guards=[{'path': '.gnovel/structure.json', **state}], operation='review_skeleton')
+                        guards=[{'path': '.govel/structure.json', **state}], operation='review_skeleton')
         return {'ok': True, 'code': 'REVIEW_SKELETON_WRITTEN', 'path': relative,
                 'artifactType': artifactType, 'registered': False, 'approved': False}

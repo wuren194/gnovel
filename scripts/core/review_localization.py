@@ -19,7 +19,7 @@ from .structure_store import StructureError
 from .write_sets import apply_write_set, guard_observation, inventory, json_bytes
 
 NOTES_SCHEMA_VERSION = 1
-NOTES_DIR = ".gnovel/workbench/review-notes"
+NOTES_DIR = ".govel/workbench/review-notes"
 NOTE_STATES = {"processed", "pending_review"}
 _UNSET_BODY = object()
 

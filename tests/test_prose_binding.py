@@ -182,7 +182,7 @@ class SeverityLayeringTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
 
     def _corrupt_first_chapter(self) -> None:
         on_disk = read_json(self.structure_path)
@@ -286,7 +286,7 @@ class ProtectedWriterBoundaryTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.before_bytes = (self.root / '.gnovel' / 'structure.json').read_bytes()
+        self.before_bytes = (self.root / '.govel' / 'structure.json').read_bytes()
 
     def _loaded(self) -> dict:
         return load_structure(self.root)
@@ -297,7 +297,7 @@ class ProtectedWriterBoundaryTests(unittest.TestCase):
         with self.assertRaises(StructureError) as caught:
             save_structure(self.root, proposed, expected_revision=self.structure['revision'])
         self.assertEqual(caught.exception.code, code)
-        self.assertEqual((self.root / '.gnovel' / 'structure.json').read_bytes(), self.before_bytes)
+        self.assertEqual((self.root / '.govel' / 'structure.json').read_bytes(), self.before_bytes)
 
     def test_direct_file_path_write_rejected(self) -> None:
         self._assert_rejected(lambda data: data['chapters'][0].__setitem__('filePath', '正文/外部.md'))
@@ -385,7 +385,7 @@ class GenericWriterCannotAddChapterTests(unittest.TestCase):
 
     def _assert_generic_add_rejected(self, root: Path, *, state: str) -> None:
         structure = load_structure(root)
-        structure_path = root / '.gnovel' / 'structure.json'
+        structure_path = root / '.govel' / 'structure.json'
         before = structure_path.read_bytes()
         proposed = deepcopy(structure)
         row = self._sealed_foreign_row(state=state,
@@ -442,7 +442,7 @@ class ExactMaterializationSetEqualityTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
 
     def _sealed_row(self, chapter_id: str, *, generation: int) -> dict:
         row = new_chapter_row(chapter_id=chapter_id, ordinal=9, title='新章')
@@ -510,7 +510,7 @@ class TransitionRevisionInvariantTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root, revision=10)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
 
     def _row(self, structure: dict, chapter_id: str) -> dict:
         return next(row for row in structure['chapters'] if row['chapterId'] == chapter_id)
@@ -607,7 +607,7 @@ class NoAutoResealTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
         on_disk = read_json(self.structure_path)
         binding = dict(on_disk['chapters'][0]['proseBinding'])
         binding['integrityDigest'] = 'sha256:' + '0' * 64
@@ -644,7 +644,7 @@ class LocalFaultIsolationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
         on_disk = read_json(self.structure_path)
         broken = dict(on_disk['chapters'][0]['proseBinding'])
         broken['integrityDigest'] = 'sha256:' + '0' * 64
@@ -725,7 +725,7 @@ class MaterializationIdentityTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
 
     def _materialize(self, chapter_id: str) -> None:
         current = load_structure(self.root)
@@ -838,7 +838,7 @@ class UnboundMoveAndHardlinkTests(unittest.TestCase):
         alias = self.root / '正文' / 'alias-b.md'
         original.write_text('shared', encoding='utf-8')
         os.link(original, alias)
-        on_disk = read_json(self.root / '.gnovel' / 'structure.json')
+        on_disk = read_json(self.root / '.govel' / 'structure.json')
         on_disk['chapters'][1]['filePath'] = '正文/alias-a.md'
         on_disk['chapters'][2]['filePath'] = '正文/alias-b.md'
         # 规范键不同 → 字符串层无碰撞；但物理对象冲突必须被提交层 helper 发现。

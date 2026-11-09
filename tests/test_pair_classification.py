@@ -49,7 +49,7 @@ class PairClassificationTests(unittest.TestCase):
 
     def save(self):
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def snapshot(self):
         return {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
@@ -66,16 +66,16 @@ class PairClassificationTests(unittest.TestCase):
             self.assertIsNone(matched)
             self.assertEqual(evidence['status'], 'unresolved')
         before = self.snapshot()
-        result = resolve_prompt_plan(self.root, 'gnovel-planner', chapter_id=self.cid)
+        result = resolve_prompt_plan(self.root, 'govel-planner', chapter_id=self.cid)
         self.assertFalse(result['complete']); self.assertTrue(result['warnings'])
         self.assertEqual(self.snapshot(), before)
-        self.assertTrue(resolve_prompt_plan(self.root, 'gnovel-writer', chapter_id=self.cid)['complete'])
-        self.assertTrue(resolve_prompt_plan(self.root, 'gnovel-titler', chapter_id=self.cid)['complete'])
+        self.assertTrue(resolve_prompt_plan(self.root, 'govel-writer', chapter_id=self.cid)['complete'])
+        self.assertTrue(resolve_prompt_plan(self.root, 'govel-titler', chapter_id=self.cid)['complete'])
 
     def test_explicit_empty_not_applicable_has_reason_and_no_contract(self):
         self.source['pairAssessment'] = {'status': 'not_applicable', 'reason': '本项目未设计任何配对。'}
         self.save()
-        plan = resolve_prompt_plan(self.root, 'gnovel-planner', chapter_id=self.cid)
+        plan = resolve_prompt_plan(self.root, 'govel-planner', chapter_id=self.cid)
         self.assertTrue(plan['complete'])
         self.assertTrue(all(row['evidence']['status'] == 'not_matched' for row in plan['conditional']))
         self.assertFalse(any(row['kind'] == 'conditional' for row in plan['contracts']))
@@ -83,11 +83,11 @@ class PairClassificationTests(unittest.TestCase):
     def test_target_and_other_type_use_same_scoped_input_in_plan_and_prompt(self):
         self.declared()
         for cid, expected in ((self.cid, True), (self.other, False)):
-            plan = resolve_prompt_plan(self.root, 'gnovel-planner', chapter_id=cid)
+            plan = resolve_prompt_plan(self.root, 'govel-planner', chapter_id=cid)
             self.assertTrue(plan['complete']); self.assertEqual(plan['conditional'][0]['matched'], expected)
             self.assertEqual(plan['conditional'][0]['evidence']['inputs']['inputHash'],
                              chapter_plan(self.source, cid)['recipe']['pairInputHash'])
-        self.assertTrue(resolve_prompt_plan(self.root, 'gnovel-composer')['conditional'][0]['matched'])
+        self.assertTrue(resolve_prompt_plan(self.root, 'govel-composer')['conditional'][0]['matched'])
 
     def test_match_with_unknown_sibling_loads_but_preserves_unresolved_warning(self):
         self.declared()
@@ -95,7 +95,7 @@ class PairClassificationTests(unittest.TestCase):
         self.source['pairs'][1]['visualPolarityState'] = 'unknown'
         self.source['pairs'][1]['scopeIds'] = [self.cid]
         self.save()
-        result = resolve_prompt_plan(self.root, 'gnovel-planner', chapter_id=self.cid)
+        result = resolve_prompt_plan(self.root, 'govel-planner', chapter_id=self.cid)
         self.assertFalse(result['complete'])
         self.assertTrue(result['conditional'][0]['matched'])
         self.assertEqual(result['conditional'][0]['evidence']['status'], 'unresolved')
@@ -222,9 +222,9 @@ class PairClassificationTests(unittest.TestCase):
         changes = [{'action': 'put', 'collection': 'pairs', 'record': pair('$pair')}]
         args = {'changes': changes, 'pairAssessment': ASSESSED, 'baseRevision': self.source['revision'],
                 'reason': '登记已评估配对', 'requestId': 'pair-1'}
-        before_source = (self.root / '.gnovel/structure.json').read_bytes()
+        before_source = (self.root / '.govel/structure.json').read_bytes()
         preview = call_operation('source.change-preview', self.root, args)
-        self.assertEqual(before_source, (self.root / '.gnovel/structure.json').read_bytes())
+        self.assertEqual(before_source, (self.root / '.govel/structure.json').read_bytes())
         self.assertEqual(call_operation('source.change-preview', self.root, args)['planHash'], preview['planHash'])
         next_action = preview['nextAction']; before = self.snapshot()
         with self.assertRaises(StructureError):
@@ -352,7 +352,7 @@ class PairClassificationTests(unittest.TestCase):
                 validate_causality_completion(self.source, self.cid, payload, 'stage_a_review')
             self.assertEqual(caught.exception.code, 'CAUSALITY_REVIEW_PLAN_STALE')
         manifest = toolbox_manifest()
-        manifest['promptPlan']['gnovel-planner']['conditional'][0]['when']['value'] = '角色甲强势'
+        manifest['promptPlan']['govel-planner']['conditional'][0]['when']['value'] = '角色甲强势'
         with patch('scripts.core.project.toolbox_manifest', return_value=manifest):
             self.assertNotEqual(chapter_plan(self.source, self.cid)['sourcePlanHash'], old_hash)
 
@@ -365,10 +365,10 @@ class PairClassificationTests(unittest.TestCase):
         self.source['pairAssessment'] = deepcopy(ASSESSED)
         self.source['pairs'] = [pair(scope=[parent['arcId']])]
         self.save()
-        plan = resolve_prompt_plan(self.root, 'gnovel-editor', chapter_id=self.cid)
+        plan = resolve_prompt_plan(self.root, 'govel-editor', chapter_id=self.cid)
         self.assertTrue(plan['conditional'][0]['matched'])
         binding = chapter_plan(self.source, self.cid)['recipe']['conditionalContracts']['conditions']
-        editor = next(row for row in binding if row['station'] == 'gnovel-editor')
+        editor = next(row for row in binding if row['station'] == 'govel-editor')
         self.assertEqual(editor['inputHash'], plan['conditional'][0]['evidence']['inputHash'])
         self.assertEqual(pair_inputs(self.source, self.cid)['pairs'], self.source['pairs'])
 
@@ -381,7 +381,7 @@ class PairClassificationTests(unittest.TestCase):
         call_operation('source.commit', self.root, preview['nextAction']['arguments'])
         source = load_structure(self.root)
         self.assertEqual(source['pairs'], [])
-        self.assertTrue(resolve_prompt_plan(self.root, 'gnovel-composer')['complete'])
+        self.assertTrue(resolve_prompt_plan(self.root, 'govel-composer')['complete'])
 
     def test_assessment_only_preview_and_request_payload_binding(self):
         args = {'changes': [], 'baseRevision': self.source['revision'], 'requestId': 'assessment', 'reason': '评估',
@@ -398,13 +398,13 @@ class PairClassificationTests(unittest.TestCase):
         review_ready_project(self.root)
         other_review = register_and_approve(self.root, self.other, 'stage_a_review', {
             'decision': 'adopt', 'activeSeats': list(range(1, 11)), 'consensus': [], 'disagreements': [], 'openItems': []})
-        before_workflow = read_json(self.root / '.gnovel/workflow.json')
+        before_workflow = read_json(self.root / '.govel/workflow.json')
         source = load_structure(self.root)
         row = {**source['pairs'][0], 'visualPolarity': '双方强势'}
         preview = preview_source_change(self.root, changes=[{'action': 'put', 'collection': 'pairs', 'record': row}],
             baseRevision=source['revision'], requestId='reclassify', reason='修改分类')
         call_operation('source.commit', self.root, preview['nextAction']['arguments'])
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         for kind in ('stage_a_review', 'stage_b_review', 'candidate_prose'):
             with self.subTest(kind=kind), self.assertRaises(WorkflowError) as caught:
                 approve_artifacts(workflow, self.cid, artifact_hashes={kind:
@@ -423,7 +423,7 @@ class PairClassificationTests(unittest.TestCase):
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
                 return json.loads(process.stdout)
             cli('quick-init', '--book-name', '分类验收临时书')
-            result = cli('prompt-plan', '--station', 'gnovel-composer')
+            result = cli('prompt-plan', '--station', 'govel-composer')
             self.assertFalse(result['complete'])
             changes = [{'action': 'put', 'collection': 'entities', 'record': {
                 'entityId': handle, 'entityType': 'character', 'name': name}}
@@ -437,7 +437,7 @@ class PairClassificationTests(unittest.TestCase):
             response = handle({'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {
                 'name': action['tool'], 'arguments': action['arguments']}})['result']
             self.assertFalse(response['isError'], response)
-            result = cli('prompt-plan', '--station', 'gnovel-composer')
+            result = cli('prompt-plan', '--station', 'govel-composer')
             self.assertTrue(result['complete']); self.assertTrue(result['conditional'][0]['matched'])
             self.assertEqual(cli('source', 'pairs')['assessment']['status'], 'assessed')
 

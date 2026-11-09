@@ -166,9 +166,9 @@ class SingleSourceProjectTests(TransportHarness):
 
     def setUp(self):
         super().setUp()
-        (self.root / ".gnovel").mkdir()
+        (self.root / ".govel").mkdir()
         source = source_fixture(self.root)
-        write_json(self.root / ".gnovel/project.json", {
+        write_json(self.root / ".govel/project.json", {
             "schemaVersion": 5, "workflowVersion": "5.0", "projectId": source["projectId"],
             "bookName": source["bookName"], "approvalMode": "manual"})
         self.volume = source['volumes'][0]['volumeId']
@@ -227,9 +227,9 @@ class TransportParityTests(SingleSourceProjectTests):
         with tempfile.TemporaryDirectory() as temp:
             self.root = Path(temp).resolve()
             self.server.project_root = str(self.root)
-            (self.root / ".gnovel").mkdir()
+            (self.root / ".govel").mkdir()
             source = source_fixture(self.root)
-            write_json(self.root / ".gnovel/project.json", {
+            write_json(self.root / ".govel/project.json", {
                 "schemaVersion": 5, "workflowVersion": "5.0",
                 "projectId": source["projectId"], "bookName": source["bookName"],
                 "approvalMode": "manual"})
@@ -338,7 +338,7 @@ class DoctorAttributionTests(SingleSourceProjectTests):
         self.assertEqual(report['domains']['project']['issues'], [])
 
     def test_pending_transaction_is_reported_as_needs_rebuild(self):
-        directory = self.root / ".gnovel" / "transactions"
+        directory = self.root / ".govel" / "transactions"
         directory.mkdir(parents=True, exist_ok=True)
         write_json(directory / "TX-STUCK.json", {
             "schemaVersion": 2, "transactionId": "TX-STUCK", "chapterId": self.chapter,
@@ -481,7 +481,7 @@ class WriterReadinessConsumesTaskPrepareTests(SingleSourceProjectTests):
                                        "order": 1, "contentRole": "plan", "contentBindings": ["AT-DOC-PLAN"],
                                        "dependsOn": ["FV-HEIGHT"]})
         save_structure(self.root, structure)
-        write_json(self.root / ".gnovel/workflow.json", {"approvedChapterIds": [self.chapter]})
+        write_json(self.root / ".govel/workflow.json", {"approvedChapterIds": [self.chapter]})
 
         # Preconditions: the exact inputs the old plan+voice formula read are now all "ok".
         prep = prepare_task(self.root, "writer", chapter_id=self.chapter)
@@ -531,16 +531,16 @@ class ContextIssueClassificationTests(SingleSourceProjectTests):
     def test_intent_router_and_context_agree_on_the_same_slice(self):
         # A real external provider must reach fresh CLI/MCP processes as well as
         # the context builder. No in-process asset-path patch supplies the data.
-        with tempfile.TemporaryDirectory(prefix="gnovel-delivery-data-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="govel-delivery-data-") as temporary:
             data_root = Path(temporary).resolve() / "provider"
             self.assertFalse(data_root.is_relative_to(ROOT))
-            environment = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "GNOVEL_LOG_MODE": "off"}
-            environment.pop("GNOVEL_PROVIDER_CONFIG", None)
+            environment = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "GOVEL_LOG_MODE": "off"}
+            environment.pop("GOVEL_PROVIDER_CONFIG", None)
             created = subprocess.run(
                 [sys.executable, str(ROOT / "scripts/provider.py"), "create", "--root", str(data_root)],
                 cwd=ROOT, env=environment, text=True, capture_output=True, timeout=120)
             self.assertEqual(created.returncode, 0, created.stdout + created.stderr)
-            environment["GNOVEL_PROVIDER_CONFIG"] = str(data_root / "config.json")
+            environment["GOVEL_PROVIDER_CONFIG"] = str(data_root / "config.json")
             sample = json.loads((ROOT / "knowledge/example.json").read_text())
             asset_id = sample["metadata"]["assetId"]
             asset_path = "knowledge/assets/example.md"

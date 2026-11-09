@@ -28,9 +28,12 @@ class VersionSourceTests(unittest.TestCase):
     def test_manifest_is_schema5_source(self) -> None:
         manifest = json.loads((ROOT / "toolbox.manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schemaVersion"], current_schema_version())
-        self.assertEqual(manifest["workflowVersion"], "5.0")
-        self.assertEqual(manifest['name'], 'gnovel')
-        self.assertIn(manifest['version'], (ROOT/'docs/CHANGELOG.md').read_text())
+        from scripts.core.structure_store import WORKFLOW_VERSION
+        self.assertEqual(WORKFLOW_VERSION, manifest["workflowVersion"])
+        self.assertEqual(manifest['name'], 'govel')
+        latest = re.search(r"^## (\S+) · 机制 \d+$", (ROOT/'docs/CHANGELOG.md').read_text(), re.M)
+        self.assertIsNotNone(latest, "CHANGELOG 缺少当前发行条目")
+        self.assertEqual(latest.group(1), manifest['version'])
         self.assertNotIn("Editor 当前机制版本 v15", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
 
     def test_changelog_newest_entry_is_first(self) -> None:
@@ -44,8 +47,8 @@ class VersionSourceTests(unittest.TestCase):
     def test_old_project_is_not_runtime_compatible(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            (root / ".gnovel").mkdir()
-            (root / ".gnovel/project.json").write_text(json.dumps({"schemaVersion": 4, "workflowVersion": "4.0"}), encoding="utf-8")
+            (root / ".govel").mkdir()
+            (root / ".govel/project.json").write_text(json.dumps({"schemaVersion": 4, "workflowVersion": "4.0"}), encoding="utf-8")
             code, result = run_cli(["project", "doctor", "--project-root", str(root)])
             self.assertNotEqual(code, 0)
             self.assertEqual(result["code"], "DOCTOR_UNHEALTHY")
@@ -72,7 +75,7 @@ class RuntimeModuleTests(unittest.TestCase):
             code, result = run_cli(["project", "quick-init", "--project-root", str(root), "--book-name", "测试", "--no-agents-md"])
             self.assertEqual(code, 0, result)
             self.assertEqual(result["project"]["schemaVersion"], current_schema_version())
-            structure = json.loads((root / ".gnovel" / "structure.json").read_text(encoding="utf-8"))
+            structure = json.loads((root / ".govel" / "structure.json").read_text(encoding="utf-8"))
             self.assertEqual(structure["schemaVersion"], current_schema_version())
             for collection in ('attributes', 'fragments', 'fieldDefinitions', 'units', 'presentations'):
                 self.assertEqual(structure[collection], [])
@@ -80,7 +83,7 @@ class RuntimeModuleTests(unittest.TestCase):
             # Current source truth does not require eager optional cache publication.
             self.assertEqual(result["doctor"]["stateCache"]["status"], "stale")
             self.assertEqual(result["doctor"]["stateCache"]["problems"], [])
-            self.assertFalse((root / '.gnovel/cache/story-state.json').exists())
+            self.assertFalse((root / '.govel/cache/story-state.json').exists())
 
 
 class ArchiveBoundaryTests(unittest.TestCase):

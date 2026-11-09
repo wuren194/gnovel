@@ -28,7 +28,9 @@ class McpServerTests(unittest.TestCase):
             {"jsonrpc": "2.0", "method": "notifications/initialized"},
             {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {"view": "audit"}},
         ])
-        self.assertEqual(responses[0]["result"]["serverInfo"]["name"], "gnovel")
+        self.assertEqual(responses[0]["result"]["serverInfo"]["name"], "govel")
+        manifest = json.loads((ROOT / "toolbox.manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(responses[0]["result"]["serverInfo"]["version"], manifest["version"])
         names = {item["name"] for item in responses[1]["result"]["tools"]}
         self.assertIn("get_project_overview", names)
         self.assertIn("preview_insert_chapter", names)

@@ -51,7 +51,7 @@ class MaintenanceTests(unittest.TestCase):
     def test_search_pages_exact_unicode_positions_and_keeps_annotations(self):
         source = load_structure(self.root)
         source['fragments'][0]['text'] = '🙂禁止旧称；正文仍然使用旧称。'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         before = self.snapshot()
         page = search_source(self.root, terms=['旧称'], contextCharacters=3, limit=1)
         self.assertEqual(page['totalMatching'], 2)
@@ -115,7 +115,7 @@ class MaintenanceTests(unittest.TestCase):
 
     def test_repeated_match_duplicate_target_and_stale_snapshot_refused(self):
         source = load_structure(self.root); source['fragments'][0]['text'] = '一米九，一米九。'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError) as error: self.preview()
         self.assertEqual(error.exception.code, 'SOURCE_PATCH_MATCH_INVALID')
         with self.assertRaises(StructureError): self.preview([self.patches()[1]] * 2)
@@ -126,7 +126,7 @@ class MaintenanceTests(unittest.TestCase):
 
     def test_batch_guard_replays_evidence_and_rejects_extra_changes(self):
         plan = self.preview()
-        frozen = read_json(self.root / f'.gnovel/plans/{plan["operationId"]}.json')
+        frozen = read_json(self.root / f'.govel/plans/{plan["operationId"]}.json')
         current = load_structure(self.root)
         require_canon_proposal(current, frozen['proposedStructure'], frozen)
         for kind in ('extra', 'metadata', 'evidence', 'approval', 'order'):
@@ -142,7 +142,7 @@ class MaintenanceTests(unittest.TestCase):
     def test_schema5_batch_rejects_stale_commit_without_partial_writes(self):
         source = load_structure(self.root)
         source['schemaVersion'] = 5
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         stale = self.preview()
         competing = self.preview([self.patches()[1]])
         self.commit(competing)
@@ -156,7 +156,7 @@ class MaintenanceTests(unittest.TestCase):
         for i in range(1154):
             source['fragments'].append({**deepcopy(source['fragments'][0]),
                 'fragmentId': f'SF-SCALE-{i}', 'order': i + 10, 'text': f'第{i}处旧称。'})
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         result = search_source(self.root, terms=['旧称'], limit=1)
         self.assertEqual(result['totalMatching'], 1154)
         patches = [{'recordId': f'SF-SCALE-{i}', 'reason': f'方案第{i}项',
@@ -175,7 +175,7 @@ class MaintenanceTests(unittest.TestCase):
         before = query_change_report(self.root, operationId=plan['operationId'], section='rationale')['items']
         result = self.commit(plan)
         self.assertEqual(result['reason'], args['reason'])
-        self.assertFalse((self.root / f'.gnovel/plans/{plan["operationId"]}.json').exists())
+        self.assertFalse((self.root / f'.govel/plans/{plan["operationId"]}.json').exists())
         self.assertEqual(query_change_report(self.root, operationId=plan['operationId'], section='rationale')['items'], before)
         self.assertEqual(preview_source_change(self.root, **args)['reason'], args['reason'])
 

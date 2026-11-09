@@ -67,7 +67,7 @@ class RefactorIdentityContractTests(unittest.TestCase):
             _commit(self.root, preview)
             structure = load_structure(self.root)
             self.assertEqual(structure['bookName'], name)
-            marker = read_json(self.root / '.gnovel' / 'project.json')
+            marker = read_json(self.root / '.govel' / 'project.json')
             self.assertEqual(marker['bookName'], name, 'marker and structure must never diverge')
         self._assert_identities_unchanged()
         self._assert_prose_bytes_unchanged()
@@ -327,7 +327,7 @@ class RefactorIdentityContractTests(unittest.TestCase):
         self.assertFalse(empty['truncated'])
 
     def test_doctor_reports_book_name_divergence(self) -> None:
-        marker_path = self.root / '.gnovel' / 'project.json'
+        marker_path = self.root / '.govel' / 'project.json'
         marker = read_json(marker_path)
         marker['bookName'] = '另一个名字'
         from scripts.core.jsonio import write_json

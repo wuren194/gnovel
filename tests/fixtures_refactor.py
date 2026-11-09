@@ -33,7 +33,7 @@ RELATION = 'REL-REFACTOR-0001'
 def refactor_project(root: Path, *, book_name: str = '山城旧事') -> dict:
     """Create a current-format single-source project and return its identity map."""
     root.mkdir(parents=True, exist_ok=True)
-    for relative in ('.gnovel', '正文', '规划', '设定', '工作台'):
+    for relative in ('.govel', '正文', '规划', '设定', '工作台'):
         (root / relative).mkdir(parents=True, exist_ok=True)
     structure = empty_structure('PRJ-REFACTOR-1', book_name)
     structure['volumes'] = [
@@ -99,7 +99,7 @@ def refactor_project(root: Path, *, book_name: str = '山城旧事') -> dict:
          'alternatives': [{'label': '先隐藏', 'outcome': 'chosen', 'reason': '张力'},
                           {'label': '直接揭露', 'outcome': 'rejected', 'reason': '太早'}]},
     ]
-    write_json(root / '.gnovel' / 'project.json',
+    write_json(root / '.govel' / 'project.json',
                {'schemaVersion': PROJECT_SCHEMA_VERSION, 'workflowVersion': WORKFLOW_VERSION,
                 'projectId': structure['projectId'], 'bookName': book_name, 'projectRevision': 0,
                 'approvalMode': 'manual'})
@@ -123,7 +123,7 @@ def refactor_project(root: Path, *, book_name: str = '山城旧事') -> dict:
         structure['fragments'].append({'fragmentId': fid, 'ownerId': chapter['chapterId'], 'order': 1, 'text': '确认门口的钥匙。',
             'contentRole': 'plan', 'contentBindings': [aid], 'chapterContract': {'targetRange': [1, 1000], 'mode': 'plot', 'intensityLevel': 1}})
     validate_structure(structure)
-    write_json(root/'.gnovel/structure.json', structure)
+    write_json(root/'.govel/structure.json', structure)
     return {'structure': structure, 'bodies': bodies,
             'volumeA': VOLUME_A, 'volumeB': VOLUME_B, 'arcMain': ARC_MAIN, 'arcSide': ARC_SIDE,
             'unit': UNIT_ONE, 'chapterOne': CHAPTER_ONE, 'chapterTwo': CHAPTER_TWO,

@@ -33,7 +33,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
             'text': '乙等待回信。', 'order': 1, 'contentRole': 'plan', 'contentBindings': ['AT-B-PLAN'], 'dependsOn': []})
         save_context_source(self.root, self.source)
         from scripts.core.workflow import default_workflow
-        write_json(self.root/'.gnovel/workflow.json', default_workflow())
+        write_json(self.root/'.govel/workflow.json', default_workflow())
 
     def commit(self, plan):
         return commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
@@ -224,7 +224,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_active_dependency_is_immutable_through_the_dedicated_public_change_route(self):
         first = self.decision(['C-ALPHA']); dependent = self.decision(['CH-BBB'], depends=[first])
-        before = (self.root/'.gnovel/structure.json').read_bytes()
+        before = (self.root/'.govel/structure.json').read_bytes()
         for args in ({'action': 'approve', 'decisionId': first, 'approvalActor': 'synthetic-author',
                       'approvalEvidence': 'cannot reapprove an active version'},
                      {'action': 'create', 'decisionId': first, 'statement': 'new semantics', 'rationale': '',
@@ -233,7 +233,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
             with self.assertRaises(StructureError):
                 preview_decision_change(self.root, expectedRevision=load_structure(self.root)['revision'],
                     reason='same-ID mutation negative control', **args)
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
         self.assertEqual(self.validity(dependent)['validity'], 'current')
 
     def test_public_decision_adoption_and_withdrawal_invalidate_only_affected_approval(self):
@@ -249,11 +249,11 @@ class AuthorContentDependencyTests(unittest.TestCase):
         save_context_source(self.root, source)
         for cid in ('CH-AAA', 'CH-BBB'):
             register_and_approve(self.root, cid, 'stage_a_review', {'decision': 'adopt', 'activeSeats': list(range(1, 11))})
-        before = read_json(self.root/'.gnovel/workflow.json')
+        before = read_json(self.root/'.govel/workflow.json')
         did = self.draft(['CH-AAA'])
-        self.assertEqual(read_json(self.root/'.gnovel/workflow.json')['approvals'], before['approvals'])
+        self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals'], before['approvals'])
         self.approve(did)
-        after = read_json(self.root/'.gnovel/workflow.json')
+        after = read_json(self.root/'.govel/workflow.json')
         self.assertEqual(after['approvals']['CH-BBB'], before['approvals']['CH-BBB'])
         self.assertTrue(after['artifacts']['CH-AAA']['stage_a_review']['invalidatedBy'])
         self.assertEqual(after['artifacts']['CH-BBB'], before['artifacts']['CH-BBB'])
@@ -261,7 +261,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
                                        reason='撤回同一范围', decisionId=did)
         self.assertEqual(scope['impact']['approvalInvalidations'], ['CH-AAA'])
         self.commit(scope)
-        self.assertEqual(read_json(self.root/'.gnovel/workflow.json')['approvals']['CH-BBB'], before['approvals']['CH-BBB'])
+        self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals']['CH-BBB'], before['approvals']['CH-BBB'])
 
     def test_generic_save_cannot_change_approved_dependency_or_drop_invalidation(self):
         first = self.decision(['C-ALPHA']); dependent = self.decision(['CH-BBB'], depends=[first])
@@ -285,7 +285,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
         from scripts.core.structure_commands import undo_operation
         did = self.decision(['CH-AAA']); before = deepcopy(self.validity(did))
         first = attribute_value_proposal(self.root, 'AT-HEIGHT', 185); self.commit(first)
-        first_journal = self.root/f".gnovel/operations/{first['operationId']}.json"
+        first_journal = self.root/f".govel/operations/{first['operationId']}.json"
         original_journal = first_journal.read_bytes()
         marker = deepcopy(self.validity(did)['scopeInvalidatedBy'])
         second = self.change_plan('SF-B-PLAN', '乙等到回信后核对署名。')
@@ -320,14 +320,14 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_failed_content_transaction_never_leaves_partial_invalidation(self):
         from unittest.mock import patch
-        did = self.decision(['CH-AAA']); before = (self.root/'.gnovel/structure.json').read_bytes()
+        did = self.decision(['CH-AAA']); before = (self.root/'.govel/structure.json').read_bytes()
         plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
         def fail(stage, relative=None):
-            if stage == 'write' and relative == '.gnovel/structure.json':
+            if stage == 'write' and relative == '.govel/structure.json':
                 raise RuntimeError('interrupted scoped change')
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail), self.assertRaises(RuntimeError):
             self.commit(plan)
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
         self.assertEqual(self.validity(did)['validity'], 'current')
         self.commit(plan)
         self.assertEqual(self.validity(did)['validity'], 'stale')
@@ -371,7 +371,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
         from scripts.core.author_decisions import undo_content_equivalent
         from scripts.core.structure_commands import undo_operation
         did = self.decision(['CH-AAA'])
-        prior_approval = next(path for path in (self.root/'.gnovel/operations').glob('OP-*.json')
+        prior_approval = next(path for path in (self.root/'.govel/operations').glob('OP-*.json')
                               if read_json(path).get('operation') == 'author_decision_approve')
         prior = read_json(prior_approval)
         change = attribute_value_proposal(self.root, 'AT-HEIGHT', 185); self.commit(change)
@@ -385,7 +385,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
         self.assertFalse(undo_content_equivalent(self.root, current, prior))
         current = deepcopy(original)
         proof_op = current['authorDecisions'][0]['scopeInvalidatedBy']['operationId']
-        proof_path = self.root/f'.gnovel/operations/{proof_op}.json'
+        proof_path = self.root/f'.govel/operations/{proof_op}.json'
         raw = proof_path.read_bytes(); proof_path.unlink()
         self.assertFalse(undo_content_equivalent(self.root, current, prior))
         proof_path.write_bytes(raw)
@@ -395,19 +395,19 @@ class AuthorContentDependencyTests(unittest.TestCase):
     def test_commit_rederives_invalidation_even_if_caller_rehashes_tampered_plan(self):
         from scripts.core.structure_commands import _plan_hash
         from scripts.core.write_sets import digest, json_bytes
-        did = self.decision(['CH-AAA']); before = (self.root/'.gnovel/structure.json').read_bytes()
+        did = self.decision(['CH-AAA']); before = (self.root/'.govel/structure.json').read_bytes()
         report = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
-        path = self.root/f".gnovel/plans/{report['operationId']}.json"; plan = read_json(path)
+        path = self.root/f".govel/plans/{report['operationId']}.json"; plan = read_json(path)
         target = next(row for row in plan['proposedStructure']['authorDecisions'] if row['decisionId'] == did)
         self.assertIn('scopeInvalidatedBy', target); target.pop('scopeInvalidatedBy')
         payload = json_bytes(plan['proposedStructure'])
-        (self.root/f".gnovel/plans/{report['operationId']}.files/.gnovel/structure.json").write_bytes(payload)
-        next(row for row in plan['writeSet'] if row['path'] == '.gnovel/structure.json')['after']['sha256'] = digest(payload)
+        (self.root/f".govel/plans/{report['operationId']}.files/.govel/structure.json").write_bytes(payload)
+        next(row for row in plan['writeSet'] if row['path'] == '.govel/structure.json')['after']['sha256'] = digest(payload)
         plan['planHash'] = _plan_hash({key: value for key, value in plan.items() if key != 'planHash'})
         write_json(path, plan)
         with self.assertRaises(StructureError) as error: self.commit(plan)
         self.assertEqual(error.exception.code, 'AUTHOR_DECISION_PROOF_READ_ONLY')
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
 
     def test_project_voice_content_is_actual_global_input(self):
         old = load_structure(self.root)

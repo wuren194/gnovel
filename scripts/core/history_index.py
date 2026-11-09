@@ -20,23 +20,23 @@ from .static_cache import signature
 from .structure_store import StructureError, load_structure
 from .write_sets import safe_project_path
 
-INDEX_PATH = '.gnovel/cache/history.sqlite3'
+INDEX_PATH = '.govel/cache/history.sqlite3'
 SCHEMA_VERSION = 1
 KINDS = ('operation', 'candidate', 'diagnostics', 'approval', 'evidence')
 _CACHE = {}
 
 
 def _inventory(root):
-    paths = {'.gnovel/structure.json': 'binding', '.gnovel/project.json': 'binding',
-             '.gnovel/workflow.json': 'workflow',
-             '.gnovel/source-review-receipts.json': 'review',
-             '.gnovel/source-prose-evidence.json': 'evidence',
-             '.gnovel/source-rule-issues.json': 'rule'}
-    for directory, pattern, kind in (('.gnovel/operations', 'OP-*.json', 'operation'),
-                                     ('.gnovel/artifact-requests', '*.json', 'request'),
-                                     ('.gnovel/workbench/candidates', '*/index.json', 'candidate'),
-                                     ('.gnovel/backups', 'OP-*/.gnovel/workflow.json', 'workflow'),
-                                     ('.gnovel/undo-receipts', '*.json', 'binding')):
+    paths = {'.govel/structure.json': 'binding', '.govel/project.json': 'binding',
+             '.govel/workflow.json': 'workflow',
+             '.govel/source-review-receipts.json': 'review',
+             '.govel/source-prose-evidence.json': 'evidence',
+             '.govel/source-rule-issues.json': 'rule'}
+    for directory, pattern, kind in (('.govel/operations', 'OP-*.json', 'operation'),
+                                     ('.govel/artifact-requests', '*.json', 'request'),
+                                     ('.govel/workbench/candidates', '*/index.json', 'candidate'),
+                                     ('.govel/backups', 'OP-*/.govel/workflow.json', 'workflow'),
+                                     ('.govel/undo-receipts', '*.json', 'binding')):
         base = safe_project_path(root, directory)
         for path in sorted(base.glob(pattern)):
             relative = path.relative_to(root).as_posix()
@@ -260,10 +260,10 @@ def _current_cache(root, inventory, project_id):
 
 def _snapshot(root):
     require_no_pending(root)
-    structure_state = signature(safe_project_path(root, '.gnovel/structure.json'))
+    structure_state = signature(safe_project_path(root, '.govel/structure.json'))
     source = load_structure(root)
     inputs = _inventory(root)
-    if structure_state != signature(safe_project_path(root, '.gnovel/structure.json')):
+    if structure_state != signature(safe_project_path(root, '.govel/structure.json')):
         raise StructureError('HISTORY_INPUT_CHANGED', 'project binding changed while reading history inputs')
     return source, inputs
 

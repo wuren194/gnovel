@@ -27,8 +27,8 @@ class ProseEvidenceTests(unittest.TestCase):
             'status': 'stable', 'filePath': '正文/守门.md'}]
         self.source['chapterArcLinks'] = [{'chapterId': cid, 'arcId': self.source['arcs'][0]['arcId'], 'role': 'primary'}]
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
-        write_json(self.root / '.gnovel/workflow.json', {'approvals': {cid: {'approved': True}}, 'artifacts': {}})
+        write_json(self.root / '.govel/structure.json', self.source)
+        write_json(self.root / '.govel/workflow.json', {'approvals': {cid: {'approved': True}}, 'artifacts': {}})
         self.prose = self.root / '正文/守门.md'; self.prose.parent.mkdir()
         self.prose.write_bytes('他一米九的身形挡住了城门。\r\n天色已暗。'.encode())
 
@@ -50,7 +50,7 @@ class ProseEvidenceTests(unittest.TestCase):
         commit(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True, actor='test')
         self.assertEqual(self.prose.read_bytes(), original)
         self.assertEqual(query_evidence(self.root)['items'][0]['status'], 'needs_review')
-        self.assertFalse(read_json(self.root / '.gnovel/workflow.json')['approvals']['CH-ALPHA']['approved'])
+        self.assertFalse(read_json(self.root / '.govel/workflow.json')['approvals']['CH-ALPHA']['approved'])
 
     def test_mention_is_candidate_and_does_not_invalidate_approval(self):
         register_evidence(self.root, **self.args(kind='mentions'))
@@ -93,5 +93,5 @@ class ProseEvidenceTests(unittest.TestCase):
     def test_changed_field_definition_invalidates_indirect_evidence(self):
         register_evidence(self.root, **self.args())
         self.source['fieldDefinitions'][0]['description'] = '成年身高，以赤足为准。'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         self.assertEqual(query_evidence(self.root)['items'][0]['status'], 'needs_review')

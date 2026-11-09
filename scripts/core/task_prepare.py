@@ -23,12 +23,12 @@ from .structure_store import StructureError, load_structure, ordered_chapters
 from .workflow import default_workflow
 
 TASK_STATIONS = {
-    "planner": "gnovel-planner",
-    "writer": "gnovel-writer",
-    "editor": "gnovel-editor",
-    "repair": "gnovel-editor",
-    "titler": "gnovel-titler",
-    "continuity": "gnovel-router",
+    "planner": "govel-planner",
+    "writer": "govel-writer",
+    "editor": "govel-editor",
+    "repair": "govel-editor",
+    "titler": "govel-titler",
+    "continuity": "govel-router",
 }
 TASK_DECISIONS = {"planner": "chapter", "titler": "title", "editor": "stage_b", "repair": "stage_b"}
 
@@ -126,6 +126,7 @@ def _plan(root: Path, station: str, decision: str | None, chapter_id: str | None
         return {"complete": False, "warnings": [{"code": exc.code, "message": str(exc), **exc.details}]}
     return {"planHash": plan["planHash"], "complete": plan["complete"], "warnings": plan["warnings"],
             'provider': plan['provider'], 'providerMaterials': plan['providerMaterials'],
+            'roundtable': plan['roundtable'],
             'conditionInputsHash': plan['conditionInputsHash'],
             "contracts": [{"path": row["path"], "sha256": row["sha256"], "readRanges": row["readRanges"]}
                           for row in plan["contracts"]],
@@ -265,12 +266,12 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
     except (StructureError, OSError, ValueError) as exc:
         missing.append({"code": getattr(exc, "code", "STRUCTURE_INVALID"), "message": str(exc), "blocking": True, "details": {}})
     try:
-        workflow = read_json(root / ".gnovel" / "workflow.json")
+        workflow = read_json(root / ".govel" / "workflow.json")
         if not isinstance(workflow, dict):
             raise ValueError("workflow state must be an object")
     except (OSError, ValueError):
         workflow = default_workflow()
-    transactions = sorted(path.stem for path in (root / ".gnovel/transactions").glob("*.json"))
+    transactions = sorted(path.stem for path in (root / ".govel/transactions").glob("*.json"))
     require(not transactions, "TRANSACTION_INCOMPLETE", "先运行 workflow recover 处理中断事务", transactions=transactions)
 
     chapter = None
@@ -513,10 +514,10 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
                            "errorCount": 0 if settings_ready else 1, "warningCount": 0},
     }
     if task == 'planner' and chapter is None and structure is not None and not structure.get('chapters'):
-        result['bootstrap'] = {'station': 'gnovel-composer', 'chapterPrepareRequired': False,
+        result['bootstrap'] = {'station': 'govel-composer', 'chapterPrepareRequired': False,
             'missingInputs': ['核心人物与边界', '作品视角与文风', '卷与弧线', '首章计划及作者批准'],
             'nextOperation': 'project.structure.insert-preview', 'grantsApproval': False}
-        result['notes'].append('空项目先按 gnovel-composer/SKILL.md 形成设计；本报告的章节范围缺失不禁止创意讨论。设计获批后建章并登记源计划，再准备写作。')
+        result['notes'].append('空项目先按 govel-composer/SKILL.md 形成设计；本报告的章节范围缺失不禁止创意讨论。设计获批后建章并登记源计划，再准备写作。')
     if route is not None and chapter is not None:
         following = next((row for row in ordered_chapters(structure) if row['displayOrdinal'] > chapter['displayOrdinal']), None)
         result['nextChapterPlanning'] = ({'chapterId': following['chapterId'], 'status': following['status'],
@@ -530,6 +531,6 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
         'povCharacter': pov_character, 'chapterGoal': chapter_goal, 'knowledgeMode': knowledge_mode})
     from .operations import new_operations
     result['readingTools'] = [{'operation': spec.id, 'tool': spec.name, 'inputSchema': spec.input_schema}
-                              for spec in new_operations() if result['station'].removeprefix('gnovel-') in spec.audiences
+                              for spec in new_operations() if result['station'].removeprefix('govel-') in spec.audiences
                               and task in spec.tasks]
     return result

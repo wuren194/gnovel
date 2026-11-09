@@ -107,7 +107,7 @@ class VoiceProfileReportTests(unittest.TestCase):
         plan = self.preview(examples=['细节\r\n' * 1600])
         self.assertTrue(plan['responseCompacted'])
         self.assertLessEqual(_size(plan), query_policy()['maxBytes']['detail'])
-        frozen = read_json(self.root / f'.gnovel/plans/{plan["operationId"]}.json')['diff']
+        frozen = read_json(self.root / f'.govel/plans/{plan["operationId"]}.json')['diff']
         for view in ('text', 'markdown'):
             cursor, parts = None, []
             while True:
@@ -128,7 +128,7 @@ class VoiceProfileReportTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             call_operation('source.commit', self.root, {**plan['nextAction']['arguments'], 'approve': False})
         self.assertEqual(before, self.inventory())
-        path = self.root / f'.gnovel/plans/{plan["operationId"]}.json'
+        path = self.root / f'.govel/plans/{plan["operationId"]}.json'
         stored = read_json(path)
         stored['diff'] = []
         write_json(path, stored)

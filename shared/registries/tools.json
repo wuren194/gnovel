@@ -704,7 +704,7 @@
       "transport": "HTTP (loopback only)",
       "audience": "本机浏览器",
       "surface": "兼容结构查询与事务；高级任务能力通过 CLI/MCP",
-      "mutations": "仅 127.0.0.1/localhost 绑定；变更请求使用 HttpOnly SameSite 同源会话 cookie，兼容 X-gnovel-Token 头，跨源请求拒绝",
+      "mutations": "仅 127.0.0.1/localhost 绑定；变更请求使用 HttpOnly SameSite 同源会话 cookie，兼容 X-govel-Token 头，跨源请求拒绝",
       "notes": "静态资源在 dashboard/（index.html + app.js + styles.css）；token 每次启动重新生成，不写入 /api/config 或 stdout"
     },
     {
@@ -722,7 +722,7 @@
       "transport": "CLI (novelctl project relocate --project-root <当前> --target <新绝对路径> 预览；再用返回的 novelctl project relocate --project-root <当前> --operation-id <OP> --preview-hash <planHash> --approve 执行)",
       "audience": "作者；项目文件夹改名或移动",
       "surface": "把项目文件夹改名或移动到同一文件系统内的新绝对路径。参数是当前项目根与目标绝对路径，不是项目内业务操作：它改变 projectRoot 本身",
-      "mutations": "预览在 .gnovel/plans 落一份带 operationId 与 TTL 的计划（事务簿记，不计入 authored inventory）；执行全程持有 .gnovel/structure.lock：末次校验 → 一次 os.rename（同文件系统内原子）→ authored 逐字节复核 → 经写集引擎落 .gnovel/project-locator.json 收据（记 operationId/planHash/rootAtOperation/currentLocator/actor）并消耗该计划 → 释放锁。锁文件在树内，随文件夹一起搬走，释放也跟到新位置，两端都不留残锁。rename 之后任何失败都把文件夹改名回去，改回去也失败就报错而非静默。projectId、全部 Stable ID 与 authored 字节不变；跨设备以 PROJECT_RELOCATE_CROSS_DEVICE_UNSUPPORTED fail closed，不悄悄退化成 copy+delete",
+      "mutations": "预览在 .govel/plans 落一份带 operationId 与 TTL 的计划（事务簿记，不计入 authored inventory）；执行全程持有 .govel/structure.lock：末次校验 → 一次 os.rename（同文件系统内原子）→ authored 逐字节复核 → 经写集引擎落 .govel/project-locator.json 收据（记 operationId/planHash/rootAtOperation/currentLocator/actor）并消耗该计划 → 释放锁。锁文件在树内，随文件夹一起搬走，释放也跟到新位置，两端都不留残锁。rename 之后任何失败都把文件夹改名回去，改回去也失败就报错而非静默。projectId、全部 Stable ID 与 authored 字节不变；跨设备以 PROJECT_RELOCATE_CROSS_DEVICE_UNSUPPORTED fail closed，不悄悄退化成 copy+delete",
       "notes": "top-level filesystem operation：没有 projectRoot 业务语义，因此是已申报的 transport exception——只进 CLI，不进 MCP tool list，也不进 dashboard 路由。这不是影子入口：surface 与 mutations 在此登记。与 book rename 是两件事：后者改显示元数据，走 project structure book-rename-preview；二者可在同一次预览里组合，commit 在同一把锁下先改文件夹、再落一份把 project-locator.json 一起算进去的库内写集，写集失败由引擎按 before-image 全部还原，文件夹再改回去。"
     }
   ],
@@ -916,7 +916,7 @@
       "description": "Editor 按当前作品要求完成阶段 B 语义审阅，结论与作者批准分别处理。",
       "binding": {
         "kind": "skill",
-        "ref": "gnovel-editor/SKILL.md"
+        "ref": "govel-editor/SKILL.md"
       },
       "audiences": [
         "editor"

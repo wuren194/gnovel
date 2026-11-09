@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Surgical Editor CLI for gnovel Engine.
+Surgical Editor CLI for govel Engine.
 Allows extracting precise paragraph context slices (with surrounding buffers) and performing targeted line-range edits.
 """
 
@@ -127,13 +127,13 @@ def _project_root_for(probe: Path) -> tuple[Path | None, str | None]:
     返回与 `probe` 同形态（不 resolve）的项目根，供词法判定使用；resolve 会吞掉
     符号链接段，让「正文 -> 项目外」这类路径看起来仍指向项目内。
 
-    - 找到 `.gnovel/project.json` → `(root, None)`；
-    - 祖先里有 `.gnovel/` 但没有 project.json → `(None, 原因)`：项目标记不完整
+    - 找到 `.govel/project.json` → `(root, None)`；
+    - 祖先里有 `.govel/` 但没有 project.json → `(None, 原因)`：项目标记不完整
       时无法确认写入边界，拒绝无锁写入（fail-closed）；
     - 没有任何项目痕迹 → `(None, None)`：项目外文件，无锁写入是既有支持的场景。
     """
     for candidate in (probe.parent, *probe.parent.parents):
-        marker_dir = candidate / ".gnovel"
+        marker_dir = candidate / ".govel"
         if (marker_dir / "project.json").is_file():
             return candidate, None
         if marker_dir.is_dir():
@@ -180,7 +180,7 @@ def apply_with_boundary(file_path: Path, start_line: int, end_line: int,
 
 
 def main() -> int:
-    parser = FailClosedArgumentParser(description="gnovel Surgical Editor")
+    parser = FailClosedArgumentParser(description="govel Surgical Editor")
     parser.add_argument("file", type=Path, help="Target markdown file path")
     parser.add_argument("--extract", nargs=2, type=int, metavar=("START", "END"), help="Extract context for line range")
     parser.add_argument("--replace", nargs=2, type=int, metavar=("START", "END"), help="Replace target line range with text from stdin or file")

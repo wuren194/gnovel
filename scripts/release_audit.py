@@ -9,11 +9,14 @@ from pathlib import Path
 import re
 import subprocess
 import stat
+import sys
 import unicodedata
 import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.core.local_layout import private_local_path, local_content_issue
 OMIT = {'.git', '__pycache__', '.pytest_cache', 'node_modules', 'dist', 'build'}
 
 
@@ -41,10 +44,14 @@ def _word_text(value):
 
 def _entry(relative, data, patterns):
     problems = []
+    if private_local_path(relative):
+        problems.append({'path': relative, 'code': 'USER_DATA_IN_SOURCE'})
+    if issue := local_content_issue(relative, data):
+        problems.append({'path': relative, 'code': issue})
     try:
         text = data.decode('utf-8')
     except UnicodeError:
-        return [{'path': relative, 'code': 'NON_TEXT_FILE'}]
+        return problems + [{'path': relative, 'code': 'NON_TEXT_FILE'}]
     combined = _word_text(relative + '\n' + text)
     ids = [index for index, pattern in enumerate(patterns) if pattern.search(combined)]
     if ids:
@@ -59,7 +66,14 @@ def _entry(relative, data, patterns):
 def audit(root, words):
     patterns = review_terms(words)
     problems, files = [], []
-    for path in sorted(root.rglob('*')):
+    # Ignored data may live in the checkout. Forced additions still appear in
+    # this candidate set and are rejected just like archive/history entries.
+    if (root / '.git').exists():
+        names = _git(root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard')
+        paths = [root / name.decode('utf-8') for name in sorted(set(names.split(b'\0'))) if name]
+    else:
+        paths = sorted(root.rglob('*'))
+    for path in paths:
         relative = path.relative_to(root)
         if any(part in OMIT for part in relative.parts):
             continue
@@ -73,7 +87,7 @@ def audit(root, words):
         problems.extend(_entry(str(relative), data, patterns))
     return {'ok': not problems, 'code': 'RELEASE_CONTENT_AUDIT', 'fileCount': len(files),
             'reviewTerms': len(words), 'files': files, 'problems': problems,
-            'scope': 'working tree text and paths; lexical review does not replace contextual review'}
+            'scope': 'Git candidates or unpacked source tree; lexical review does not replace contextual review'}
 
 
 def audit_zip(path, words):

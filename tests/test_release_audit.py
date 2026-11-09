@@ -76,6 +76,38 @@ class ReleaseAuditTests(unittest.TestCase):
         self.assertTrue(report['ok'])
         self.assertEqual(report['fileVersions'], 1)
 
+    def test_public_local_layout_is_allowed_only_with_empty_placeholder(self):
+        (self.root / 'local/knowledge').mkdir(parents=True)
+        (self.root / 'local/README.md').write_text('Local data instructions')
+        placeholder = self.root / 'local/knowledge/.gitkeep'
+        placeholder.write_bytes(b'')
+        self.assertTrue(audit(self.root, ['marker'])['ok'])
+        placeholder.write_text('private content')
+        self.assertIn('local_placeholder_not_empty', {row['code'] for row in audit(self.root, ['marker'])['problems']})
+
+    def test_ignored_local_data_is_private_but_force_added_data_is_rejected(self):
+        self.git('init', '-q')
+        (self.root / '.gitignore').write_text('/local/\n')
+        local = self.root / 'local'
+        local.mkdir()
+        (local / 'seat.md').write_text('marker\n')
+        self.assertTrue(audit(self.root, ['marker'])['ok'])
+        self.git('add', '-f', 'local/seat.md')
+        report = audit(self.root, ['marker'])
+        self.assertFalse(report['ok'])
+        self.assertIn('USER_DATA_IN_SOURCE', {row['code'] for row in report['problems']})
+        self.git('commit', '-qm', 'Example private-file mistake')
+        self.assertFalse(audit_history(self.root, ['marker'])['ok'])
+
+    def test_local_data_in_an_unpacked_release_or_zip_is_rejected(self):
+        (self.root / 'local').mkdir()
+        (self.root / 'local/seat.md').write_text('ordinary example')
+        self.assertIn('USER_DATA_IN_SOURCE', {row['code'] for row in audit(self.root, ['marker'])['problems']})
+        path = self.root / 'release.zip'
+        with zipfile.ZipFile(path, 'w') as output:
+            output.writestr('local/seat.md', 'ordinary example')
+        self.assertIn('USER_DATA_IN_SOURCE', {row['code'] for row in audit_zip(path, ['marker'])['problems']})
+
 
 if __name__ == '__main__':
     unittest.main()

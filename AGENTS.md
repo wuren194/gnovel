@@ -1,6 +1,6 @@
-# gnovel 开发规则
+# Govel 开发规则
 
-公开仓库只维护通用引擎、规范和原创中性示例。用户资料及题材扩展必须位于仓库外；不得复制本地 Provider、审核词表、运行日志或私人路径到源码和测试。
+公开仓库只跟踪通用引擎、规范和原创中性示例，以及 `local/README.md`、空的 `local/knowledge/.gitkeep` 目录骨架。用户资料可放在 `local/` 或仓库外；私人圆桌、知识内容、Provider 配置及日志均由 Git 忽略，不得进入发行包或复制到公开源码和测试。`local/roundtable.md` 是可直接编辑的唯一私人圆桌，缺失或空白时使用通用版。
 
 仅支持 manifest 声明的当前项目格式。语义归契约，数值归注册表，代码必须有真实消费者。修改作者体验前读取 `docs/PRODUCT-INTENT.md` 与 `docs/INTENT-ALIGNMENT.md`。
 

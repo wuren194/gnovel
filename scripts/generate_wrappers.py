@@ -13,19 +13,19 @@ FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
 
 def source_description(skill: str) -> str:
-    source = ROOT / ("SKILL.md" if skill == "gnovel" else Path(skill) / "SKILL.md")
+    source = ROOT / ("SKILL.md" if skill == "govel" else Path(skill) / "SKILL.md")
     text = source.read_text(encoding="utf-8")
     match = FRONTMATTER.match(text)
     if not match:
-        return "gnovel skill discovery wrapper."
+        return "govel skill discovery wrapper."
     for line in match.group(1).splitlines():
         if line.startswith("description:"):
             return line.partition(":")[2].strip().strip('"')
-    return "gnovel skill discovery wrapper."
+    return "govel skill discovery wrapper."
 
 
 def display_name(skill: str) -> str:
-    return "gnovel" if skill == "gnovel" else skill.removeprefix("gnovel-").title()
+    return "Govel" if skill == "govel" else skill.removeprefix("govel-").title()
 
 
 # plain scalar 里会改变 YAML 结构或语义的字符：行首指示符、`: ` / 行尾 `:`、` #` 注释、制表/换行。
@@ -49,9 +49,9 @@ def yaml_scalar(desc: str) -> str:
 def agent_wrapper(skill: str) -> str:
     desc = source_description(skill)
     if "Use when" not in desc:
-        desc = f"{desc} Use when this workstation is the selected gnovel route."
-    relative = "../../../SKILL.md" if skill == "gnovel" else f"../../../{skill}/SKILL.md"
-    source = "SKILL.md" if skill == "gnovel" else f"{skill}/SKILL.md"
+        desc = f"{desc} Use when this workstation is the selected govel route."
+    relative = "../../../SKILL.md" if skill == "govel" else f"../../../{skill}/SKILL.md"
+    source = "SKILL.md" if skill == "govel" else f"{skill}/SKILL.md"
     body = f"""# {display_name(skill)} Loader（Antigravity）
 
 执行前读取唯一业务真源：[{source}]({relative})。
@@ -62,13 +62,13 @@ def agent_wrapper(skill: str) -> str:
 
 def claude_wrapper(skill: str) -> str:
     desc = source_description(skill)
-    relative = "../SKILL.md" if skill == "gnovel" else f"../../{skill}/SKILL.md"
+    relative = "../SKILL.md" if skill == "govel" else f"../../{skill}/SKILL.md"
     return f"---\nname: {skill}\ndescription: {yaml_scalar(desc)}\n---\n\n# {display_name(skill)} Loader\n\n唯一业务 Skill：`{relative}`。\n\n执行前读取该文件；准备入口与 MCP／CLI 选择按根 Skill 执行；任务范围与契约读取按真源执行（`promptPlan.{skill}`）。\n"
 
 
 def codex_wrapper(skill: str) -> str:
     desc = source_description(skill).replace('"', "\\\"")
-    relative = "../SKILL.md" if skill == "gnovel" else f"../../{skill}/SKILL.md"
+    relative = "../SKILL.md" if skill == "govel" else f"../../{skill}/SKILL.md"
     return (
         f'name = "{skill}"\n'
         f'description = "{desc}"\n'
@@ -82,14 +82,14 @@ def codex_wrapper(skill: str) -> str:
 
 def expected_files() -> dict[Path, str]:
     manifest = json.loads((ROOT / "toolbox.manifest.json").read_text(encoding="utf-8"))
-    skills = ["gnovel", *manifest["skills"]]
+    skills = ["govel", *manifest["skills"]]
     expected: dict[Path, str] = {}
     for skill in skills:
         expected[ROOT / ".agents" / "skills" / skill / "SKILL.md"] = agent_wrapper(skill)
-        if skill != "gnovel":
+        if skill != "govel":
             expected[ROOT / ".claude" / "agents" / f"{skill}.md"] = claude_wrapper(skill)
             expected[ROOT / ".codex" / "agents" / f"{skill}.toml"] = codex_wrapper(skill)
-    expected[ROOT / ".claude" / "SKILL.md"] = claude_wrapper("gnovel")
+    expected[ROOT / ".claude" / "SKILL.md"] = claude_wrapper("govel")
     return expected
 
 

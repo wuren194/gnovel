@@ -31,7 +31,7 @@ class LocatorOnlyOwnershipTests(unittest.TestCase):
         chapter['proseBinding'] = seal_binding(source['projectId'], CHAPTER_ONE, chapter['filePath'],
             state='unbound', generation=source['revision'], expected_content_digest=None)
         self.source_rel = chapter['filePath']; (self.root/self.source_rel).unlink()
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
 
     def _relocate(self, target):
         return refactor.preview_relocate_chapter_paths(self.root, chapter_id=CHAPTER_ONE, file_path=target)
@@ -44,11 +44,11 @@ class LocatorOnlyOwnershipTests(unittest.TestCase):
 
     def test_existing_target_is_blocked_without_changes(self):
         path = self.root/'正文/B.md'; path.write_text('DO NOT OVERWRITE')
-        before = (self.root/'.gnovel/structure.json').read_bytes()
+        before = (self.root/'.govel/structure.json').read_bytes()
         with self.assertRaises(RefactorPathError): check_target(self.root, self.source_rel, '正文/B.md')
         with self.assertRaises(ValueError): self._relocate('正文/B.md')
         self.assertEqual(path.read_text(), 'DO NOT OVERWRITE')
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), before)
 
     def test_directory_target_is_blocked(self):
         (self.root/'正文/DIR.md').mkdir()
@@ -134,7 +134,7 @@ class FinalizationOwnershipTests(unittest.TestCase):
 
     def test_managed_refinalization_is_independent_of_history(self):
         self._managed()
-        self.assertEqual(read_json(self.root/'.gnovel/workflow.json').get('continuity', {}), {})
+        self.assertEqual(read_json(self.root/'.govel/workflow.json').get('continuity', {}), {})
         result = self._finalize()
         self.assertEqual(result['code'], 'CHAPTER_FINALIZED')
         self.assertEqual(self.prose_path.read_text(), NEW_PROSE)
@@ -142,21 +142,21 @@ class FinalizationOwnershipTests(unittest.TestCase):
 
     def test_target_appearing_after_locked_preflight_is_preserved(self):
         foreign = b'raced in after locked preflight'
-        source_before = (self.root/'.gnovel/structure.json').read_bytes()
-        workflow_before = (self.root/'.gnovel/workflow.json').read_bytes()
+        source_before = (self.root/'.govel/structure.json').read_bytes()
+        workflow_before = (self.root/'.govel/workflow.json').read_bytes()
         with self._inject_after_locked_preflight(foreign), self.assertRaises((StructureError, WorkflowError)) as caught: self._finalize()
         self.assertEqual(caught.exception.code, 'WRITE_SET_CONFLICT')
         self.assertEqual(self.prose_path.read_bytes(), foreign)
-        self.assertEqual((self.root/'.gnovel/structure.json').read_bytes(), source_before)
-        self.assertEqual((self.root/'.gnovel/workflow.json').read_bytes(), workflow_before)
-        self.assertFalse(list((self.root/'.gnovel/transactions').glob('*.json')))
+        self.assertEqual((self.root/'.govel/structure.json').read_bytes(), source_before)
+        self.assertEqual((self.root/'.govel/workflow.json').read_bytes(), workflow_before)
+        self.assertFalse(list((self.root/'.govel/transactions').glob('*.json')))
 
     def test_managed_target_edited_after_locked_preflight_is_preserved(self):
         self._managed(); foreign = b'external H2 after preflight'
         with self._inject_after_locked_preflight(foreign), self.assertRaises((StructureError, WorkflowError)) as caught: self._finalize()
         self.assertEqual(caught.exception.code, 'WRITE_SET_CONFLICT')
         self.assertEqual(self.prose_path.read_bytes(), foreign)
-        self.assertFalse(list((self.root/'.gnovel/transactions').glob('*.json')))
+        self.assertFalse(list((self.root/'.govel/transactions').glob('*.json')))
 
     def test_target_appearing_before_lock_is_revalidated(self):
         sentinel = b'raced in before lock'
@@ -169,7 +169,7 @@ class FinalizationOwnershipTests(unittest.TestCase):
         self.assertEqual(self.prose_path.read_bytes(), sentinel)
 
     def test_malformed_continuity_is_rejected_independently_of_empty_target(self):
-        path = self.root/'.gnovel/workflow.json'; workflow = read_json(path)
+        path = self.root/'.govel/workflow.json'; workflow = read_json(path)
         workflow['continuity'] = {self.chapter_id: {'chapterId': self.chapter_id, 'status': 'complete'}}
         write_json(path, workflow)
         before = self._snapshot()
@@ -183,7 +183,7 @@ class FinalizationOwnershipTests(unittest.TestCase):
         chapter['displayOrdinal'] = 2; chapter['displayCode'] = 'CH002'
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         self.prose_path.write_text('另一章的正文'); before = self._snapshot()
         with self.assertRaises((StructureError, WorkflowError)): self._finalize()
         self.assertEqual(self._snapshot(), before)

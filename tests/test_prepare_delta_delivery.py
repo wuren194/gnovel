@@ -50,9 +50,9 @@ class PrepareDeltaDeliveryTests(unittest.TestCase):
 
     def test_authorization_and_blockers_are_recomputed_even_when_materials_are_held(self):
         first = self.prepare()
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['approvedChapterIds'] = []
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         delta = self.prepare(heldPrepareRef=first['prepareRef'])
         self.assertEqual(delta['delivery']['mode'], 'delta')
         self.assertFalse(delta['readiness']['authorizationReady'])

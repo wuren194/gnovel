@@ -43,8 +43,8 @@ class StrictCacheTests(unittest.TestCase):
     def test_old_project_is_rejected_with_import_route(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            (root / ".gnovel").mkdir()
-            write_json(root / ".gnovel/project.json", {"schemaVersion": 4, "workflowVersion": "4.0"})
+            (root / ".govel").mkdir()
+            write_json(root / ".govel/project.json", {"schemaVersion": 4, "workflowVersion": "4.0"})
             with self.assertRaises(state_cache.StateCacheError) as caught:
                 state_cache.load(root)
             self.assertIn("外部小说", str(caught.exception))
@@ -65,7 +65,7 @@ class StrictCacheTests(unittest.TestCase):
             second_id = structure['chapters'][1]['chapterId']
             preview = preview_insert_chapter(root, title="中间章", volume_id=structure["volumes"][0]["volumeId"], primary_arc_id=structure["arcs"][0]["arcId"], before_chapter_id=second_id)
             commit_plan(root, operation_id=preview["operationId"], plan_hash=preview["planHash"], approved=True)
-            updated = read_json(root / ".gnovel/structure.json")
+            updated = read_json(root / ".govel/structure.json")
             self.assertEqual(next(item for item in updated["chapters"] if item["chapterId"] == second_id)["displayCode"], "CH003")
             self.assertEqual(next(item for item in updated["chapters"] if item["title"] == "中间章")["displayCode"], "CH002")
 

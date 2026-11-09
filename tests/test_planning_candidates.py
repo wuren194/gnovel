@@ -78,7 +78,7 @@ class PlanningCandidatesTests(unittest.TestCase):
             preview_candidate_change(self.root, action='create', expectedRevision=source['revision'],
                                      reason='错误锚点', record=wrong)
         self.assertEqual(caught.exception.code, 'PLANNING_CANDIDATE_INVALID')
-        self.assertNotIn('planningCandidates', read_json(self.root / '.gnovel/structure.json'))
+        self.assertNotIn('planningCandidates', read_json(self.root / '.govel/structure.json'))
 
     def test_cli_and_mcp_share_operation(self):
         source = load_structure(self.root)

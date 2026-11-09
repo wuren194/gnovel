@@ -128,14 +128,14 @@ def _character_rows(root, source, character_id, selection):
 def _setting_rows(root, operation_id, dependencies):
     from .source_maintenance_receipts import load_operation
     from .write_sets import safe_project_path
-    directory = safe_project_path(root, '.gnovel/operations')
+    directory = safe_project_path(root, '.govel/operations')
     paths = sorted(directory.glob('OP-*.json'))
-    dependencies['queries'].append({'directory': '.gnovel/operations', 'pattern': 'OP-*.json',
+    dependencies['queries'].append({'directory': '.govel/operations', 'pattern': 'OP-*.json',
                                    'members': [path.relative_to(root).as_posix() for path in paths]})
     ids = [operation_id] if operation_id is not None else [path.stem for path in paths]
-    undo_directory = safe_project_path(root, '.gnovel/undo-receipts')
+    undo_directory = safe_project_path(root, '.govel/undo-receipts')
     undo_pattern = operation_id + '-*.json' if operation_id is not None else 'OP-*.json'
-    dependencies['queries'].append({'directory': '.gnovel/undo-receipts', 'pattern': undo_pattern,
+    dependencies['queries'].append({'directory': '.govel/undo-receipts', 'pattern': undo_pattern,
         'members': [path.relative_to(root).as_posix() for path in sorted(undo_directory.glob(undo_pattern))]})
     rows, groups = [], []
     for oid in ids:

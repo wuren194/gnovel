@@ -1,7 +1,7 @@
 """The one durable undo-receipt schema: naming, writing and validating it.
 
 Every committed undo of a schema-4 operation restores the structure through the shared write set
-and, inside the SAME transaction, persists one receipt under ``.gnovel/undo-receipts/``. This
+and, inside the SAME transaction, persists one receipt under ``.govel/undo-receipts/``. This
 receipt is the only operation-specific undo evidence that survives: the ``UNDO-`` marker in
 ``structure.lastOperation`` is overwritten by the next legitimate status advance, so relying on it
 alone would let a reversed move quietly re-enter live lineage (and would refuse a chapter the undo
@@ -30,7 +30,7 @@ from typing import Optional
 from .write_sets import json_bytes
 
 # Relative, canonical (POSIX separators) location of the durable undo evidence.
-UNDO_RECEIPT_DIR = '.gnovel/undo-receipts'
+UNDO_RECEIPT_DIR = '.govel/undo-receipts'
 
 # A receipt names the operation it reverses, so the receipt's own filename contract includes this.
 OPERATION_ID_PATTERN = re.compile(r'OP-[0-9A-F]{16}')

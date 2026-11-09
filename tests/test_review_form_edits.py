@@ -172,7 +172,7 @@ class ReviewFormEditsTests(unittest.TestCase):
     def test_public_a_semantic_submission_keeps_actual_seats_and_plan_binding(self):
         source = load_structure(self.root)
         source['chapters'][0].update(reviewClass='ordinary', newLocation=True)
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         form = call_operation('workflow.review-form', self.root, {'chapterId': self.cid, 'artifactType': 'stage_a_review'})
         frozen = get(self.root, form['formRef'], kind='review-form')['report']['payload']
         result = call_operation('workflow.submit', self.root, self.arguments(form))
@@ -185,7 +185,7 @@ class ReviewFormEditsTests(unittest.TestCase):
     def test_b_semantic_submission_reuses_existing_gates_and_replays_without_cache(self):
         form = self.form()
         args = self.arguments(form)
-        before_approvals = read_json(self.root / '.gnovel/workflow.json')['approvals']
+        before_approvals = read_json(self.root / '.govel/workflow.json')['approvals']
         result = submit_artifacts(self.root, **args)
         self.assertTrue(result['submissionComplete'], result)
         frozen = get(self.root, form['formRef'], kind='review-form')['report']['payload']
@@ -199,7 +199,7 @@ class ReviewFormEditsTests(unittest.TestCase):
             self.assertTrue(replay['submissionComplete'], replay)
             self.assertTrue(replay['results'][0]['replayed'])
             self.assertEqual(self.files(), before)
-        self.assertEqual(read_json(self.root / '.gnovel/workflow.json')['approvals'], before_approvals)
+        self.assertEqual(read_json(self.root / '.govel/workflow.json')['approvals'], before_approvals)
         changed = deepcopy(args)
         changed['artifacts'][0]['edits']['slots']['logic']['conclusion'] += 'changed'
         self.assert_rejected_unchanged(changed, 'SUBMISSION_REQUEST_REUSED')
@@ -213,7 +213,7 @@ class ReviewFormEditsTests(unittest.TestCase):
         self.cache_path(form['formRef']).unlink()
         result = submit_artifacts(self.root, requestId='interrupted')
         self.assertTrue(result['submissionComplete'], result)
-        record_path = next((self.root / '.gnovel/artifact-submissions').glob('*.json'))
+        record_path = next((self.root / '.govel/artifact-submissions').glob('*.json'))
         record = read_json(record_path)
         self.assertNotIn('formRef', record['arguments']['artifacts'][0])
         self.assertNotIn('edits', record['arguments']['artifacts'][0])
@@ -236,7 +236,7 @@ class ReviewFormEditsTests(unittest.TestCase):
         review = self.edits(previous)
         review['slots']['logic']['conclusion'] = '这一轮合成审校明确核对了交接动作。'
         self.assertTrue(submit_artifacts(self.root, **self.arguments(previous, review, request='history-create'))['ok'])
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         history = workflow['artifacts'][self.cid]['stage_b_review']['repairHistory']
         old_path = self.root / history[0]['artifactPath']
         form = self.form()
@@ -256,7 +256,7 @@ class ReviewFormEditsTests(unittest.TestCase):
         before = self.files()
 
         def fail(phase, relative=None):
-            if phase == 'write' and relative.startswith('.gnovel/artifact-submissions/'):
+            if phase == 'write' and relative.startswith('.govel/artifact-submissions/'):
                 raise RuntimeError('interrupted before submission freeze committed')
 
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail), self.assertRaises(RuntimeError):
@@ -274,11 +274,11 @@ class ReviewFormEditsTests(unittest.TestCase):
         del variants[1]['slots']['organization']
         variants[2]['slots']['logic']['evidence'] = [{'text': '没有出现在当前正文中的引文。'}]
         variants[3]['behaviorCoverage'] = {'relationship': 'unassessed'}
-        workflow = (self.root / '.gnovel/workflow.json').read_bytes()
+        workflow = (self.root / '.govel/workflow.json').read_bytes()
         for index, edits in enumerate(variants):
             result = submit_artifacts(self.root, **self.arguments(form, edits, request=f'incomplete-{index}'))
             self.assertFalse(result['submissionComplete'], result)
-            self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), workflow)
+            self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), workflow)
             self.assertNotEqual(result['error']['code'], 'REVIEW_FORM_STALE')
 
     def test_bindings_unknown_seats_and_forged_receipts_are_not_writable(self):
@@ -336,17 +336,17 @@ class ReviewFormEditsTests(unittest.TestCase):
         def change_source(root):
             source = load_structure(root)
             source['fragments'][0]['text'] += '合成材料变更。'
-            write_json(root / '.gnovel/structure.json', source)
+            write_json(root / '.govel/structure.json', source)
 
         def change_seats(root):
             source = load_structure(root)
             source['chapters'][0].update(reviewClass='ordinary')
-            write_json(root / '.gnovel/structure.json', source)
+            write_json(root / '.govel/structure.json', source)
 
         def change_authorization(root):
-            workflow = read_json(root / '.gnovel/workflow.json')
+            workflow = read_json(root / '.govel/workflow.json')
             workflow['approvals'][self.cid]['approved'] = False
-            write_json(root / '.gnovel/workflow.json', workflow)
+            write_json(root / '.govel/workflow.json', workflow)
 
         def change_candidate(root):
             pack_artifact(root, chapterId=self.cid, artifactType='candidate_prose', text='他收起钥匙。')
@@ -355,7 +355,7 @@ class ReviewFormEditsTests(unittest.TestCase):
             with self.subTest(mutation=mutate.__name__):
                 form = self.form()
                 args = self.arguments(form)
-                paths = [self.root / '.gnovel' / name for name in ('structure.json', 'workflow.json')]
+                paths = [self.root / '.govel' / name for name in ('structure.json', 'workflow.json')]
                 original = {path: path.read_bytes() for path in paths}
                 try:
                     mutate(self.root)
@@ -372,7 +372,7 @@ class ReviewFormEditsTests(unittest.TestCase):
         def mutate(root, record):
             source = load_structure(root)
             source['fragments'][0]['text'] += '冻结途中发生更改。'
-            write_json(root / '.gnovel/structure.json', source)
+            write_json(root / '.govel/structure.json', source)
             changed.append(self.files())
             return original(root, record)
 
@@ -380,7 +380,7 @@ class ReviewFormEditsTests(unittest.TestCase):
         with patch.object(module, '_assert_current', side_effect=mutate), self.assertRaises(StructureError):
             submit_artifacts(self.root, **self.arguments(form))
         self.assertEqual(self.files(), changed[0])
-        self.assertFalse((self.root / '.gnovel/artifact-submissions').exists())
+        self.assertFalse((self.root / '.govel/artifact-submissions').exists())
 
     def test_existing_facts_cannot_be_deleted_renamed_or_passed_implicitly(self):
         form = self.form()
@@ -460,10 +460,10 @@ class ReviewFormEditsTests(unittest.TestCase):
                 apply_semantic_edits(payload, 'stage_a_review', edits)
 
     def test_repair_form_uses_existing_issue_decisions_and_artifact_receipt(self):
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         workflow['artifacts'][self.cid].pop('diagnostics', None)
         workflow['approvals'][self.cid]['artifactHashes'].pop('diagnostics', None)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         form = self.form()
         edits = self.edits(form)
         edits.update(verdict='REPAIR_REQUIRED', repairScope='local', append={'findings': [{

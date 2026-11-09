@@ -15,11 +15,16 @@ from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.core.project import TOOLBOX_ROOT
+from scripts.core.local_layout import private_local_path, local_content_issue
 
 def _unsafe(name: str) -> str | None:
     path = PurePosixPath(name)
     if path.is_absolute() or '..' in path.parts or '\\' in name or not name or name.startswith('/'):
         return 'unsafe_path'
+    if private_local_path(name):
+        return 'local_user_data'
+    if path.name in {'provider-config.json', 'provider.json'}:
+        return 'provider_configuration'
     if name == '小说参考' or name.startswith('小说参考/'):
         return 'private_reference_alias'
     if name.startswith('knowledge/sources/private/') or name == 'knowledge/sources/private':
@@ -68,6 +73,9 @@ def check_worktree(*, public: bool = False) -> dict:
     candidate_names = set(names)
     for name in names:
         path = TOOLBOX_ROOT / name
+        if path.is_file() and not path.is_symlink():
+            if issue := local_content_issue(name, path.read_bytes() if name.endswith('.gitkeep') else b''):
+                report['problems'].append({'path': name, 'code': issue})
         if path.is_symlink():
             # 与 check_zip / 打包器同一判定：看链接本身指向哪里（原样 target），
             # 不看它在本机被解析到哪里——否则同一棵树在打包入口与校验入口得到相反结论。
@@ -85,6 +93,8 @@ def check_zip(path: Path, *, public: bool = False) -> dict:
         report = check_paths(archive.namelist(), public=public)
         names = set(archive.namelist())
         for item in archive.infolist():
+            if issue := local_content_issue(item.filename, archive.read(item) if not item.is_dir() else b''):
+                report['problems'].append({'path': item.filename, 'code': issue})
             if stat.S_ISLNK(item.external_attr >> 16):
                 # ZIP symlinks can resolve outside the archive or into ignored
                 # private material when an extractor follows them.

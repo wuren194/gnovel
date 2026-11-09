@@ -7,7 +7,7 @@ description: Writer 与 Editor 共用的事实、表达、输出隔离和修订�
 
 # 写作与修订边界
 
-Writer 按已批准计划和文风写作，Editor 核对当前候选。机械规则卡见 `gnovel-router/references/mechanical-baseline.md`，正向表达原则见 `STYLE-AND-VOICE.md`。
+Writer 按已批准计划和文风写作，Editor 核对当前候选。机械规则卡见 `govel-router/references/mechanical-baseline.md`，正向表达原则见 `STYLE-AND-VOICE.md`。
 
 ## 事实与视角
 

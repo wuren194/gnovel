@@ -107,7 +107,7 @@ class RelationProposalTests(unittest.TestCase):
         self.assertFalse(plan['parameters']['relationProposal']['approval']['verifiedHuman'])
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(load_structure(self.root)['relations'][0]['kind'], 'trusts')
-        journal = read_json(self.root / '.gnovel/operations' / (plan['operationId'] + '.json'))
+        journal = read_json(self.root / '.govel/operations' / (plan['operationId'] + '.json'))
         self.assertFalse(journal['proposal']['approval']['verifiedHuman'])
         deleted = self.propose(new_record=None)
         commit_plan(self.root, operation_id=deleted['operationId'], plan_hash=deleted['planHash'], approved=True)
@@ -167,8 +167,8 @@ class RelationProposalTests(unittest.TestCase):
         source['revision'] = max(1, source['revision'])
         chapter['proseBinding'] = seal_binding(source['projectId'], chapter['chapterId'], chapter['filePath'],
             state='managed', generation=source['revision'], expected_content_digest='sha256:'+digest('甲守护乙。'.encode()))
-        write_json(self.root/'.gnovel/structure.json', source)
-        write_json(self.root / '.gnovel/workflow.json',
+        write_json(self.root/'.govel/structure.json', source)
+        write_json(self.root / '.govel/workflow.json',
                    {'approvals': {chapter['chapterId']: {'approved': True}}, 'artifacts': {}})
         prose = self.root / chapter['filePath']
         prose.parent.mkdir(exist_ok=True)
@@ -178,7 +178,7 @@ class RelationProposalTests(unittest.TestCase):
                           citations=[{'start': 0, 'end': 5, 'text': '甲守护乙。',
                                       'targetIds': ['REL-ALPHA-BETA'], 'kind': 'depends_on',
                                       'reason': '句子依赖关系类型。'}])
-        historical_evidence = (self.root / '.gnovel/source-prose-evidence.json').read_bytes()
+        historical_evidence = (self.root / '.govel/source-prose-evidence.json').read_bytes()
         plan = self.propose()
         self.assertIn(chapter['chapterId'], plan['impact']['approvalInvalidations'])
         self.assertIn('SF-REL-DEPENDENT', plan['impact']['reviewFragmentIds'])
@@ -187,12 +187,12 @@ class RelationProposalTests(unittest.TestCase):
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(prose.read_bytes(), original)
         self.assertEqual(query_evidence(self.root)['items'][0]['status'], 'needs_review')
-        self.assertEqual((self.root / '.gnovel/source-prose-evidence.json').read_bytes(), historical_evidence)
-        self.assertFalse(read_json(self.root / '.gnovel/workflow.json')['approvals'][chapter['chapterId']]['approved'])
+        self.assertEqual((self.root / '.govel/source-prose-evidence.json').read_bytes(), historical_evidence)
+        self.assertFalse(read_json(self.root / '.govel/workflow.json')['approvals'][chapter['chapterId']]['approved'])
 
     def test_commit_boundary_rechecks_handcrafted_plan_diff(self):
         plan = self.propose()
-        path = self.root / '.gnovel/plans' / (plan['operationId'] + '.json')
+        path = self.root / '.govel/plans' / (plan['operationId'] + '.json')
         altered = read_json(path)
         altered['proposedStructure']['entities'][0]['summary'] = 'unreviewed'
         altered['planHash'] = _plan_hash({key: value for key, value in altered.items()
@@ -205,7 +205,7 @@ class RelationProposalTests(unittest.TestCase):
 
     def test_cli_and_mcp_use_same_resolver(self):
         repo = Path(__file__).resolve().parents[1]
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         cli = subprocess.run([sys.executable, str(repo / 'scripts/novelctl.py'), 'project', 'source',
                               'relation-resolve', '--project-root', str(self.root),
                               '--relation-id', 'REL-ALPHA-BETA'], cwd=repo, capture_output=True, text=True)
@@ -218,14 +218,14 @@ class RelationProposalTests(unittest.TestCase):
         self.assertEqual(mcp.returncode, 0, mcp.stderr)
         actual = json.loads(json.loads(mcp.stdout.splitlines()[-1])['result']['content'][0]['text'])
         self.assertEqual(json.loads(cli.stdout), actual)
-        self.assertEqual(before, (self.root / '.gnovel/structure.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/structure.json').read_bytes())
 
     def test_cli_and_mcp_share_proposal_preview(self):
         repo = Path(__file__).resolve().parents[1]
         resolved = self.resolve()
         old = resolved['record']
         new = {**old, 'kind': 'trusts'}
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         cli = subprocess.run([sys.executable, str(repo / 'scripts/novelctl.py'), 'project', 'source',
                               'relation-proposal-preview', '--project-root', str(self.root),
                               '--session-ref', resolved['sessionRef'], '--expected-old-record', json.dumps(old),
@@ -248,7 +248,7 @@ class RelationProposalTests(unittest.TestCase):
         cli_plan = json.loads(cli.stdout)
         self.assertEqual(cli_plan['parameters'], actual['parameters'])
         self.assertEqual(cli_plan['impact'], actual['impact'])
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
 
 
 if __name__ == '__main__':

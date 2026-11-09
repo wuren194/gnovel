@@ -65,7 +65,7 @@ def read_batch(root: Path, *, task: str | None = None, requests: list | None = N
     if type(budget) is not int or not 1 <= budget <= policy['maxBytes']['detail'] or type(count) is not int or not 1 <= count <= policy['maxLimit']:
         raise StructureError('QUERY_BUDGET_INVALID', 'invalid batch reading budget')
     task_guards = []
-    for relative in ('.gnovel/structure.json', '.gnovel/workflow.json'):
+    for relative in ('.govel/structure.json', '.govel/workflow.json'):
         state, _ = guard_observation(safe_project_path(root, relative))
         task_guards.append({'path': relative, **state})
     if credential is not None and credential.startswith('gn:'):
@@ -82,8 +82,8 @@ def read_batch(root: Path, *, task: str | None = None, requests: list | None = N
     plan = prepared['promptPlan']
     if not plan.get('complete'):
         raise StructureError('READ_BATCH_BLOCKED', 'current contract plan is incomplete')
-    from .data_provider import active_provider, binding as provider_binding
-    provider = active_provider()
+    from .data_provider import storage_root, binding as provider_binding
+    data_root = storage_root()
     initial_provider = provider_binding()
     if plan.get('provider') != initial_provider:
         raise StructureError('READ_BATCH_STALE', 'provider changed after preparation')
@@ -124,9 +124,7 @@ def read_batch(root: Path, *, task: str | None = None, requests: list | None = N
                 or not isinstance(request['root'], str) or request['root'] not in {'project', 'toolbox', 'provider'}
                 or not isinstance(request['path'], str) or not isinstance(request['sha256'], str)):
             raise StructureError('READ_BATCH_INVALID', 'each request requires root, path and selected file sha256')
-        if request['root'] == 'provider' and provider is None:
-            raise StructureError('READ_BATCH_FORBIDDEN', 'no provider is configured')
-        base = root if request['root'] == 'project' else provider['root'] if request['root'] == 'provider' else TOOLBOX_ROOT
+        base = root if request['root'] == 'project' else data_root if request['root'] == 'provider' else TOOLBOX_ROOT
         alias, canonical = None, request['path']
         if request['root'] == 'toolbox':
             if aliases is None:
@@ -159,7 +157,7 @@ def read_batch(root: Path, *, task: str | None = None, requests: list | None = N
             if relative.startswith('knowledge/assets/'):
                 from .knowledge_store import _parse
                 metadata, _ = _parse(raw, relative)
-                if metadata['status'] != 'active' or prepared['station'].removeprefix('gnovel-') not in metadata['stations']:
+                if metadata['status'] != 'active' or prepared['station'].removeprefix('govel-') not in metadata['stations']:
                     raise StructureError('READ_BATCH_FORBIDDEN', 'knowledge asset is not active for this station')
             lines = text.splitlines(keepends=True)
             raw_files[key] = (state, lines)
@@ -205,10 +203,13 @@ def read_batch(root: Path, *, task: str | None = None, requests: list | None = N
     binding = sha256_json({'requests': requests, 'maxBytes': budget, 'limit': count, 'textPages': 2, 'priorReceipt': priorReceipt})
     validate_guards(root, observations['project'], stage='read-batch')
     validate_guards(TOOLBOX_ROOT, observations['toolbox'], stage='read-batch')
-    if provider is not None:
-        validate_guards(provider['root'], observations['provider'], stage='read-batch')
-    if provider_binding() != initial_provider:
+    validate_guards(data_root, observations['provider'], stage='read-batch')
+    if provider_binding() != initial_provider or storage_root() != data_root:
         raise StructureError('READ_BATCH_STALE', 'provider changed during reading')
+    if plan.get('roundtable') is not None:
+        from .data_provider import roundtable_resource
+        if roundtable_resource() != plan['roundtable']['resource']:
+            raise StructureError('READ_BATCH_STALE', 'roundtable changed during reading; prepare again')
     require_no_pending(root)
     from .text_pages import text_page
     from .transport_cache import put

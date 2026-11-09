@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DefinitionReuseTests(unittest.TestCase):
     def setUp(self):
-        patcher = patch.dict(os.environ, {'GNOVEL_LOG_MODE': 'off'})
+        patcher = patch.dict(os.environ, {'GOVEL_LOG_MODE': 'off'})
         patcher.start(); self.addCleanup(patcher.stop)
         static_cache._VALUES.clear()
         self.registry = ROOT / 'shared/registries/text-patterns.json'

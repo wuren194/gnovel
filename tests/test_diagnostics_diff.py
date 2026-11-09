@@ -103,8 +103,8 @@ class DiagnosticsDiffCommandTests(unittest.TestCase):
 
     def _register_findings_diagnostics(self, findings: list[dict]) -> Path:
         """fixture 的 diagnostics 没有 findings；用生产入口重注册一份带 findings 的。"""
-        structure = read_json(self.root / ".gnovel/structure.json")
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        structure = read_json(self.root / ".govel/structure.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         prose = read_json(Path(workflow["artifacts"][self.chapter]["candidate_prose"]["artifactPath"]))
         artifact = envelope("diagnostics", {
             "passed": True, "findings": findings,
@@ -198,7 +198,7 @@ class ChapterStatusBoardTests(unittest.TestCase):
 
     def test_next_action_derived_from_state_not_template(self):
         """改变实际状态，下一步随之改变：diagnostics 未批准时指向批准而非 advance。"""
-        workflow_path = self.root / ".gnovel/workflow.json"
+        workflow_path = self.root / ".govel/workflow.json"
         workflow = read_json(workflow_path)
         workflow["approvals"][self.chapter]["approved"] = False
         write_json(workflow_path, workflow)

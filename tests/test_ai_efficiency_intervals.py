@@ -97,8 +97,8 @@ class IntervalReadingTests(unittest.TestCase):
         arguments = {'credential': report['reading']['credential'], 'readIds': [read_id]}
         first = call_operation('task.read-batch', self.root, arguments)
         from scripts.core.jsonio import read_json, write_json
-        workflow = read_json(self.root / '.gnovel/workflow.json'); workflow['approvedChapterIds'] = []
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        workflow = read_json(self.root / '.govel/workflow.json'); workflow['approvedChapterIds'] = []
+        write_json(self.root / '.govel/workflow.json', workflow)
         with self.assertRaises(StructureError):
             call_operation('task.read-batch', self.root, {**arguments, 'priorReceipt': first['sessionReadReceipt']})
         self.text = '改' + self.text[1:]

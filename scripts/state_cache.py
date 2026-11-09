@@ -25,7 +25,7 @@ except ImportError:
         PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION, StructureError, load_structure, ordered_chapters,
     )
 
-CACHE_DIR_REL = ".gnovel/cache"
+CACHE_DIR_REL = ".govel/cache"
 STATE_REL = f"{CACHE_DIR_REL}/story-state.json"
 DESIGN_REL = f"{CACHE_DIR_REL}/story-design.json"
 MANIFEST_REL = f"{CACHE_DIR_REL}/manifest.json"
@@ -53,8 +53,8 @@ def _snapshot(path: Path) -> dict:
 
 def _source_snapshots(root: Path) -> dict[str, dict]:
     required = [
-        root / ".gnovel" / "project.json",
-        root / ".gnovel" / "structure.json",
+        root / ".govel" / "project.json",
+        root / ".govel" / "structure.json",
     ]
     structure = load_structure(root)
     snapshots = {str(path.relative_to(root)): _snapshot(path) for path in required}
@@ -89,7 +89,7 @@ def _toolbox_version() -> str:
     return str(manifest.get("version", "unknown"))
 
 def _project_marker(root: Path) -> dict:
-    path = root / ".gnovel" / "project.json"
+    path = root / ".govel" / "project.json"
     try:
         marker = read_json(path)
     except (OSError, json.JSONDecodeError) as exc:
@@ -120,7 +120,7 @@ def _validate_paths(root: Path, structure: dict) -> None:
 def project_projections(root: Path) -> tuple[dict, dict]:
     """Build both projections from one validated snapshot without publishing a cache."""
     root = root.expanduser().resolve()
-    safe_project_path(root, ".gnovel/project.json")
+    safe_project_path(root, ".govel/project.json")
     marker = _project_marker(root)
     structure = load_structure(root)
     if marker["projectId"] != structure["projectId"]:

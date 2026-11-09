@@ -105,7 +105,7 @@ class HandoffRecordTests(unittest.TestCase):
         handoff = self._create()
         # 直接篡改 record 的 projectId 模拟跨项目返回；正常路径由 create 绑定。
         from scripts.core.jsonio import read_json, write_json
-        index_path = self.root / ".gnovel/handoffs/index.json"
+        index_path = self.root / ".govel/handoffs/index.json"
         index = read_json(index_path)
         index["handoffs"][handoff["handoffId"]]["projectId"] = "OTHER-PROJECT"
         write_json(index_path, index)

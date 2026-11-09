@@ -156,7 +156,7 @@ class SemanticViewTests(unittest.TestCase):
         ctx = self.build('edge')
         self.assertEqual(semantic_view(json.loads(json.dumps(ctx)))[0], semantic_view(ctx)[0])
         chapter, goal = fixture(self.root, 'edge')
-        source = json.loads((self.root / '.gnovel/structure.json').read_text())
+        source = json.loads((self.root / '.govel/structure.json').read_text())
         source['entities'][0]['summary'] += '依赖已变化。'
         save_context_source(self.root, source)
         new = builder.build_station_context(self.root, chapter, chapter_goal=goal, pov_character='C-ALPHA',

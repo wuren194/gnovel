@@ -14,7 +14,7 @@ from scripts.novelctl import _initialize
 def initialize_project(root: Path, *, book_name: str = '测试书') -> dict:
     _initialize(root, project_id=str(uuid.uuid4()), book_name=book_name,
                 idempotency_key=str(uuid.uuid4()), approval_mode='manual')
-    return read_json(root/'.gnovel/structure.json')
+    return read_json(root/'.govel/structure.json')
 
 
 def create_schema5_project(root: Path, *, book_name: str = '测试书', chapter_count: int = 2,
@@ -57,7 +57,7 @@ def create_schema5_project(root: Path, *, book_name: str = '测试书', chapter_
             'dependsOn': [], 'chapterContract': {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                 'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
     validate_structure(structure)
-    write_json(root/'.gnovel/structure.json', structure)
+    write_json(root/'.govel/structure.json', structure)
     state_cache.rebuild(root)
     return {'structure': structure, 'chapterIds': ids, 'volumeId': volume_id, 'arcId': arc_id,
             'characterId': 'C-TEST-ALPHA', 'propId': 'P-TEST-KEY', 'locationId': 'L-TEST-ROOM', 'hookId': 'HK-TEST-SECRET'}

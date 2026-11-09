@@ -25,21 +25,21 @@ class AuthoringFormsTests(unittest.TestCase):
         self.cid, self.other = fixture['chapterIds']
 
     def workflow(self):
-        return read_json(self.root / '.gnovel/workflow.json')
+        return read_json(self.root / '.govel/workflow.json')
 
     def files(self):
         return {p.relative_to(self.root).as_posix(): p.read_bytes()
                 for p in self.root.rglob('*') if p.is_file() and p.name != 'structure.lock'}
 
     def test_stage_a_form_uses_dynamic_seats_and_frozen_plan_without_writing_files(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         chapter = source['chapters'][0]
         chapter.update(reviewClass='ordinary', newLocation=True)
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         before = self.files()
         result = review_form(self.root, chapterId=self.cid, artifactType='stage_a_review', view='full')
         payload = result['payload']
-        expected = resolve_effective_review_plan('gnovel-planner', 'chapter', chapter=chapter)['activeSeats']
+        expected = resolve_effective_review_plan('govel-planner', 'chapter', chapter=chapter)['activeSeats']
         self.assertEqual(payload['activeSeats'], expected)
         self.assertEqual(set(payload['seatReviews']), {str(seat) for seat in expected})
         self.assertEqual(payload['sourcePlanHash'], chapter_plan(source, self.cid)['sourcePlanHash'])
@@ -79,9 +79,9 @@ class AuthoringFormsTests(unittest.TestCase):
 
         def change(*args, **kwargs):
             result = original(*args, **kwargs)
-            source = read_json(self.root / '.gnovel/structure.json')
+            source = read_json(self.root / '.govel/structure.json')
             source['fragments'][0]['text'] += '材料发生变化。'
-            write_json(self.root / '.gnovel/structure.json', source)
+            write_json(self.root / '.govel/structure.json', source)
             return result
 
         with patch.object(artifact_bindings, 'bind_fields', side_effect=change):
@@ -137,7 +137,7 @@ class AuthoringFormsTests(unittest.TestCase):
         before = self.files()
 
         def fail(phase, relative=None):
-            if phase == 'write' and relative.startswith('.gnovel/artifact-requests/'):
+            if phase == 'write' and relative.startswith('.govel/artifact-requests/'):
                 raise RuntimeError('state write interrupted')
 
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail):
@@ -154,7 +154,7 @@ class AuthoringFormsTests(unittest.TestCase):
         prepare_state_candidate(self.root, chapterId=self.cid, requestId='state-invalidated')
         workflow = self.workflow()
         workflow['artifacts'][self.cid]['state_candidate']['invalidatedBy'] = 'later reviewed operation'
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         before = self.files()
         with self.assertRaises(StructureError) as caught:
             prepare_state_candidate(self.root, requestId='state-invalidated')
@@ -163,7 +163,7 @@ class AuthoringFormsTests(unittest.TestCase):
 
     def test_state_request_tampering_and_missing_candidate_are_rejected(self):
         prepare_state_candidate(self.root, chapterId=self.cid, requestId='state-tamper')
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         path = self.root / artifact_request_path(source['projectId'], 'state-prepare:state-tamper')
         data = read_json(path)
         data['inputIdentity']['chapterId'] = self.other

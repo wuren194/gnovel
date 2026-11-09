@@ -69,7 +69,7 @@ class CliMutationLockTests(unittest.TestCase):
             self.assertEqual(caught.exception.code, "PROJECT_LOCKED")
 
     def test_all_unlocked_cli_writes_now_reject_pending_transaction(self):
-        source = '.gnovel/structure.json'
+        source = '.govel/structure.json'
         interrupted_write_set(self.root, {source: (self.root/source).read_bytes()})
         cases = [
             ["workflow", "approve-chapters", "--chapter-id", self.chapter_id],
@@ -102,10 +102,10 @@ class CliMutationLockTests(unittest.TestCase):
         self.assertTrue(state_cache.is_fresh(self.root))
         operation = next(row for row in list_operations(self.root) if row['operationId'] == plan['operationId'])
         self.assertTrue(operation['undoable'], operation)
-        before = read_json(self.root/'.gnovel/structure.json')
+        before = read_json(self.root/'.govel/structure.json')
         result = undo_operation(self.root, plan['operationId'])
         self.assertEqual(result['code'], 'STRUCTURE_UNDONE')
-        after = read_json(self.root/'.gnovel/structure.json')
+        after = read_json(self.root/'.govel/structure.json')
         self.assertGreater(after['revision'], before['revision'])
         self.assertEqual(next(v for v in after['volumes'] if v['volumeId'] == volume_id)['title'], old_title)
         self.assertEqual([c['proseBinding'] for c in after['chapters']], [c['proseBinding'] for c in before['chapters']])

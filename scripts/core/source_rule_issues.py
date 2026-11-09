@@ -16,7 +16,7 @@ from .project import source_model_policy
 from .structure_store import StructureError
 from .write_sets import apply_write_set, json_bytes, safe_project_path
 
-ISSUES_PATH = '.gnovel/source-rule-issues.json'
+ISSUES_PATH = '.govel/source-rule-issues.json'
 STATUSES = set(source_model_policy()['ruleIssueStatuses'])
 
 

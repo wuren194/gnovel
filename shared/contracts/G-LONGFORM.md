@@ -7,7 +7,7 @@ description: 当前单一真源项目的长篇连续性、计划执行、事实�
 
 # 长篇连续性合同
 
-设定与规划唯一真源在 `.gnovel/structure.json`，记录身份、内容角色、关系、时间与登记依赖；查询和变更规则见 `G-SINGLE-SOURCE.md`。正文按章 filePath 管理，缓存与阅读导出不取得作者真源地位。
+设定与规划唯一真源在 `.govel/structure.json`，记录身份、内容角色、关系、时间与登记依赖；查询和变更规则见 `G-SINGLE-SOURCE.md`。正文按章 filePath 管理，缓存与阅读导出不取得作者真源地位。
 
 ## 写前
 

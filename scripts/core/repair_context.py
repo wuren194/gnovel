@@ -22,7 +22,7 @@ def _prepare_repair(root, chapter_id):
     structure = load_structure(root)
     prose = candidate_prose(root, chapter_id, structure=structure)
     body, body_hash = prose['text'], sha256_text(prose['text'])
-    workflow_path = root / '.gnovel/workflow.json'
+    workflow_path = root / '.govel/workflow.json'
     workflow = normalize_workflow(read_json(workflow_path)) if workflow_path.is_file() else default_workflow()
     bodies, transitions, unavailable = candidate_history(root, structure, workflow, chapter_id, prose)
     reports, stale, rows, decisions = {}, [], {}, {}

@@ -86,7 +86,7 @@ class BehaviorInventoryTests(unittest.TestCase):
     def test_a_missing_contract_cannot_be_called_not_applicable(self):
         source = load_structure(self.root)
         plan = next(f for f in source['fragments'] if f['ownerId'] == self.cid and f['contentRole'] == 'plan')
-        del plan['chapterContract']; write_json(self.root/'.gnovel/structure.json', source)
+        del plan['chapterContract']; write_json(self.root/'.govel/structure.json', source)
         payload = self.full(self.op('workflow.review-form', chapterId=self.cid, artifactType='stage_a_review', view='full'))['payload']
         payload['decision'] = 'adopt'; payload['behaviorCoverage'] = {'relationship': 'not_applicable', 'living': 'not_applicable'}
         for row in payload['seatReviews'].values(): row.update(conclusion='当前合成计划没有承重安排。', evidence=[{'text': plan['text']}])
@@ -169,7 +169,7 @@ class BehaviorInventoryTests(unittest.TestCase):
         source_before = load_structure(self.root); prose = self.root/source_before['chapters'][0]['filePath']
         raw = prose.read_bytes(); generation = source_before['chapters'][0]['proseBinding']['generation']
         report = self.commit_fact()
-        workflow = read_json(self.root/'.gnovel/workflow.json')
+        workflow = read_json(self.root/'.govel/workflow.json')
         self.assertFalse(workflow['approvals'][self.cid]['approved'])
         self.assertEqual(workflow['approvals'][self.cid]['invalidatedBy'], 'source_dependencies_changed')
         waiting = self.closeout('waiting', confirm=False)
@@ -180,7 +180,7 @@ class BehaviorInventoryTests(unittest.TestCase):
         self.assertTrue(final['readyForContinuation'], final)
         self.assertEqual(prose.read_bytes(), raw)
         self.assertEqual(load_structure(self.root)['chapters'][0]['proseBinding']['generation'], generation)
-        self.assertFalse(read_json(self.root/'.gnovel/workflow.json')['approvals'][self.cid]['approved'])
+        self.assertFalse(read_json(self.root/'.govel/workflow.json')['approvals'][self.cid]['approved'])
         # Source fact changes invalidate old citations and the handoff again.
         fragment_id = report['facts'][0]['fragmentId']
         source = load_structure(self.root); fragment = next(f for f in source['fragments'] if f['fragmentId'] == fragment_id)
@@ -196,7 +196,7 @@ class BehaviorInventoryTests(unittest.TestCase):
 
     def test_inventory_rejects_generation_prose_and_review_tampering(self):
         self.closeout()
-        source = load_structure(self.root); workflow = read_json(self.root/'.gnovel/workflow.json')
+        source = load_structure(self.root); workflow = read_json(self.root/'.govel/workflow.json')
         self.assertTrue(inventory_status(self.root, source, workflow, self.cid)['complete'])
         from scripts.core.prose_binding import seal_binding
         chapter = source['chapters'][0]
@@ -226,7 +226,7 @@ class LivingArrangementTests(unittest.TestCase):
             'scope': '仅今晚；未来安排保持计划。'}]
         plan['dependsOn'] = ['C-TEST-ALPHA', *(basis or [])]
         source['chapters'][0]['reviewClass'] = 'ordinary'
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         result = self.op('source.change-preview', baseRevision=source['revision'], requestId='living-plan', reason='本临时项目明确生活安排审校范围。',
                          changes=[{'action': 'put', 'collection': 'fragments', 'record': plan}])
         args = dict(result['nextAction']['arguments']); args.pop('projectRoot', None); self.op('source.commit', **args)
@@ -574,7 +574,7 @@ class PendingBehaviorBindingTests(unittest.TestCase):
         source = load_structure(self.root)
         for disposition in ('replan_required', 'local_repair'):
             with self.subTest(disposition=disposition):
-                workflow = read_json(self.root / '.gnovel/workflow.json'); before = deepcopy(workflow)
+                workflow = read_json(self.root / '.govel/workflow.json'); before = deepcopy(workflow)
                 artifact = envelope('stage_b_review', self.review(disposition),
                                     project_id=source['projectId'], chapter_id=self.cid)
                 with self.assertRaises(ValueError) as caught:
@@ -597,7 +597,7 @@ class PendingBehaviorBindingTests(unittest.TestCase):
                 current = self.review('replan_required')
                 self.assertEqual(registered['sourcePlanHash'], current['sourcePlanHash'])
                 self.assertEqual(registered['finalProseSha256'], current['finalProseSha256'])
-                workflow_before = (self.root / '.gnovel/workflow.json').read_bytes()
+                workflow_before = (self.root / '.govel/workflow.json').read_bytes()
                 stale = self.review('replan_required'); stale['sourcePlanHash'] = '0' * 64
                 if operation == 'workflow.artifact-pack':
                     before = self.files()
@@ -609,7 +609,7 @@ class PendingBehaviorBindingTests(unittest.TestCase):
                         artifacts=[{'artifactType': 'stage_b_review', 'payload': stale}]))
                     self.assertFalse(result['submissionComplete'])
                     self.assertEqual(result['error']['code'], 'ARTIFACT_BINDING_STALE')
-                self.assertEqual((self.root / '.gnovel/workflow.json').read_bytes(), workflow_before)
+                self.assertEqual((self.root / '.govel/workflow.json').read_bytes(), workflow_before)
 
 
 if __name__ == '__main__': unittest.main()

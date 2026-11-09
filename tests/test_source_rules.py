@@ -95,18 +95,18 @@ class SourceRulesTests(unittest.TestCase):
                 with self.assertRaises(StructureError): validate_structure(self.source)
 
     def test_query_reports_global_readiness_not_just_page(self):
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         page = query_rules(self.root, chapterId=self.cid, action='publish', limit=1)
         self.assertFalse(page['ready'])
         self.assertEqual(page['items'][0]['ruleId'], 'RU-RESCUE')
 
     def test_required_rule_blocks_publication_preflight(self):
         from scripts.core.finalization_preflight import preflight_finalization
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         result = preflight_finalization(self.root, self.cid, skip_title=True)
         self.assertIn('SOURCE_RULES_BLOCKED', {row['code'] for row in result.blockers})
         self.rule['enforcement'] = 'advisory'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         result = preflight_finalization(self.root, self.cid, skip_title=True)
         self.assertNotIn('SOURCE_RULES_BLOCKED', {row['code'] for row in result.blockers})
 
@@ -114,7 +114,7 @@ class SourceRulesTests(unittest.TestCase):
         from scripts.core.chapter_state import advance_chapter_status
         from scripts.core.workflow import WorkflowError
         self.rule['actions'] = ['prepare']
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(WorkflowError) as caught:
             advance_chapter_status(self.root, self.cid, 'planned')
         self.assertEqual(caught.exception.code, 'SOURCE_RULES_BLOCKED')
@@ -147,7 +147,7 @@ class SourceRulesTests(unittest.TestCase):
     def test_mechanical_exception_requires_declared_policy_and_evidence(self):
         from scripts.core.source_rule_issues import submit_rule_issue
         self.rule['exceptionsAllowed'] = True
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         row = evaluate_rules(self.source, self.cid, 'publish', root=self.root)['items'][0]
         submit_rule_issue(self.root, requestId='mechanical-exception', ruleId='RU-RESCUE',
             chapterId=self.cid, action='publish', inputHash=row['inputHash'], status='exception',

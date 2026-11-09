@@ -26,7 +26,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         self.directory = Path(temporary.name).resolve()
         self.gemini = self.directory / '.gemini'
         self.config = self.gemini / 'config/mcp_config.json'
-        self.skills = self.gemini / 'config/skills/gnovel'
+        self.skills = self.gemini / 'config/skills/govel'
         self.skills.mkdir(parents=True)
         for name in installer.LINKS:
             (self.skills / name).symlink_to(installer.REPO / name)
@@ -42,11 +42,11 @@ class AntigravityRegistrationTests(unittest.TestCase):
         self.config.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
 
     def backups(self):
-        return list(self.config.parent.glob('.mcp_config.json.gnovel-backup-*'))
+        return list(self.config.parent.glob('.mcp_config.json.govel-backup-*'))
 
     def test_missing_current_config_is_not_satisfied_by_old_settings(self):
         old = self.gemini / 'settings.json'
-        old.write_text(json.dumps({'mcpServers': {'gnovel': self.entry()}}))
+        old.write_text(json.dumps({'mcpServers': {'govel': self.entry()}}))
         original = old.read_bytes()
         report = installer.check()
         self.assertFalse(report['ok'])
@@ -55,7 +55,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         self.assertEqual(report['mcp']['problems'][0]['code'], 'MCP_CONFIG_MISSING')
         self.assertFalse(self.config.exists())
         self.assertEqual(old.read_bytes(), original)
-        self.assertFalse((self.config.parent / '.gnovel-mcp-install.lock').exists())
+        self.assertFalse((self.config.parent / '.govel-mcp-install.lock').exists())
 
     def test_missing_registration_and_bad_fields_are_reported_without_secrets(self):
         secret = 'a-private-value-never-printed'
@@ -76,7 +76,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         (self.directory / 'exists.py').write_text('pass\n')
         for change in changes:
             with self.subTest(change=change):
-                self.write({'mcpServers': {'gnovel': {**self.entry(), **change}}})
+                self.write({'mcpServers': {'govel': {**self.entry(), **change}}})
                 before = self.config.read_bytes()
                 report = installer.check()
                 self.assertFalse(report['ok'], change)
@@ -86,20 +86,20 @@ class AntigravityRegistrationTests(unittest.TestCase):
                 self.assertNotIn(secret, json.dumps(report))
 
     def test_static_success_does_not_claim_running_client_connection(self):
-        self.write({'mcpServers': {'gnovel': self.entry()}})
+        self.write({'mcpServers': {'govel': self.entry()}})
         report = installer.check()
         self.assertTrue(report['ok'], report)
         self.assertTrue(report['mcp']['configHealthy'])
         self.assertEqual(report['mcp']['status'], 'configured')
         self.assertFalse(report['mcp']['connectionVerified'])
         self.assertEqual(report['mcp']['hostConnection'], 'not_observed')
-        self.assertFalse((self.config.parent / '.gnovel-mcp-install.lock').exists())
+        self.assertFalse((self.config.parent / '.govel-mcp-install.lock').exists())
 
     def test_non_executable_python_is_not_healthy(self):
         command = self.directory / 'python3'
         command.write_text('#!/bin/sh\nexit 0\n')
         command.chmod(0o600)
-        self.write({'mcpServers': {'gnovel': {**self.entry(), 'command': str(command)}}})
+        self.write({'mcpServers': {'govel': {**self.entry(), 'command': str(command)}}})
         report = installer.check()
         self.assertFalse(report['ok'])
         self.assertIn('MCP_COMMAND_INVALID', {row['code'] for row in report['mcp']['problems']})
@@ -113,7 +113,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         self.assertTrue(first['mcp']['changed'])
         self.assertIsNone(first['mcp']['backupPath'])
         data = json.loads(self.config.read_text())
-        self.assertEqual(data['mcpServers']['gnovel'], self.entry())
+        self.assertEqual(data['mcpServers']['govel'], self.entry())
         self.assertEqual(stat.S_IMODE(self.config.stat().st_mode), 0o600)
         before = self.config.read_bytes(), self.config.stat().st_mtime_ns
         second = installer.install()
@@ -127,7 +127,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
     def test_repair_preserves_other_entries_options_and_exact_backup(self):
         original = {'theme': {'custom': True}, 'mcpServers': {
             'Other': {'url': 'https://other.invalid/', 'headers': {'Authorization': 'Bearer not-a-real-secret'}},
-            'gnovel': {'command': 'missing-python', 'args': ['/old/mcp_server.py', '--discovery-view', 'audit'],
+            'govel': {'command': 'missing-python', 'args': ['/old/mcp_server.py', '--discovery-view', 'audit'],
                         'type': 'http', 'url': 'https://obsolete.invalid', 'serverUrl': 'https://old.invalid',
                         'disabled': True, 'enabled': False, 'env': {'PRIVATE_LOCAL_SETTING': 'preserved-value'},
                         'customOption': {'retain': 'yes'}, 'timeout': 60000}}}
@@ -137,7 +137,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         self.assertTrue(report['ok'], report)
         actual = json.loads(self.config.read_text())
         expected = deepcopy(original)
-        entry = expected['mcpServers']['gnovel']
+        entry = expected['mcpServers']['govel']
         entry.update(command=sys.executable, args=[str(installer.MCP_SERVER), '--discovery-view', 'audit'],
                      type='stdio', disabled=False, enabled=True)
         del entry['url'], entry['serverUrl']
@@ -155,8 +155,8 @@ class AntigravityRegistrationTests(unittest.TestCase):
     def test_malformed_config_is_never_replaced(self):
         for raw in ('{broken', '[]', '{"mcpServers":[]}', '{"x":NaN}', '{"x":1,"x":2}',
                     '{"option":1e999,"mcpServers":{}}', '{"nested":{"value":-1e999},"mcpServers":{}}',
-                    '{"mcpServers":{"gnovel":[]}}', '{"mcpServers":{"gnovel":null}}',
-                    '{"mcpServers":{"gnovel":{"env":[]}}}'):
+                    '{"mcpServers":{"govel":[]}}', '{"mcpServers":{"govel":null}}',
+                    '{"mcpServers":{"govel":{"env":[]}}}'):
             with self.subTest(raw=raw):
                 self.config.write_text(raw)
                 report = installer.install()
@@ -165,11 +165,11 @@ class AntigravityRegistrationTests(unittest.TestCase):
                 self.assertEqual(self.backups(), [])
 
     def test_wrong_boolean_types_are_repaired_even_when_python_equality_matches(self):
-        self.write({'mcpServers': {'gnovel': {**self.entry(), 'disabled': 0, 'enabled': 1}}})
+        self.write({'mcpServers': {'govel': {**self.entry(), 'disabled': 0, 'enabled': 1}}})
         report = installer.install()
         self.assertTrue(report['ok'], report)
         self.assertEqual(report['mcp']['changedFields'], ['disabled', 'enabled'])
-        entry = json.loads(self.config.read_text())['mcpServers']['gnovel']
+        entry = json.loads(self.config.read_text())['mcpServers']['govel']
         self.assertIs(entry['disabled'], False)
         self.assertIs(entry['enabled'], True)
 
@@ -219,13 +219,13 @@ class AntigravityRegistrationTests(unittest.TestCase):
         self.assertEqual(json.loads(self.backups()[0].read_text()), concurrent)
         self.assertEqual(stat.S_IMODE(self.backups()[0].stat().st_mode), 0o600)
         self.assertEqual(report['mcp']['backupPath'], str(self.backups()[0]))
-        self.assertEqual([p for p in self.config.parent.glob('.gnovel-mcp-*')
-                          if p.name != '.gnovel-mcp-install.lock'], [])
+        self.assertEqual([p for p in self.config.parent.glob('.govel-mcp-*')
+                          if p.name != '.govel-mcp-install.lock'], [])
 
     def test_existing_install_lock_blocks_without_modifying_configuration(self):
         self.write({'mcpServers': {}})
         before = self.config.read_bytes()
-        lock = self.config.parent / '.gnovel-mcp-install.lock'
+        lock = self.config.parent / '.govel-mcp-install.lock'
         descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -257,7 +257,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         real_link = os.link
 
         def replace_before_publication(source, destination, **kwargs):
-            if Path(source).name.startswith('.gnovel-mcp-staged-'):
+            if Path(source).name.startswith('.govel-mcp-staged-'):
                 self.write(concurrent)
             return real_link(source, destination, **kwargs)
 
@@ -275,7 +275,7 @@ class AntigravityRegistrationTests(unittest.TestCase):
         real_link = os.link
 
         def fail_publish_only(source, destination, **kwargs):
-            if Path(source).name.startswith('.gnovel-mcp-staged-'):
+            if Path(source).name.startswith('.govel-mcp-staged-'):
                 raise OSError('simulated publication failure')
             return real_link(source, destination, **kwargs)
 
@@ -313,7 +313,7 @@ registration.install_registration(Path(configuration), Path(script))
                 process = subprocess.run([sys.executable, '-c', program, str(self.config),
                                           str(installer.MCP_SERVER), window], cwd=installer.REPO,
                                          env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1',
-                                              'GNOVEL_LOG_MODE': 'off'}, capture_output=True, timeout=15)
+                                              'GOVEL_LOG_MODE': 'off'}, capture_output=True, timeout=15)
                 self.assertEqual(process.returncode, -9, process.stderr)
                 pending = registration.pending_registration(self.config)
                 self.assertIsNotNone(pending)
@@ -328,7 +328,7 @@ registration.install_registration(Path(configuration), Path(script))
                 result = json.loads(self.config.read_text())
                 self.assertEqual(result['keep'], window)
                 self.assertEqual(result['mcpServers']['Other'], {'command': 'preserved'})
-                self.assertEqual(result['mcpServers']['gnovel'], self.entry())
+                self.assertEqual(result['mcpServers']['govel'], self.entry())
                 self.assertIsNone(registration.pending_registration(self.config))
                 self.assertEqual(self.config.stat().st_nlink, 1)
 
@@ -343,7 +343,7 @@ registration.install_registration(Path(configuration), Path(script))
         for tail, valid in tails:
             with self.subTest(tail=tail):
                 self.assertEqual(startup_arguments_valid(tail), valid)
-                self.write({'mcpServers': {'gnovel': {**self.entry(), 'args': [str(installer.MCP_SERVER), *tail]}}})
+                self.write({'mcpServers': {'govel': {**self.entry(), 'args': [str(installer.MCP_SERVER), *tail]}}})
                 self.assertEqual(installer.check()['mcp']['configHealthy'], valid)
                 with patch('sys.argv', ['mcp_server.py', *tail]), patch('sys.stdin', io.StringIO()), \
                         redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
@@ -354,12 +354,12 @@ registration.install_registration(Path(configuration), Path(script))
                             mcp_server.main()
                 report = installer.install()
                 self.assertTrue(report['ok'], report)
-                self.assertEqual(json.loads(self.config.read_text())['mcpServers']['gnovel']['args'],
+                self.assertEqual(json.loads(self.config.read_text())['mcpServers']['govel']['args'],
                                  [str(installer.MCP_SERVER), *(tail if valid else [])])
 
     def test_command_resolution_uses_configured_environment_path(self):
         environment = {'PATH': str(self.directory / 'no-executables')}
-        self.write({'mcpServers': {'gnovel': {'command': 'python3',
+        self.write({'mcpServers': {'govel': {'command': 'python3',
                                               'args': [str(installer.MCP_SERVER)], 'env': environment}}})
         before = self.config.read_bytes()
         report = installer.check()
@@ -368,21 +368,21 @@ registration.install_registration(Path(configuration), Path(script))
         self.assertIn('MCP_COMMAND_INVALID', {row['code'] for row in report['mcp']['problems']})
         report = installer.install()
         self.assertTrue(report['ok'], report)
-        entry = json.loads(self.config.read_text())['mcpServers']['gnovel']
+        entry = json.loads(self.config.read_text())['mcpServers']['govel']
         self.assertEqual(entry['env'], environment)
         self.assertEqual(entry['command'], sys.executable)
         result = subprocess.run([entry['command'], *entry['args']], input='', text=True,
-                                env={**os.environ, **environment, 'GNOVEL_LOG_MODE': 'off'},
+                                env={**os.environ, **environment, 'GOVEL_LOG_MODE': 'off'},
                                 capture_output=True, timeout=15, cwd=installer.REPO)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_unknown_discovery_filters_do_not_count_as_healthy_registration(self):
         for tail in (['--audience', 'not-a-station'], ['--task', 'not-a-task']):
             with self.subTest(tail=tail):
-                self.write({'mcpServers': {'gnovel': {**self.entry(), 'args': [str(installer.MCP_SERVER), *tail]}}})
+                self.write({'mcpServers': {'govel': {**self.entry(), 'args': [str(installer.MCP_SERVER), *tail]}}})
                 self.assertFalse(installer.check()['mcp']['configHealthy'])
                 self.assertTrue(installer.install()['ok'])
-                self.assertEqual(json.loads(self.config.read_text())['mcpServers']['gnovel']['args'],
+                self.assertEqual(json.loads(self.config.read_text())['mcpServers']['govel']['args'],
                                  [str(installer.MCP_SERVER)])
 
     def test_recovery_never_overwrites_new_config_after_interruption(self):
@@ -420,7 +420,7 @@ registration.install_registration(Path(configuration), Path(script))
 
         def stop_after_publication(source, destination, **kwargs):
             real_link(source, destination, **kwargs)
-            if Path(source).name.startswith('.gnovel-mcp-staged-'):
+            if Path(source).name.startswith('.govel-mcp-staged-'):
                 payload = json.dumps(concurrent).encode('utf-8')
                 os.ftruncate(descriptor, 0)
                 os.write(descriptor, payload)
@@ -434,7 +434,7 @@ registration.install_registration(Path(configuration), Path(script))
             os.close(descriptor)
         pending = registration.pending_registration(self.config)
         installed = json.loads(self.config.read_text())
-        self.assertIn('gnovel', installed['mcpServers'])
+        self.assertIn('govel', installed['mcpServers'])
         report = installer.install()
         self.assertFalse(report['ok'])
         self.assertEqual(report['mcp']['errorCode'], 'MCP_RECOVERY_CONFLICT')

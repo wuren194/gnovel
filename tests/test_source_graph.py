@@ -34,7 +34,7 @@ class SourceGraphTests(unittest.TestCase):
                                     'contentBindings': ['AT-LIFE'], 'dependsOn': [],
                                     'contentRole': 'plan'})
         validate_structure(source)
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
 
     def test_planning_edges_do_not_enter_canon_view(self):
         planning = query_source_links(self.root, recordId='PC-TEST-NODE', graph='planning', depth=1)
@@ -62,7 +62,7 @@ class SourceGraphTests(unittest.TestCase):
 
     def test_cli_and_mcp_expose_same_read_only_graph(self):
         project = Path(__file__).resolve().parents[1]
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         cli = subprocess.run([sys.executable, str(project / 'scripts/novelctl.py'),
                               'project', 'source', 'graph', '--project-root', str(self.root),
                               '--record-id', 'PC-TEST-NODE', '--graph', 'planning'],
@@ -76,7 +76,7 @@ class SourceGraphTests(unittest.TestCase):
         self.assertEqual(mcp.returncode, 0, mcp.stderr)
         actual = json.loads(json.loads(mcp.stdout.splitlines()[-1])['result']['content'][0]['text'])
         self.assertEqual(json.loads(cli.stdout), actual)
-        self.assertEqual(before, (self.root / '.gnovel/structure.json').read_bytes())
+        self.assertEqual(before, (self.root / '.govel/structure.json').read_bytes())
 
 
 if __name__ == '__main__':

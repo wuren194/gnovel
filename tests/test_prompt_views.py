@@ -22,7 +22,7 @@ class PromptViewTests(unittest.TestCase):
         self.fixture = create_schema5_project(self.root, chapter_count=1)
         self.chapter_id = self.fixture["chapterIds"][0]
 
-    def plan(self, station="gnovel-planner", **kwargs):
+    def plan(self, station="govel-planner", **kwargs):
         return resolve_prompt_plan(self.root, station, chapter_id=self.chapter_id, **kwargs)
 
     def test_station_plan_does_not_expand_reference_trees(self):
@@ -31,19 +31,19 @@ class PromptViewTests(unittest.TestCase):
         (library / 'manifest.json').write_text('{}')
         for number in range(20):
             (library / f'note-{number}.md').write_text('普通参考资料。')
-        manifest = {'promptPlan': {'gnovel-planner': {'always': [], 'conditional': []}},
-                    'onDemandReferences': {'gnovel-planner': ['library']}}
+        manifest = {'promptPlan': {'govel-planner': {'always': [], 'conditional': []}},
+                    'onDemandReferences': {'govel-planner': ['library']}}
         with patch('scripts.core.prompt_plan.TOOLBOX_ROOT', self.root), \
              patch('scripts.core.prompt_plan.toolbox_manifest', return_value=manifest):
-            station_plan = resolve_prompt_plan(self.root, 'gnovel-planner', design={}, view='station')
-            full = resolve_prompt_plan(self.root, 'gnovel-planner', design={}, view='full')
+            station_plan = resolve_prompt_plan(self.root, 'govel-planner', design={}, view='station')
+            full = resolve_prompt_plan(self.root, 'govel-planner', design={}, view='full')
             self.assertFalse(any("files" in row for row in station_plan["onDemandReferences"]))
             reference = station_plan['onDemandReferences'][0]
             self.assertEqual(reference['entrypoints'][0]['path'], 'library/manifest.json')
             self.assertLess(len(json.dumps(station_plan)), len(json.dumps(full)) * 0.7)
 
     def test_selected_ranges_are_exact_and_content_addressed(self):
-        plan = self.plan("gnovel-titler", view="station", decision_type="title")
+        plan = self.plan("govel-titler", view="station", decision_type="title")
         total = 0
         for contract in plan["contracts"]:
             lines = (ROOT / contract["path"]).read_text(encoding="utf-8").splitlines(keepends=True)
@@ -54,7 +54,7 @@ class PromptViewTests(unittest.TestCase):
         self.assertEqual(total, plan["characterCounts"]["contractText"])
         self.assertLess(total, len((ROOT / "shared/contracts/G-MULTI-IDENTITY-REVIEW.md").read_text()) / 2)
         self.assertEqual(plan["characterCounts"]["response"], len(json.dumps(plan, ensure_ascii=False, sort_keys=True, indent=2)))
-        self.assertEqual(plan, self.plan("gnovel-titler", view="station", decision_type="title"))
+        self.assertEqual(plan, self.plan("govel-titler", view="station", decision_type="title"))
 
     def test_heavy_chapter_metadata_reaches_review_compiler(self):
         structure = load_structure(self.root)
@@ -71,7 +71,7 @@ class PromptViewTests(unittest.TestCase):
         self.assertEqual(ordinary["reviewPlan"]["activeSeats"], [1, 2, 4, 5, 6, 7, 10])
 
     def test_plan_does_not_publish_stale_cache(self):
-        cache = self.root / ".gnovel/cache/story-state.json"
+        cache = self.root / ".govel/cache/story-state.json"
         cache.write_text("{}", encoding="utf-8")
         before = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
         self.plan(view="station")

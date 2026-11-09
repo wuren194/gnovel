@@ -69,7 +69,7 @@ class SourceReportTextTests(unittest.TestCase):
             with self.subTest(overrides=overrides), self.assertRaises(StructureError) as caught:
                 self.read(cursor=first['nextCursor'], **overrides)
             self.assertEqual(caught.exception.code, code)
-        path = self.root / '.gnovel/plans' / (self.preview['operationId'] + '.json')
+        path = self.root / '.govel/plans' / (self.preview['operationId'] + '.json')
         plan = read_json(path)
         plan['parameters']['proposals'][0]['proposal']['reason'] += ' changed'
         plan['planHash'] = _plan_hash({key: value for key, value in plan.items() if key != 'planHash'})

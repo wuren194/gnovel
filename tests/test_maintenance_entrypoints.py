@@ -57,7 +57,7 @@ class MaintenanceEntrypointTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             call_operation('source.search', self.root, {**args, 'selection': {'ownerIds': ['C-BETA']}})
         self.source['volumes'][0]['title'] = '人物甲'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as caught:
             call_operation('source.search', self.root, {'terms': ['他'], 'ownerSelectors': ['人物甲']})
         self.assertEqual(caught.exception.code, 'SOURCE_SEARCH_OWNER_AMBIGUOUS')

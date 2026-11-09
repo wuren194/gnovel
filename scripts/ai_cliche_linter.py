@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static prose diagnostics for gnovel.
+"""Static prose diagnostics for govel.
 
 The linter reports form-level evidence only.  It does not claim to prove POV,
 character voice, causality, consent, or physical continuity.
@@ -198,7 +198,7 @@ def build_report(text: str, *, intensity_level: int | None = None, mode: str = "
 
 
 def main() -> int:
-    parser = FailClosedArgumentParser(description="Static gnovel prose diagnostics")
+    parser = FailClosedArgumentParser(description="Static govel prose diagnostics")
     parser.add_argument("file_path", type=Path, help="Markdown or text file to scan")
     parser.add_argument("--json", action="store_true", help="Output the stable JSON report")
     parser.add_argument("--output", type=Path, help="Write the report to a file")

@@ -29,7 +29,7 @@ AUTHORIZATION_BY_EFFECT = {
 
 
 def _workflow(root: Path) -> dict:
-    path = root / '.gnovel' / 'workflow.json'
+    path = root / '.govel' / 'workflow.json'
     return read_json(path) if path.is_file() else default_workflow()
 
 

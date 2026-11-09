@@ -11,7 +11,7 @@ from .source_model import SourceIndex, author_content
 from .structure_store import StructureError, canonical_json, structure_hash
 from .write_sets import digest, json_bytes, safe_project_path
 
-REVIEW_PATH = '.gnovel/source-review.json'
+REVIEW_PATH = '.govel/source-review.json'
 
 
 def time_constraint_content(record):
@@ -334,7 +334,7 @@ def review_outputs(root: Path, before: dict, after: dict, impact: dict) -> dict[
                                'revision': after['revision']}
     state['sourceHash'] = structure_hash(after)
     outputs = {REVIEW_PATH: json_bytes(state)}
-    path = safe_project_path(root, '.gnovel/workflow.json')
+    path = safe_project_path(root, '.govel/workflow.json')
     if path.is_file() and impact['approvalInvalidations']:
         workflow = read_json(path)
         for chapter_id in impact['approvalInvalidations']:
@@ -352,5 +352,5 @@ def review_outputs(root: Path, before: dict, after: dict, impact: dict) -> dict[
                     # reviews replaced before the current version was invalidated.
                     for reference in history:
                         reference['invalidatedBy'] = 'source_dependencies_changed'
-        outputs['.gnovel/workflow.json'] = json_bytes(workflow)
+        outputs['.govel/workflow.json'] = json_bytes(workflow)
     return outputs

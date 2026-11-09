@@ -105,7 +105,7 @@ class SourceTimeTests(unittest.TestCase):
                 {'presentationId': 'PV-LATE', 'eventId': 'E-LATE', 'chapterId': 'CH-LATER',
                  'kind': 'flashback', 'order': 1},
             ])
-            validate_structure(source); write_json(root / '.gnovel/structure.json', source)
+            validate_structure(source); write_json(root / '.govel/structure.json', source)
             result = query_timeline(root, readerChapterId=chapter['chapterId'])
             rows = {row['timeId']: row for row in result['items']}
             self.assertEqual(rows['E-EARLY']['readerState'], 'revealed')

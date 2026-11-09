@@ -55,7 +55,7 @@ class ContinuityTests(unittest.TestCase):
         self.assertTrue(chapter_receipt(self.root, self.chapter_id)['readyForContinuation'])
 
     def test_completion_requires_explicit_approval_in_auto_mode(self):
-        path = self.root/'.gnovel/project.json'; marker = read_json(path)
+        path = self.root/'.govel/project.json'; marker = read_json(path)
         marker['approvalMode'] = 'auto'; write_json(path, marker)
         with self.assertRaises(ContinuityError) as caught: self.complete(approved=False)
         self.assertEqual(caught.exception.code, 'CONTINUITY_APPROVAL_REQUIRED')
@@ -100,12 +100,12 @@ class ContinuityTests(unittest.TestCase):
         with self.assertRaises(ContinuityError): self.complete(preview, changed)
 
     def test_failure_restores_receipt(self):
-        path = self.root/'.gnovel/workflow.json'; before = path.read_bytes()
+        path = self.root/'.govel/workflow.json'; before = path.read_bytes()
         def fail(phase, relative=None):
-            if phase == 'write' and relative == '.gnovel/workflow.json': raise RuntimeError('injected')
+            if phase == 'write' and relative == '.govel/workflow.json': raise RuntimeError('injected')
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail), self.assertRaises(RuntimeError): self.complete()
         self.assertEqual(path.read_bytes(), before)
-        self.assertFalse(list((self.root/'.gnovel/transactions').glob('*.json')))
+        self.assertFalse(list((self.root/'.govel/transactions').glob('*.json')))
 
     def test_preview_is_read_only(self):
         before = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
@@ -124,8 +124,8 @@ class MissingContinuityTests(unittest.TestCase):
     def test_missing_receipts_are_not_backfilled_or_bundled(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); fixture = create_schema5_project(root, chapter_count=3)
-            source = load_structure(root); workflow = read_json(root/'.gnovel/workflow.json')
-            before = (root/'.gnovel/workflow.json').read_bytes()
+            source = load_structure(root); workflow = read_json(root/'.govel/workflow.json')
+            before = (root/'.govel/workflow.json').read_bytes()
             pending = pending_continuity(source, workflow)
             self.assertEqual([r['chapterId'] for r in pending], fixture['chapterIds'])
             self.assertTrue(all(r['status'] == 'receipt_missing' for r in pending))
@@ -134,4 +134,4 @@ class MissingContinuityTests(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 'CONTINUITY_RECEIPT_MISSING')
             with self.assertRaises(ContinuityError):
                 require_predecessors_ready(source, workflow, {'chapterId': 'CH-NEXT', 'displayOrdinal': 4})
-            self.assertEqual((root/'.gnovel/workflow.json').read_bytes(), before)
+            self.assertEqual((root/'.govel/workflow.json').read_bytes(), before)

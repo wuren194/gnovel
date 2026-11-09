@@ -54,7 +54,7 @@ class ToolboxCopyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / 'source'
             self._fixture(source, '''class Probe(unittest.TestCase):
- def test_ok(self): self.assertTrue(Path(os.environ["GNOVEL_TEST_COPY_ROOT"]).joinpath(".test-toolbox-copy.json").is_file())
+ def test_ok(self): self.assertTrue(Path(os.environ["GOVEL_TEST_COPY_ROOT"]).joinpath(".test-toolbox-copy.json").is_file())
  def test_fail(self): self.fail("remote failure detail")
  def test_error(self): raise ValueError("remote error detail")
  @unittest.skip("browser dependency absent")

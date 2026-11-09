@@ -12,7 +12,7 @@ from .source_selection import normalize_selection
 from .structure_store import StructureError, canonical_json, load_structure
 from .write_sets import apply_write_set, digest, json_bytes, safe_project_path
 
-PRESETS_PATH = '.gnovel/source-presets.json'
+PRESETS_PATH = '.govel/source-presets.json'
 
 
 def _fingerprint(value) -> str:

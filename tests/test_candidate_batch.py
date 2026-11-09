@@ -43,12 +43,12 @@ class CandidateBatchTests(unittest.TestCase):
             (self.root / chapter['filePath']).unlink()
             chapter['proseBinding'] = seal_binding(source['projectId'], chapter['chapterId'], chapter['filePath'],
                 state='unbound', generation=source['revision'], expected_content_digest=None)
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         workflow = default_workflow(); workflow['approvedChapterIds'] = self.ids
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         self.batch = prepare_candidate_batch(self.root, requestId='three-candidates', chapterIds=self.ids[:3])['batchRef']
 
-    def workflow(self): return read_json(self.root / '.gnovel/workflow.json')
+    def workflow(self): return read_json(self.root / '.govel/workflow.json')
 
     def cli(self, action, **arguments):
         from scripts.core.catalog_api import snake_case
@@ -75,7 +75,7 @@ class CandidateBatchTests(unittest.TestCase):
         workflow = self.workflow()
         approve_artifacts(workflow, cid, artifact_hashes={kind: workflow['artifacts'][cid][kind]['artifactSha256'] for kind in kinds},
                           approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
 
     def chapter(self, cid, *, stop_after_a=False):
         recipe = prepare_candidate_recipe(self.root, batchRef=self.batch, chapterId=cid)
@@ -205,7 +205,7 @@ class CandidateBatchTests(unittest.TestCase):
         self.assertEqual(stored_project_path(self.root, pointer).read_bytes(), originals[pointer])
         with self.assertRaises(ValueError):
             safe_project_path(self.root, pointer, allow_absolute=True)
-        receipt_path = self.root / '.gnovel/project-locator.json'
+        receipt_path = self.root / '.govel/project-locator.json'
         receipt = read_json(receipt_path); receipt['projectId'] = 'PRJ-OTHER'
         write_json(receipt_path, receipt)
         with self.assertRaises(ValueError):
@@ -246,7 +246,7 @@ class CandidateBatchTests(unittest.TestCase):
                      'factChange': {'status': 'pending', 'requestId': 'candidate-key-return',
                                     'reason': '候选中明确发生归还动作，尚未建立正式事实。',
                                     'evidence': [{'text': TEXT}]}}]
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         pack_artifact(self.root, chapterId=cid, artifactType='stage_b_review', payload={
             'verdict': 'POLISH_READY', 'slots': evidenced_slots(TEXT), 'findings': findings,
             'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'},
@@ -255,8 +255,8 @@ class CandidateBatchTests(unittest.TestCase):
         item = recipe['recipe']['inputs'][0]
         self.assertEqual(item['conditionalFacts'][0]['findingId'], 'F-CANDIDATE-ONLY')
         self.assertEqual(item['materialRole'], 'conditional-candidate-not-canon')
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
-        self.assertFalse((self.root / '.gnovel/source-prose-evidence.json').exists())
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
+        self.assertFalse((self.root / '.govel/source-prose-evidence.json').exists())
         from scripts.core.fact_inventory import inventory_status
         self.assertFalse(inventory_status(self.root, load_structure(self.root), self.workflow(), cid)['complete'])
         self.assertNotIn('stage_b_review', self.workflow()['approvals'][cid]['artifactHashes'])
@@ -272,7 +272,7 @@ from scripts.core.authoring_submission import submit_artifacts
 root=Path(sys.argv[1]); cid=sys.argv[2]
 def checkpoint(stage, relative=None):
     if stage == 'committed':
-        pending=[json.loads(p.read_text()) for p in (root/'.gnovel/transactions').glob('*.json')]
+        pending=[json.loads(p.read_text()) for p in (root/'.govel/transactions').glob('*.json')]
         if any(p.get('operation')=='artifact_pack' and p.get('phase')=='committed' for p in pending):
             os.kill(os.getpid(),signal.SIGKILL)
 write_sets.checkpoint=checkpoint
@@ -316,7 +316,7 @@ from scripts.core.chapter_closeout import closeout_chapter
 root=Path(sys.argv[1])
 def checkpoint(stage,relative=None):
     if stage=='committed':
-        pending=[json.loads(p.read_text()) for p in (root/'.gnovel/transactions').glob('*.json')]
+        pending=[json.loads(p.read_text()) for p in (root/'.govel/transactions').glob('*.json')]
         if any(p.get('operation')=='finalize_chapter' and p.get('phase')=='committed' for p in pending):
             os.kill(os.getpid(),signal.SIGKILL)
 write_sets.checkpoint=checkpoint
@@ -344,7 +344,7 @@ closeout_chapter(root,requestId='killed-closeout',prepareRef=sys.argv[2],
         with self.assertRaises(ValueError):
             export_candidate_batch(self.root, batchRef=self.batch, output='工作台/阅读稿.md')
         self.assertEqual(path.read_text(), '已有作者阅读笔记。')
-        source_path = self.root / '.gnovel/workflow.json'
+        source_path = self.root / '.govel/workflow.json'
         def change(stage):
             if stage == 'before_publish':
                 workflow = read_json(source_path)
@@ -473,7 +473,7 @@ closeout_chapter(root,requestId='killed-closeout',prepareRef=sys.argv[2],
         source['fragments'].append(fact)
         next(f for f in source['fragments'] if f['ownerId'] == self.ids[0] and f['contentRole'] == 'plan')['dependsOn'] = ['SF-KEY-STATE']
         from scripts.core.structure_store import validate_structure
-        validate_structure(source); write_json(self.root / '.gnovel/structure.json', source)
+        validate_structure(source); write_json(self.root / '.govel/structure.json', source)
         self.batch = prepare_candidate_batch(self.root, requestId='fact-dependent-batch', chapterIds=self.ids[:3])['batchRef']
         # An actual unrelated registered/approved candidate proves the operation
         # preserves evidence, rather than comparing two absent artifact entries.

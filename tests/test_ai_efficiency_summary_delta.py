@@ -90,7 +90,7 @@ class SummaryDeltaTests(unittest.TestCase):
 
     def test_body_change_and_late_transaction_change_are_rejected_without_restoring_source(self):
         arguments = self.delta()
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         path = self.root / source['chapters'][0]['filePath']
         path.write_text('准备后改稿')
         before = (self.root / SUMMARY_PATH).read_bytes()

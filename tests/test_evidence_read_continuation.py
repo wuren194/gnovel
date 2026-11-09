@@ -65,7 +65,7 @@ class EvidenceReadContinuationTests(unittest.TestCase):
             with self.subTest(overrides=overrides), self.assertRaises(StructureError):
                 self.prepare(cursor=page['nextCursor'], **{'resumeRequestIds': ['first'], **overrides})
         self.source['fragments'][0]['text'] += ' External change.'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError):
             self.prepare(cursor=page['nextCursor'], resumeRequestIds=['first'])
 
@@ -76,7 +76,7 @@ class EvidenceReadContinuationTests(unittest.TestCase):
         other = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'C-ALPHA'})
         with self.assertRaises(StructureError):
             self.prepare(cursor=page['nextCursor'], resumeRequestIds=['first'], aggregateRef=other['selectionRef'])
-        path = self.root / '.gnovel/source-review-receipts.json'
+        path = self.root / '.govel/source-review-receipts.json'
         ledger = read_json(path)
         next(iter(ledger['requests'].values()))['snapshot']['sourceHash'] = 'tampered'
         write_json(path, ledger)

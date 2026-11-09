@@ -19,6 +19,7 @@ class _ObservedReads(dict):
     def __init__(self):
         super().__init__()
         self.knowledge = None
+        self.roundtable = None
 
 
 def _state(path):
@@ -40,7 +41,7 @@ def _observe_open(event, arguments):
     if not path.is_relative_to(current['root']):
         return
     relative = path.relative_to(current['root']).as_posix()
-    if relative == '.gnovel/structure.lock' or '__pycache__' in path.parts:
+    if relative == '.govel/structure.lock' or '__pycache__' in path.parts:
         return
     current['observed'].setdefault(relative, _state(path))
 
@@ -74,6 +75,17 @@ def observe_knowledge(root, files, *, directory=None, members=None):
         knowledge['files'].setdefault(relative, list(state) if state is not None else None)
     if directory is not None:
         knowledge['queries'].setdefault(directory, list(members))
+
+
+def observe_roundtable(root, resource):
+    current = _ACTIVE.get()
+    if current is None:
+        return
+    snapshot = {'root': str(Path(root).resolve()), 'resource': resource}
+    previous = current['observed'].roundtable
+    if previous is not None and previous != snapshot:
+        raise StructureError('TASK_INPUT_CHANGED', 'roundtable changed while preparing; prepare again')
+    current['observed'].roundtable = snapshot
 
 
 @contextmanager
@@ -128,19 +140,19 @@ def capture_dependencies(root, *, chapter_id=None, evidence=None):
         for relative in members:
             add(relative, kind)
 
-    for relative in ('AGENTS.md', '.gnovel/project.json', '.gnovel/structure.json'):
+    for relative in ('AGENTS.md', '.govel/project.json', '.govel/structure.json'):
         add(relative, 'authorization')
-    query('.gnovel/transactions', '*.json', 'authorization')
-    source = _json(root, '.gnovel/structure.json')
+    query('.govel/transactions', '*.json', 'authorization')
+    source = _json(root, '.govel/structure.json')
     if evidence is None:
-        add('.gnovel/workflow.json', 'authorization')
-        add('.gnovel/aux/story-summary.json')
-        for relative in ('.gnovel/source-review.json', '.gnovel/source-review-receipts.json',
-                         '.gnovel/source-prose-evidence.json', '.gnovel/source-rule-issues.json'):
+        add('.govel/workflow.json', 'authorization')
+        add('.govel/aux/story-summary.json')
+        for relative in ('.govel/source-review.json', '.govel/source-review-receipts.json',
+                         '.govel/source-prose-evidence.json', '.govel/source-rule-issues.json'):
             add(relative)
         for chapter in source.get('chapters', []):
             add(chapter.get('filePath'))
-        workflow = _json(root, '.gnovel/workflow.json')
+        workflow = _json(root, '.govel/workflow.json')
         artifacts = workflow.get('artifacts', {})
         selected = artifacts.values() if chapter_id is None else [artifacts.get(chapter_id, {})]
         for chapter in selected:
@@ -149,11 +161,11 @@ def capture_dependencies(root, *, chapter_id=None, evidence=None):
                     for key in ('artifactPath', 'previousArtifactPath'):
                         add(entry.get(key))
     elif evidence['kind'] == 'review' and evidence.get('reviewContext'):
-        add('.gnovel/source-review.json')
-        add('.gnovel/source-review-receipts.json')
+        add('.govel/source-review.json')
+        add('.govel/source-review-receipts.json')
     elif evidence['kind'] == 'continuity':
-        add('.gnovel/workflow.json', 'authorization')
-        add('.gnovel/aux/story-summary.json')
+        add('.govel/workflow.json', 'authorization')
+        add('.govel/aux/story-summary.json')
         for relative in evidence.get('paths') or []:
             add(relative)
     elif evidence['kind'] == 'prose':
@@ -167,12 +179,15 @@ def capture_dependencies(root, *, chapter_id=None, evidence=None):
 
 
 def bind_observed(dependencies, observed):
+    roundtable = getattr(observed, 'roundtable', None)
+    if roundtable is not None:
+        dependencies['roundtable'] = deepcopy(roundtable)
     knowledge = getattr(observed, 'knowledge', None)
     if knowledge is not None:
         dependencies['knowledge'] = deepcopy(knowledge)
     for relative, state in list(observed.items()):
         parts = Path(relative).parts
-        if (len(parts) == 5 and parts[:3] == ('.gnovel', 'workbench', 'candidates')
+        if (len(parts) == 5 and parts[:3] == ('.govel', 'workbench', 'candidates')
                 and parts[-1] == 'index.json'):
             # Saving an unselected version appends to this index but does not
             # change the selected manuscript. The selected body still retains
@@ -209,6 +224,14 @@ def validate_dependencies(root, dependencies, *, code='READ_BATCH_STALE'):
     from .data_provider import binding
     if dependencies.get('provider') != binding():
         changed.append({'kind': 'runtime-policy', 'root': 'provider', 'change': 'modified'})
+    if 'roundtable' in dependencies:
+        from .data_provider import roundtable_resource, storage_root, ProviderError
+        try:
+            current = {'root': str(storage_root().resolve()), 'resource': roundtable_resource()}
+        except (ProviderError, OSError) as exc:
+            raise StructureError(code, 'roundtable is unavailable; prepare again') from exc
+        if dependencies['roundtable'] != current:
+            changed.append({'kind': 'roundtable', 'change': 'modified'})
     knowledge = dependencies.get('knowledge')
     if knowledge is not None:
         from .data_provider import storage_root, confined_path, ProviderError

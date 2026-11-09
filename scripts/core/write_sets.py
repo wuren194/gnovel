@@ -220,7 +220,7 @@ def checkpoint(phase: str, relative: str | None = None) -> None:
 
 
 def _persist(root: Path, manifest: dict) -> None:
-    path = safe_project_path(root, f".gnovel/transactions/{manifest['transactionId']}.json")
+    path = safe_project_path(root, f".govel/transactions/{manifest['transactionId']}.json")
     write_json(path, manifest)
 
 
@@ -228,7 +228,7 @@ PUBLICATION_PROTOCOL = "preserve-exclusive-v1"
 
 
 def _transaction_path(root: Path, manifest: dict, relative: str) -> Path:
-    return safe_project_path(root, f".gnovel/transactions/{manifest['transactionId']}/{relative}")
+    return safe_project_path(root, f".govel/transactions/{manifest['transactionId']}/{relative}")
 
 
 def _clear(root: Path, manifest: dict) -> None:
@@ -239,7 +239,7 @@ def _clear(root: Path, manifest: dict) -> None:
     cleanup nor GC removes this transaction directory.
     """
     from .file_preservation import exclusive_move
-    active = safe_project_path(root, f".gnovel/transactions/{manifest['transactionId']}.json")
+    active = safe_project_path(root, f".govel/transactions/{manifest['transactionId']}.json")
     terminal = _transaction_path(root, manifest, 'completed.json')
     checkpoint('before-archive')
     exclusive_move(active, terminal)
@@ -436,7 +436,7 @@ def apply_write_set(root: Path, outputs: dict[str, bytes | None], *, expected: l
     validate_guard_groups(grouped_guards, stage='preparing')
     assert_lock_current(root)
     txid = 'TX-' + uuid.uuid4().hex.upper()
-    directory = safe_project_path(root, f'.gnovel/transactions/{txid}')
+    directory = safe_project_path(root, f'.govel/transactions/{txid}')
     missing = {'exists': False, 'sha256': None, 'mode': None, 'dev': None, 'ino': None}
     expected_objects = {row['path']: row['expectedObject'] for row in expected or [] if row.get('expectedObject') is not None}
     for number, row in enumerate(rows):
@@ -510,7 +510,7 @@ def apply_write_set(root: Path, outputs: dict[str, bytes | None], *, expected: l
             # A failed commit-marker write may leave the durable phase prepared.
             # Recovery follows the actual persisted record, never our mutated dict.
             from .jsonio import read_json
-            durable = read_json(safe_project_path(root, f'.gnovel/transactions/{txid}.json'))
+            durable = read_json(safe_project_path(root, f'.govel/transactions/{txid}.json'))
             recover_write_set(root, durable)
         except BaseException as recovery:
             raise OSError(f'rollback incomplete（原始失败：{failure}）；{recovery}') from failure

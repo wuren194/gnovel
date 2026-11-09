@@ -160,7 +160,7 @@ def _path(root, request_id):
     if not isinstance(request_id, str) or not request_id.strip():
         raise StructureError('CLOSEOUT_REQUEST_INVALID', 'requestId must be nonempty')
     identity = sha256_json({'projectId': load_structure(root)['projectId'], 'requestId': request_id})
-    return f'.gnovel/closeout-requests/{identity}.json'
+    return f'.govel/closeout-requests/{identity}.json'
 
 
 def _seal(record):

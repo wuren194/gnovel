@@ -20,7 +20,7 @@ from .call_log_store import CallLogStore
 from .project import call_logging_policy
 from .structure_store import StructureError
 
-_ACTIVE: ContextVar[CallRecorder | None] = ContextVar("gnovel_call_log", default=None)
+_ACTIVE: ContextVar[CallRecorder | None] = ContextVar("govel_call_log", default=None)
 
 
 def _now() -> str:
@@ -28,12 +28,12 @@ def _now() -> str:
 
 
 def log_root() -> Path:
-    value = os.environ.get("GNOVEL_LOG_DIR")
-    return Path(os.path.abspath(os.path.expanduser(value))) if value else Path.home() / "Library/Logs/gnovel"
+    value = os.environ.get("GOVEL_LOG_DIR")
+    return Path(os.path.abspath(os.path.expanduser(value))) if value else Path.home() / "Library/Logs/govel"
 
 
 def _settings(policy: dict, store: CallLogStore) -> tuple[str, str]:
-    override = os.environ.get("GNOVEL_LOG_MODE")
+    override = os.environ.get("GOVEL_LOG_MODE")
     if override is not None:
         mode, source = override, "environment"
     else:
@@ -163,7 +163,7 @@ def _begin(entrypoint: str, request, name: str, client, enabled: bool) -> CallRe
     recorder = CallRecorder()
     # A deliberate off switch does not create files or require healthy local
     # logging configuration. It never affects a business validation gate.
-    if not enabled or os.environ.get("GNOVEL_LOG_MODE") == "off":
+    if not enabled or os.environ.get("GOVEL_LOG_MODE") == "off":
         return recorder
     try:
         policy = call_logging_policy()

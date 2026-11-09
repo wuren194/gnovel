@@ -54,7 +54,7 @@ class ScratchRepo:
     """仓库之外的真实 git 仓库；所有快照能力都在它上面实测。"""
 
     def __init__(self) -> None:
-        self.root = Path(tempfile.mkdtemp(prefix="gnovel-scratch-", dir=local_ci._temp_root()))
+        self.root = Path(tempfile.mkdtemp(prefix="govel-scratch-", dir=local_ci._temp_root()))
 
     def git(self, *args: str) -> None:
         subprocess.run(["git", "-C", str(self.root), "-c", "user.email=t@example.invalid",
@@ -824,7 +824,7 @@ class RepositorySnapshotTests(unittest.TestCase):
         self.assertNotEqual(entry["sha256"], hashlib.sha256(b"TARGET BYTES\n").hexdigest())
 
     def test_changing_a_symlinks_external_target_is_not_proof_of_its_own_change(self):
-        outside = Path(tempfile.mkdtemp(prefix="gnovel-outside-", dir=local_ci._temp_root()))
+        outside = Path(tempfile.mkdtemp(prefix="govel-outside-", dir=local_ci._temp_root()))
         self.addCleanup(shutil.rmtree, outside, True)
         (outside / "payload.txt").write_text("one\n", encoding="utf-8")
         (self.repo.root / "外部链接.md").symlink_to(outside / "payload.txt")

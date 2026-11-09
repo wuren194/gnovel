@@ -66,7 +66,7 @@ def candidate_prose(root: Path, chapter_id: str, *, structure: dict | None = Non
     chapter = next((row for row in structure['chapters'] if row['chapterId'] == chapter_id), None)
     if chapter is None:
         raise StructureError('CHAPTER_NOT_FOUND', 'unknown chapter', {'chapterId': chapter_id})
-    workflow_path = root / '.gnovel/workflow.json'
+    workflow_path = root / '.govel/workflow.json'
     workflow = normalize_workflow(read_json(workflow_path)) if workflow_path.is_file() else default_workflow()
     entry = workflow.get('artifacts', {}).get(chapter_id, {}).get('candidate_prose')
     from .current_candidate import require_candidate_selection
@@ -132,7 +132,7 @@ def complete_evidence(payload: dict) -> bool:
 
 def evidence_current(root: Path, chapter_id: str, *, structure: dict | None = None) -> dict:
     structure = load_structure(root) if structure is None else structure
-    workflow_path = root / '.gnovel/workflow.json'
+    workflow_path = root / '.govel/workflow.json'
     workflow = normalize_workflow(read_json(workflow_path)) if workflow_path.is_file() else default_workflow()
     entry = workflow.get('artifacts', {}).get(chapter_id, {}).get('diagnostics')
     result = {'registered': isinstance(entry, dict), 'current': False, 'fresh': False, 'passed': False}
@@ -236,7 +236,7 @@ def _run_diagnostics(root: Path, *, chapter_id: str, mode: str | None = None, in
             raise StructureError('DIAGNOSTICS_INPUT_INVALID', 'mixed mode requires explicit sceneParagraphs')
         if strict_floor and mode != 'peakScene' and not scene_paragraphs:
             raise StructureError('DIAGNOSTICS_INPUT_INVALID', 'strict floor on a partly adult chapter requires explicit sceneParagraphs')
-        workflow_path = safe_project_path(root, '.gnovel/workflow.json')
+        workflow_path = safe_project_path(root, '.govel/workflow.json')
         workflow_raw = workflow_path.read_bytes() if workflow_path.is_file() else None
         workflow = normalize_workflow(json.loads(workflow_raw)) if workflow_raw is not None else default_workflow()
         proposed = None
@@ -251,8 +251,8 @@ def _run_diagnostics(root: Path, *, chapter_id: str, mode: str | None = None, in
         current_facts = facts
         if proposed is not None:
             facts = evidence_payload(root, chapter_id, structure=proposed)
-            if '.gnovel/structure.json' in facts['sourceFiles']:
-                facts['sourceFiles']['.gnovel/structure.json'] = {'sha256': digest(json_bytes(proposed))}
+            if '.govel/structure.json' in facts['sourceFiles']:
+                facts['sourceFiles']['.govel/structure.json'] = {'sha256': digest(json_bytes(proposed))}
         previous_entry = workflow.get('artifacts', {}).get(chapter_id, {}).get('diagnostics')
         previous = None
         try:
@@ -264,7 +264,7 @@ def _run_diagnostics(root: Path, *, chapter_id: str, mode: str | None = None, in
         semantic_hash = sha256_json({**semantic, **run})
         guards = [inference_guard] if inference_guard else []
         guards.extend(prose.get('selectionGuards', []))
-        for relative in sorted({'.gnovel/structure.json', prose['artifactPath'],
+        for relative in sorted({'.govel/structure.json', prose['artifactPath'],
                                 *facts['sourceFiles']}):
             state, _ = guard_observation(safe_project_path(root, relative))
             guards.append({'path': relative, **state})
@@ -285,7 +285,7 @@ def _run_diagnostics(root: Path, *, chapter_id: str, mode: str | None = None, in
                     raise StructureError('DIAGNOSTICS_INPUT_CHANGED', 'diagnostic inputs changed before lifecycle advancement')
                 from .derived_views import derived_outputs
                 outputs, _ = derived_outputs(root, proposed, current=structure,
-                    extras={'.gnovel/workflow.json': json_bytes(workflow)})
+                    extras={'.govel/workflow.json': json_bytes(workflow)})
                 _publish(root, outputs, guards, workflow_raw)
             return {'ok': True, 'code': 'DIAGNOSTICS_REUSED', 'evidence': previous['payload'], 'artifact': previous,
                     'registered': True, 'approved': False, 'reused': True,
@@ -365,7 +365,7 @@ def _run_diagnostics(root: Path, *, chapter_id: str, mode: str | None = None, in
                         project_id=structure['projectId'], project_root=root, artifact_bytes=artifact_bytes)
         if previous_path:
             workflow['artifacts'][chapter_id]['diagnostics']['previousArtifactPath'] = previous_path
-        outputs = {relative: artifact_bytes, '.gnovel/workflow.json': json_bytes(workflow)}
+        outputs = {relative: artifact_bytes, '.govel/workflow.json': json_bytes(workflow)}
         if proposed is not None:
             from .derived_views import derived_outputs
             outputs, _ = derived_outputs(root, proposed, current=structure, extras=outputs)
@@ -378,7 +378,7 @@ def _run_diagnostics(root: Path, *, chapter_id: str, mode: str | None = None, in
 
 def _publish(root, outputs, guards, workflow_raw):
     expected = inventory(root, outputs)
-    observed = next(row['before']['sha256'] for row in expected if row['path'] == '.gnovel/workflow.json')
+    observed = next(row['before']['sha256'] for row in expected if row['path'] == '.govel/workflow.json')
     if observed != (digest(workflow_raw) if workflow_raw is not None else None):
         raise StructureError('WRITE_SET_CONFLICT', 'workflow changed during diagnostics')
     validate_guards(root, guards, stage='diagnostics-publication')

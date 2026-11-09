@@ -54,7 +54,7 @@ class ImporterTests(unittest.TestCase):
             self.assertEqual(structure['chapters'][0]['proseBinding']['state'], 'unbound')
             self.assertFalse((root/structure['chapters'][0]['filePath']).exists())
             from scripts.core.jsonio import read_json
-            self.assertEqual(read_json(root/'.gnovel/workflow.json')['approvals'], {})
+            self.assertEqual(read_json(root/'.govel/workflow.json')['approvals'], {})
 
     def test_import_does_not_accept_project_snapshots_or_caller_authority(self):
         for field, value, code in (

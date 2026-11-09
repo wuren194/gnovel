@@ -87,7 +87,7 @@ class AuthorPathRecoveryTests(unittest.TestCase):
         source = fixture['structure']
         source['fragments'][0]['chapterContract']['behaviorCoverage'] = {
             'relationship': 'applicable', 'living': 'applicable'}
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         result = review_form(self.root, chapterId=fixture['chapterIds'][0], artifactType='stage_a_review', view='full')
         preflight = result['planPreflight']
         self.assertFalse(preflight['readyForCompletionReview'])
@@ -101,7 +101,7 @@ class AuthorPathRecoveryTests(unittest.TestCase):
         from scripts.core.jsonio import read_json
         from tests.fixtures_workflow import review_ready_project
         cid = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
-        old = read_json(self.root / '.gnovel/workflow.json')['artifacts'][cid]['candidate_prose']['artifactSha256']
+        old = read_json(self.root / '.govel/workflow.json')['artifacts'][cid]['candidate_prose']['artifactSha256']
         result = pack_artifact(self.root, chapterId=cid, artifactType='candidate_prose', text='重新交班的中性测试正文。', requestId='replace')
         replacement = result['replacement']
         self.assertEqual(replacement['previousArtifactSha256'], old)

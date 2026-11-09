@@ -321,8 +321,8 @@ def preflight_finalization(root: Path, chapter_id: str, *, title_candidate_id: s
     root = root.expanduser().resolve()
     result = FinalizationPreflight()
     try:
-        lock_path = safe_project_path(root, ".gnovel/structure.lock")
-        safe_project_path(root, ".gnovel/transactions")
+        lock_path = safe_project_path(root, ".govel/structure.lock")
+        safe_project_path(root, ".govel/transactions")
         if check_lock and project_lock_observation(root)["locked"]:
             result.block("PROJECT_LOCKED", "another client is changing this project")
         result.transactions = pending_transactions(root)
@@ -562,8 +562,8 @@ def preflight_finalization(root: Path, chapter_id: str, *, title_candidate_id: s
                 "bindingGeneration": ownership["bindingGeneration"],
                 "observedContentDigest": ownership["observedContentDigest"],
             }
-        targets = ([prose_path, safe_project_path(root, '.gnovel/structure.json'),
-                    safe_project_path(root, '.gnovel/workflow.json')])
+        targets = ([prose_path, safe_project_path(root, '.govel/structure.json'),
+                    safe_project_path(root, '.govel/workflow.json')])
         for path in targets:
             try:
                 safe_project_path(root, path.relative_to(root))

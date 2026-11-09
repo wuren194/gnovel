@@ -46,11 +46,15 @@ except ImportError:  # running from inside scripts/
     from scripts.core.project import TOOLBOX_ROOT, toolbox_manifest
 
 MANIFEST_NAME = 'MANIFEST.json'
+from scripts.core.local_layout import PUBLIC_LOCAL_FILES, EMPTY_LOCAL_FILES, local_content_issue
 
 # 明确排除的类别。每一项都要能说清「为什么它不该进发行包」；说不清的不要凭猜测删。
 # path 类是前缀匹配；noise 类是「任一路径分量命中即排除」——它们可以出现在任何深度。
 EXCLUSIONS: dict[str, tuple[str, str, str]] = {
     'vcs_metadata': ('.git', 'Git 元数据不是发行内容', 'prefix'),
+    'local_user_data': ('local', '个人资料、席位、配置与日志不进入发行包', 'prefix'),
+    'provider_configuration': ('provider-config.json', '本地 Provider 配置', 'component'),
+    'provider_manifest': ('provider.json', '本地 Provider 清单', 'component'),
     'private_reference_alias': ('小说参考', '真实参考小说原文的旧路径别名，只在本机', 'prefix'),
     'private_source': ('knowledge/sources/private/', '私有原文与迁移回执，Git 已忽略', 'prefix'),
     'derived_private_state': ('knowledge/.cache/', '可重建派生索引', 'prefix'),
@@ -76,6 +80,8 @@ def _unsafe(name: str) -> str | None:
     path = PurePosixPath(name)
     if path.is_absolute() or '..' in path.parts or '\\' in name or not name:
         return 'unsafe_path'
+    if name in PUBLIC_LOCAL_FILES:
+        return None
     parts = set(path.parts)
     for category, (needle, _reason, kind) in EXCLUSIONS.items():
         if kind == 'prefix':
@@ -188,11 +194,18 @@ def collect() -> dict:
             continue
         path = TOOLBOX_ROOT / name
         if path.is_symlink():
+            if name in EMPTY_LOCAL_FILES:
+                excluded[name] = {'category': 'local_placeholder_not_empty', 'reason': '公开占位必须是空的普通文件'}
+                continue
             link_targets[name] = os.readlink(path)
             continue
         if not path.is_file():
             continue
-        packaged[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        data = path.read_bytes()
+        if issue := local_content_issue(name, data):
+            excluded[name] = {'category': issue, 'reason': '公开目录占位文件必须为空'}
+            continue
+        packaged[name] = hashlib.sha256(data).hexdigest()
     # 链条合流：指向另一个被拒链接的链接同样无法在包内自洽，收敛到不动点。
     accepted = set(link_targets)
     changed = True
@@ -409,6 +422,8 @@ def check(manifest_path: Path, archive: Path | None) -> dict:
             problems.append({'path': name, 'code': 'hash_mismatch', 'expected': row['sha256'],
                              'actual': digest})
     for name in present:
+        if issue := local_content_issue(name, bodies.get(name, links.get(name, '').encode())):
+            problems.append({'path': name, 'code': issue})
         category = _unsafe(name)
         if category:
             problems.append({'path': name, 'code': 'excluded_category_present', 'category': category})

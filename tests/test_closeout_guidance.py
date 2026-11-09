@@ -23,7 +23,7 @@ class CloseoutGuidanceTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve() / 'book'
-        environment = patch.dict(os.environ, {'GNOVEL_LOG_MODE': 'off'})
+        environment = patch.dict(os.environ, {'GOVEL_LOG_MODE': 'off'})
         environment.start()
         self.addCleanup(environment.stop)
         self.cid = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
@@ -33,7 +33,7 @@ class CloseoutGuidanceTests(unittest.TestCase):
                 for p in self.root.rglob('*') if p.is_file()}
 
     def workflow(self, change):
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         value = read_json(path)
         change(value)
         write_json(path, value)
@@ -60,9 +60,9 @@ class CloseoutGuidanceTests(unittest.TestCase):
                     self.assertTrue(action['when'])
 
     def occupy_target(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         chapter = next(row for row in source['chapters'] if row['chapterId'] == self.cid)
-        entry = read_json(self.root / '.gnovel/workflow.json')['artifacts'][self.cid]['candidate_prose']
+        entry = read_json(self.root / '.govel/workflow.json')['artifacts'][self.cid]['candidate_prose']
         candidate = read_json(Path(entry['artifactPath']))
         target = self.root / chapter['filePath']
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -70,7 +70,7 @@ class CloseoutGuidanceTests(unittest.TestCase):
         return chapter, target
 
     def refresh_diagnostics(self):
-        previous = read_json(self.root / '.gnovel/workflow.json')['artifacts'][self.cid]['diagnostics']['artifactSha256']
+        previous = read_json(self.root / '.govel/workflow.json')['artifacts'][self.cid]['diagnostics']['artifactSha256']
         # A disposable invalidation forces the real runner to publish a new report.
         self.workflow(lambda value: value['artifacts'][self.cid]['diagnostics'].update(
             invalidatedBy={'reason': 'synthetic rerun requested'}))
@@ -85,9 +85,9 @@ class CloseoutGuidanceTests(unittest.TestCase):
             value['artifacts'][self.cid].pop('state_candidate')
             value['approvals'][self.cid]['artifactHashes'].pop('state_candidate')
         self.workflow(remove_state)
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['bookName'] += '（合成变更）'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         chapter, target = self.occupy_target()
         before = self.inventory()
         result = prepare_closeout(self.root, chapterId=self.cid)
@@ -159,9 +159,9 @@ class CloseoutGuidanceTests(unittest.TestCase):
 
     def test_stale_diagnostics_does_not_recommend_approving_its_old_report(self):
         self.refresh_diagnostics()
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['bookName'] += '（输入已变）'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         prepared = prepare_closeout(self.root, chapterId=self.cid, skipTitle=True)
         self.assertIn('DIAGNOSTICS_STALE', {row['code'] for row in prepared['blockers']})
         self.assertFalse(any(row['operation'] == 'project.workflow.artifact-approve'
@@ -197,7 +197,7 @@ class CloseoutGuidanceTests(unittest.TestCase):
         self.assertEqual(self.inventory(), before)
 
     def test_bad_stage_b_file_does_not_hide_other_closeout_failures(self):
-        value = read_json(self.root / '.gnovel/workflow.json')
+        value = read_json(self.root / '.govel/workflow.json')
         Path(value['artifacts'][self.cid]['stage_b_review']['artifactPath']).write_text('{invalid json')
         self.occupy_target()
         before = self.inventory()
@@ -232,7 +232,7 @@ class CloseoutGuidanceTests(unittest.TestCase):
         self.check_action_shapes(receipt)
 
     def test_ready_run_action_has_request_id_and_uses_inline_continuity_without_target_sync(self):
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         target = self.root / source['chapters'][0]['filePath']
         self.assertFalse(target.exists())
         prepared = prepare_closeout(self.root, chapterId=self.cid, skipTitle=True)
@@ -282,7 +282,7 @@ class CloseoutGuidanceTests(unittest.TestCase):
         self.assertTrue(completed['readyForContinuation'], completed)
         self.assertEqual(completed['completedStages'], ['continuity'])
         for path, data in frozen.items():
-            if path.startswith('.gnovel/closeout-requests/'):
+            if path.startswith('.govel/closeout-requests/'):
                 self.assertEqual((self.root / path).read_bytes(), data)
 
 

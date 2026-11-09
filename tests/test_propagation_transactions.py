@@ -75,7 +75,7 @@ class PropagationTransactionTests(unittest.TestCase):
         self.assertNotIn('voice.ban', query_settings(self.root, selector=self.fixture['characterId'])['matches'][0]['fields'])
 
     def test_changed_source_refuses_commit_without_overwriting_external_edit(self):
-        plan = self.plan(); path = self.root/'.gnovel/structure.json'
+        plan = self.plan(); path = self.root/'.govel/structure.json'
         source = read_json(path); source['revision'] += 1; write_json(path, source)
         before = self.business()
         with self.assertRaises(StructureError): self.commit(plan)
@@ -84,7 +84,7 @@ class PropagationTransactionTests(unittest.TestCase):
     def test_exception_restores_source_set_and_same_plan_can_retry(self):
         plan = self.plan(); before = self.business()
         def fail(phase, relative=None):
-            if phase == 'write' and relative == '.gnovel/structure.json':
+            if phase == 'write' and relative == '.govel/structure.json':
                 raise RuntimeError('injected')
         with patch.object(write_sets, 'checkpoint', side_effect=fail):
             with self.assertRaisesRegex(RuntimeError, 'injected'): self.commit(plan)
@@ -95,7 +95,7 @@ class PropagationTransactionTests(unittest.TestCase):
         source = load_structure(self.root)
         source['relations'] = [{'relationId': 'REL-AUTHOR', 'fromEntity': self.fixture['propId'],
             'toEntity': self.fixture['characterId'], 'kind': 'owns', 'origin': 'author'}]
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         self.commit(self.plan())
         self.assertEqual(load_structure(self.root)['relations'], source['relations'])
 
@@ -105,7 +105,7 @@ class PropagationTransactionTests(unittest.TestCase):
 from pathlib import Path
 from scripts.core import write_sets
 from scripts.core.structure_commands import commit_plan
-write_sets.checkpoint=lambda phase, relative=None: os._exit(77) if phase=='write' and relative=='.gnovel/structure.json' else None
+write_sets.checkpoint=lambda phase, relative=None: os._exit(77) if phase=='write' and relative=='.govel/structure.json' else None
 commit_plan(Path(sys.argv[1]), operation_id=sys.argv[2], plan_hash=sys.argv[3], approved=True)
 """
         result = subprocess.run([sys.executable, '-c', script, str(self.root), plan['operationId'], plan['planHash']], cwd=ROOT, capture_output=True)
@@ -181,7 +181,7 @@ with project_lock(Path(sys.argv[1])):
 
     def _guard_root(self, temp: str) -> Path:
         root = Path(temp).resolve()
-        (root / '.gnovel').mkdir()
+        (root / '.govel').mkdir()
         (root / 'business.json').write_text('old', encoding='utf-8')
         (root / 'authored.md').write_text('H1', encoding='utf-8')
         return root
@@ -231,7 +231,7 @@ with project_lock(Path(sys.argv[1])):
             self.assertEqual(caught.exception.code, 'TRANSACTION_GUARD_DRIFT')
             self.assertEqual(caught.exception.details['stage'], 'preparing')
             self.assertEqual((root / 'business.json').read_text(), 'old')
-            self.assertFalse((root / '.gnovel' / 'transactions').exists(),
+            self.assertFalse((root / '.govel' / 'transactions').exists(),
                              'not even a transaction directory was created')
 
     def test_identical_bytes_on_a_different_object_are_still_guard_drift(self) -> None:
@@ -316,7 +316,7 @@ with project_lock(Path(sys.argv[1])):
 
             def hook(phase, relative=None):
                 if phase == 'prepared':
-                    directory = root / '.gnovel' / 'transactions' / manifests[-1]['transactionId']
+                    directory = root / '.govel' / 'transactions' / manifests[-1]['transactionId']
                     backed_up.append(sorted(str(p.relative_to(directory / 'before'))
                                             for p in (directory / 'before').rglob('*') if p.is_file()))
 
@@ -359,7 +359,7 @@ with project_lock(Path(sys.argv[1])):
 
     def _tree_root(self, temp: str) -> Path:
         root = Path(temp).resolve()
-        (root / '.gnovel').mkdir()
+        (root / '.govel').mkdir()
         (root / 'business.json').write_text('old', encoding='utf-8')
         (root / '设定').mkdir()
         (root / '设定' / 'a.md').write_text('A', encoding='utf-8')
@@ -401,7 +401,7 @@ with project_lock(Path(sys.argv[1])):
                                  'the author’s new file is not a recovery target')
                 self.assertEqual(pending_transactions(root), [])
                 if not durable:
-                    self.assertFalse((root / '.gnovel' / 'transactions').exists(),
+                    self.assertFalse((root / '.govel' / 'transactions').exists(),
                                      'a membership veto that lands first costs no durable work')
 
     def test_a_rename_or_deletion_of_a_member_is_membership_drift(self) -> None:

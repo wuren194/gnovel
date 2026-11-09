@@ -40,7 +40,7 @@ class ChapterFactsTests(unittest.TestCase):
         ]
         source['attributes'].append({'attributeId': 'AT-FACT-TOPIC', 'ownerId': 'C-FACT-OWNER',
                                      'fieldId': 'FD-FACT-TOPIC', 'values': []})
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         _walk_to_review(self.root, self.cid, self.prose)
         finalized = finalize_chapter(self.root, self.cid, skip_title=True,
                                      binding_generation=source['chapters'][0]['proseBinding']['generation'])
@@ -64,9 +64,9 @@ class ChapterFactsTests(unittest.TestCase):
                       approved=True, actor='test-author')
 
     def test_preview_approval_commit_and_exact_evidence_are_separate(self):
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         report = self.prepare()
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
         self.assertEqual(report['facts'][0]['attributeId'], 'AT-FACT-TOPIC')
         self.assertFalse(report['committed'])
         self.assertFalse(report['complete'])
@@ -145,16 +145,16 @@ class ChapterFactsTests(unittest.TestCase):
                  ({'ownerId': 'C-UNKNOWN'}, 'CHAPTER_FACTS_OWNER_INVALID'),
                  ({'dependsOn': ['SF-UNKNOWN']}, 'CHAPTER_FACTS_DEPENDENCY_INVALID'),
                  ({'quote': '正文中没有这句话。'}, 'EVIDENCE_QUOTE_MISSING')]
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         for index, (overrides, code) in enumerate(cases):
             with self.subTest(code=code), self.assertRaises(StructureError) as caught:
                 self.prepare([self.fact(**overrides)], request=f'bad-{index}')
             self.assertEqual(caught.exception.code, code)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
         self.assertFalse((self.root / EVIDENCE_PATH).exists())
 
     def test_pending_continuity_returns_its_real_action_and_does_not_confirm(self):
-        path = self.root / '.gnovel/workflow.json'
+        path = self.root / '.govel/workflow.json'
         workflow = read_json(path)
         workflow['continuity'][self.cid]['status'] = 'pending'
         write_json(path, workflow)
@@ -169,7 +169,7 @@ class ChapterFactsTests(unittest.TestCase):
     def test_unfinalized_chapter_is_rejected_even_if_candidate_prose_exists(self):
         source = load_structure(self.root)
         source['chapters'][0]['status'] = 'review'
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         with self.assertRaises(StructureError) as caught:
             self.prepare()
         self.assertEqual(caught.exception.code, 'CHAPTER_FACTS_STAGE_REQUIRED')
@@ -177,30 +177,30 @@ class ChapterFactsTests(unittest.TestCase):
 
     def test_ordinary_source_commit_rechecks_unregistered_formal_prose(self):
         report = self.prepare()
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         self.prose_path.write_text('正文在预览后已改变。')
         with self.assertRaises(StructureError):
             self.commit(report)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
         self.assertFalse((self.root / EVIDENCE_PATH).exists())
 
     def test_commit_marker_guard_rolls_back_fact_when_prose_races(self):
         report = self.prepare()
-        original = (self.root / '.gnovel/structure.json').read_bytes()
+        original = (self.root / '.govel/structure.json').read_bytes()
         raced = False
 
         def race(phase, path=None):
             nonlocal raced
-            if phase == 'write' and path == '.gnovel/structure.json' and not raced:
+            if phase == 'write' and path == '.govel/structure.json' and not raced:
                 raced = True
                 self.prose_path.write_text('另一个编辑器更改了正文。')
 
         with patch('scripts.core.write_sets.checkpoint', side_effect=race), self.assertRaises(StructureError):
             self.commit(report)
         self.assertTrue(raced)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
         self.assertEqual(self.prose_path.read_text(), '另一个编辑器更改了正文。')
-        self.assertFalse((self.root / '.gnovel/operations' / (report['operationId'] + '.json')).exists())
+        self.assertFalse((self.root / '.govel/operations' / (report['operationId'] + '.json')).exists())
 
     def test_postcommit_prose_drift_blocks_evidence_without_new_writes(self):
         report = self.prepare()
@@ -243,7 +243,7 @@ class ChapterFactsTests(unittest.TestCase):
         report = self.prepare([self.fact(ownerId=self.cid)])
         self.assertIn(self.cid, report['sourcePreview']['impact']['approvalInvalidations'])
         self.commit(report)
-        self.assertFalse(read_json(self.root / '.gnovel/workflow.json')['approvals'][self.cid]['approved'])
+        self.assertFalse(read_json(self.root / '.govel/workflow.json')['approvals'][self.cid]['approved'])
         status = complete_chapter_facts(self.root, requestId='facts-1', registerEvidence=True)
         self.assertTrue(status['complete'])
         self.assertTrue(continuity_preview(self.root, self.cid)['readyForContinuation'])

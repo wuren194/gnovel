@@ -39,7 +39,7 @@ class FieldMigrationTests(unittest.TestCase):
         self.source = source_fixture(self.root)
         with project_lock(self.root):
             self.assertTrue(project_lock_observation(self.root)['ownedByCurrentThread'])
-        self.lock_inode = (self.root / '.gnovel/structure.lock').stat().st_ino
+        self.lock_inode = (self.root / '.govel/structure.lock').stat().st_ino
 
     def attribute(self, identity, source=None):
         return next(row for row in (self.source if source is None else source)['attributes']
@@ -48,7 +48,7 @@ class FieldMigrationTests(unittest.TestCase):
     def install_fixture(self):
         """Complete neutral data before its first transaction, never accept external edits."""
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def height_item(self, *, field_patch=None, values=None):
         if values is None:
@@ -86,12 +86,12 @@ class FieldMigrationTests(unittest.TestCase):
                       approved=approved, actor='test')
 
     def plan_path(self, preview):
-        return self.root / '.gnovel/plans' / (preview['operationId'] + '.json')
+        return self.root / '.govel/plans' / (preview['operationId'] + '.json')
 
     def inventory(self):
         self.assertEqual(project_lock_observation(self.root),
                          {'locked': False, 'ownedByCurrentThread': False, 'protocol': 'stable-flock-v1'})
-        self.assertEqual((self.root / '.gnovel/structure.lock').stat().st_ino, self.lock_inode)
+        self.assertEqual((self.root / '.govel/structure.lock').stat().st_ino, self.lock_inode)
         return {str(path.relative_to(self.root)): path.read_bytes()
                 for path in self.root.rglob('*') if path.is_file()}
 
@@ -113,9 +113,9 @@ class FieldMigrationTests(unittest.TestCase):
         prose = self.root / '正文/作者稿.md'
         prose.parent.mkdir()
         prose.write_text('人物甲站在门旁。\n', encoding='utf-8')
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         preview = self.preview()
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         self.assertEqual({row['recordId'] for row in preview['diff']},
                          {'FD-HEIGHT', 'AT-HEIGHT', 'AT-BETA-HEIGHT'})
         plan = read_json(self.plan_path(preview))
@@ -143,7 +143,7 @@ class FieldMigrationTests(unittest.TestCase):
         self.assertEqual(current['fieldDefinitions'][1:], self.source['fieldDefinitions'][1:])
         self.assertFalse(receipt['impact']['proseWrite'])
         self.assertEqual(prose.read_text(), '人物甲站在门旁。\n')
-        journal = read_json(self.root / '.gnovel/operations' / (preview['operationId'] + '.json'))
+        journal = read_json(self.root / '.govel/operations' / (preview['operationId'] + '.json'))
         self.assertEqual(journal['proposals'], plan['parameters']['proposals'])
         self.assertEqual(query_change_report(self.root, operationId=preview['operationId'],
                                             section='rationale')['items'], [row])
@@ -565,7 +565,7 @@ class FieldMigrationTests(unittest.TestCase):
         # Deliberate outside edit is a stale-input probe, never an accepted source update.
         changed = deepcopy(self.source)
         changed['fragments'][0]['text'] = '作者又改了资料。'
-        write_json(self.root / '.gnovel/structure.json', changed)
+        write_json(self.root / '.govel/structure.json', changed)
         self.assert_preview_rejected(self.height_item(), requestId='fresh', code='SESSION_REF_STALE')
         before = self.inventory()
         with self.assertRaises(StructureError) as caught:
@@ -640,19 +640,19 @@ class FieldMigrationTests(unittest.TestCase):
 
     def test_failed_transaction_restores_original_source_and_can_resume_request(self):
         preview = self.preview()
-        original_source = (self.root / '.gnovel/structure.json').read_bytes()
+        original_source = (self.root / '.govel/structure.json').read_bytes()
         original_plan = self.plan_path(preview).read_bytes()
 
         def fail(phase, relative=None):
-            if phase == 'write' and relative == '.gnovel/structure.json':
+            if phase == 'write' and relative == '.govel/structure.json':
                 raise OSError('injected field migration write failure')
 
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail), self.assertRaises(OSError):
             self.commit(preview)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), original_source)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original_source)
         self.assertEqual(self.plan_path(preview).read_bytes(), original_plan)
         self.assertFalse((self.root / REVIEW_PATH).exists())
-        self.assertFalse((self.root / '.gnovel/operations' / (preview['operationId'] + '.json')).exists())
+        self.assertFalse((self.root / '.govel/operations' / (preview['operationId'] + '.json')).exists())
         resumed = self.preview()
         self.assertEqual(resumed['operationId'], preview['operationId'])
         self.commit(resumed)
@@ -707,7 +707,7 @@ class FieldMigrationTests(unittest.TestCase):
             record_artifact(workflow, cid, artifact, structure=self.source, artifact_path=str(path),
                             project_id=self.source['projectId'], project_root=self.root)
             approve_artifacts(workflow, cid, artifact_hashes={'stage_a_review': artifact['artifactSha256']}, approval_mode='manual', project_root=self.root)
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         pending = {row['recordId']: row for row in query_reviews(self.root)['items']}
         texts = {row['fragmentId']: row['text'] for row in self.source['fragments']}
         reviews = [{key: pending[rid][key] for key in ('recordId', 'inputHash', 'contentHash')} | {
@@ -727,7 +727,7 @@ class FieldMigrationTests(unittest.TestCase):
         self.assertEqual(states['SF-CH-ALPHA'], 'pending')
         self.assertEqual(states['SF-CH-BETA'], 'pending')
         self.assertEqual(states['SF-CH-OTHER'], 'compatible')
-        current_workflow = read_json(self.root / '.gnovel/workflow.json')
+        current_workflow = read_json(self.root / '.govel/workflow.json')
         for cid in ('CH-ALPHA', 'CH-BETA'):
             self.assertFalse(current_workflow['approvals'][cid]['approved'])
         self.assertEqual(current_workflow['approvals']['CH-OTHER'], workflow['approvals']['CH-OTHER'])

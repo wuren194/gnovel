@@ -26,8 +26,8 @@ from novelctl import build_parser  # noqa: E402
 DOC_GLOBS = (
     "SKILL.md",
     "README.md", "AGENTS.md",
-    "gnovel-*/SKILL.md",
-    "gnovel-*/references/**/*.md",
+    "govel-*/SKILL.md",
+    "govel-*/references/**/*.md",
     "shared/contracts/*.md",
     "shared/templates/**/*.md",
     "docs/**/*.md",

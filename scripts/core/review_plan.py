@@ -17,7 +17,7 @@ SOURCE_CONTRACT = "shared/contracts/G-MULTI-IDENTITY-REVIEW.md"
 
 def chapter_stage_a_plan(structure: dict, chapter_id: str) -> dict:
     chapter = next(row for row in structure['chapters'] if row['chapterId'] == chapter_id)
-    plan = resolve_effective_review_plan('gnovel-planner', 'chapter', chapter=chapter)
+    plan = resolve_effective_review_plan('govel-planner', 'chapter', chapter=chapter)
     from .behavior_review import blank_reviews
     if blank_reviews(structure, chapter_id) and 9 not in plan['activeSeats']:
         plan['activeSeats'] = sorted([*plan['activeSeats'], 9])
@@ -144,7 +144,10 @@ def resolve_effective_review_plan(
                 else:
                     reasons[str(seat)] = {3: "本章无新增玩法", 8: "本章钩子与卷债务无新增风险", 9: "本章无新增地点、道具或设定"}[seat]
             active.sort()
-    contract = TOOLBOX_ROOT / SOURCE_CONTRACT
+    from .data_provider import roundtable_resource, binding
+    private = roundtable_resource()
+    source = ({'root': 'provider', **private, 'provider': binding()} if private is not None
+              else {'root': 'toolbox', 'path': SOURCE_CONTRACT, 'sha256': file_sha256(TOOLBOX_ROOT / SOURCE_CONTRACT)})
     result = {
         "schemaVersion": 1,
         "station": station,
@@ -155,7 +158,7 @@ def resolve_effective_review_plan(
         "inactiveSeats": [seat for seat in ALL_SEATS if seat not in active],
         "inactiveReasons": reasons,
         "auxiliaryGates": auxiliary,
-        "sourceContract": {"path": SOURCE_CONTRACT, "sha256": file_sha256(contract)},
+        "sourceContract": source,
         "semanticRulesEmbedded": False,
     }
     result["reviewPlanHash"] = sha256_json(result)

@@ -22,7 +22,7 @@ class ArtifactPackTests(unittest.TestCase):
         self.chapter = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
 
     def workflow(self):
-        return read_json(self.root / '.gnovel/workflow.json')
+        return read_json(self.root / '.govel/workflow.json')
 
     def pack(self, kind, payload):
         path = self.root / '工作台/input.json'
@@ -60,11 +60,11 @@ class ArtifactPackTests(unittest.TestCase):
                          self.workflow()['artifacts'][self.chapter]['candidate_prose']['artifactSha256'])
         from scripts.core.source_plan import chapter_plan
         self.assertEqual(artifact['payload']['sourcePlanHash'],
-                         chapter_plan(read_json(self.root / '.gnovel/structure.json'), self.chapter)['sourcePlanHash'])
+                         chapter_plan(read_json(self.root / '.govel/structure.json'), self.chapter)['sourcePlanHash'])
         self.assertEqual(artifact['payload']['diagnosticsArtifactSha256'], self.workflow()['artifacts'][self.chapter]['diagnostics']['artifactSha256'])
         self.assertEqual(artifact['payload']['finalProseSha256'], sha256_text('他把钥匙放回桌上，合上了登记本。'))
         self.assertEqual(artifact['payload']['proseBindingGeneration'],
-                         read_json(self.root / '.gnovel/structure.json')['chapters'][0]['proseBinding']['generation'])
+                         read_json(self.root / '.govel/structure.json')['chapters'][0]['proseBinding']['generation'])
         self.assertEqual(self.workflow()['approvals'], before)
 
     def test_missing_review_slot_is_not_filled_with_a_pass(self):
@@ -110,7 +110,7 @@ class ArtifactPackTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             self.pack('diagnostics', {'passed': True})
         with self.assertRaises(StructureError):
-            pack_artifact(self.root, chapterId=self.chapter, artifactType='candidate_prose', input='.gnovel/workflow.json')
+            pack_artifact(self.root, chapterId=self.chapter, artifactType='candidate_prose', input='.govel/workflow.json')
 
     def test_transaction_failure_restores_workflow_and_removes_new_artifact(self):
         write_json(self.root / '工作台/input.json', self.stage_b())
@@ -146,8 +146,8 @@ class ArtifactPackTests(unittest.TestCase):
         from tests.current_lifecycle import CurrentLifecycleFixture
         helper = CurrentLifecycleFixture(); helper.setUp(); self.addCleanup(helper.doCleanups)
         root, cid = helper.read_ready_schema5()
-        before = (root/'.gnovel/structure.json').read_bytes()
+        before = (root/'.govel/structure.json').read_bytes()
         result = pack_artifact(root, chapterId=cid, artifactType='stage_a_review',
             payload={'decision': 'pending', 'activeSeats': list(range(1, 11))})
         self.assertEqual(set(result['bindings']), {'sourcePlanHash'})
-        self.assertEqual((root/'.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((root/'.govel/structure.json').read_bytes(), before)

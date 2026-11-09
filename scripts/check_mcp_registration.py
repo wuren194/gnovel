@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that Claude Code and Codex can actually start the gnovel MCP server.
+"""Check that Claude Code and Codex can actually start the govel MCP server.
 
 2026-08-06 删掉旧的 `mcp-server.py` 后，Claude Code（`~/.claude.json`）与 Codex
 （`~/.codex/config.toml`）的注册仍指向它。server 起不来却没有任何报错：模型看不到
@@ -7,7 +7,7 @@
 只校验 Gemini 的 `settings.json`，这两个客户端没有对应检查。Antigravity当前官方配置
 由其安装器检查 `~/.gemini/config/mcp_config.json`；本脚本仍只检查Claude Code与Codex。
 
-本脚本只读：列出两处配置里全部 `gnovel` 注册，确认目标文件存在，再按注册的
+本脚本只读：列出两处配置里全部 `govel` 注册，确认目标文件存在，再按注册的
 command/args 真实启动 server，完成 initialize 与 tools/list 握手。command 按当前
 PATH 解析，可能与 GUI 客户端的 PATH 不同。`--dir` 报告在该目录新开的 Claude Code
 会话实际生效哪条注册（local 优先于 user）。
@@ -36,9 +36,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SERVER_SCRIPT = REPO / "scripts" / "mcp_server.py"
 # 客户端配置里的注册名；install_antigravity.py 用同一个名字（测试绑定）。
-SERVER_NAME = "gnovel"
+SERVER_NAME = "govel"
 # mcp_server.py 在 initialize 返回的 serverInfo.name（测试以真实握手绑定）。
-HANDSHAKE_NAME = "gnovel"
+HANDSHAKE_NAME = "govel"
 CLAUDE_CONFIG = Path.home() / ".claude.json"
 CODEX_CONFIG = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex") / "config.toml"
 CLIENT_NAMES = {"claude": "Claude Code", "codex": "Codex"}
@@ -79,7 +79,7 @@ def claude_registrations(config: Path) -> tuple[list[dict], list[str]]:
 
 
 def codex_registrations(config: Path) -> tuple[list[dict], list[str]]:
-    """Codex 只有全局一份：[mcp_servers.gnovel]。"""
+    """Codex 只有全局一份：[mcp_servers.govel]。"""
     if not config.exists():
         return [], []
     try:
@@ -291,7 +291,7 @@ def render(report: dict) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="检查 Claude Code 与 Codex 能否真正启动 gnovel MCP server（只读）")
+    parser = argparse.ArgumentParser(description="检查 Claude Code 与 Codex 能否真正启动 govel MCP server（只读）")
     parser.add_argument("--dir", action="append", dest="dirs", metavar="DIR",
                         help="确认在该目录新开的 Claude Code 会话生效哪条注册；可重复，缺省为当前目录")
     parser.add_argument("--json", action="store_true", help="输出机器可读报告")

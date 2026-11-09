@@ -39,7 +39,7 @@ class BehaviorRuleDeliveryTests(unittest.TestCase):
                 self.assertIn(rule, delivered)
 
     def test_composer_receives_existing_life_baseline_without_editor_handoff(self):
-        plan = resolve_prompt_plan(self.root, 'gnovel-composer', view='station')
+        plan = resolve_prompt_plan(self.root, 'govel-composer', view='station')
         causal = next(row for row in plan['contracts'] if row['path'] == 'shared/contracts/G-CAUSAL.md')
         self.assertEqual([row['slice'] for row in causal['readRanges']], ['life-baseline'])
         from scripts.core.project import TOOLBOX_ROOT

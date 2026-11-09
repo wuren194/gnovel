@@ -19,7 +19,7 @@ station context + dependency manifest + 确定性 contextHash + health/invalidat
 - memory tier（working/episodic/semantic）与 epistemic role 是两个维度，互不替代。
 
 数据源（只读，不初始化完整 Runtime）：
-  真源布局：.gnovel/structure.json → 按需构建的机器投影；正文按注册路径读取
+  真源布局：.govel/structure.json → 按需构建的机器投影；正文按注册路径读取
   checkout 布局：章节路径来自 structure 的 filePath
 """
 
@@ -254,7 +254,7 @@ def _characters(design: dict) -> list[dict]:
 
 
 def _load_story_summary(store) -> dict | None:
-    """读取 .gnovel/aux/story-summary.json（非事务辅助摘要）。
+    """读取 .govel/aux/story-summary.json（非事务辅助摘要）。
 
     文件缺失或 schema 非法时返回 None（回退标题聚合），不阻断续写上下文。
     """

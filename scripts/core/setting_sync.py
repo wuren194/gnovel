@@ -14,7 +14,7 @@ def state_preview(root: Path, chapter_id: str) -> dict:
     """Inspect bindings only; source changes have their own reviewed transaction preview."""
     root = root.expanduser().resolve()
     structure = load_structure(root)
-    workflow = read_json(root/'.gnovel/workflow.json')
+    workflow = read_json(root/'.govel/workflow.json')
     chapter = next((row for row in structure['chapters'] if row['chapterId'] == chapter_id), None)
     if chapter is None:
         raise StructureError('CHAPTER_NOT_FOUND', 'unknown chapter', {'chapterId': chapter_id})

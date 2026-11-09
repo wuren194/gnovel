@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "gnovel knowledge asset",
+  "title": "Govel knowledge asset",
   "type": "object",
   "additionalProperties": false,
   "required": ["metadata", "body"],

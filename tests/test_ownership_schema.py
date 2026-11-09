@@ -139,7 +139,7 @@ class ExactMaterializationAuthorityTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
 
     def _sealed_new_row(self, *, chapter_id: str, ordinal: int, generation: int) -> dict:
         row = new_chapter_row(chapter_id=chapter_id, ordinal=ordinal, title='新章')
@@ -301,7 +301,7 @@ class DeclaredChapterNeverMaterializedTests(unittest.TestCase):
         return plan, current
 
     def _assert_prepare_boundary_rejected(self, root: Path, plan: dict, current: dict) -> None:
-        structure_path = root / '.gnovel' / 'structure.json'
+        structure_path = root / '.govel' / 'structure.json'
         before = structure_path.read_bytes()
         with self.assertRaises(StructureError) as caught:
             prepare_writes(root, plan, current)
@@ -311,7 +311,7 @@ class DeclaredChapterNeverMaterializedTests(unittest.TestCase):
         self.assertEqual(caught.exception.details['authorized'], [self.DECLARED])
         # 副作用哨兵：boundary 在任何 staged 文件落盘之前拒绝，磁盘结构一个字节未动。
         self.assertEqual(structure_path.read_bytes(), before)
-        self.assertFalse((root / '.gnovel' / 'plans' / f"{plan['operationId']}.files").exists())
+        self.assertFalse((root / '.govel' / 'plans' / f"{plan['operationId']}.files").exists())
 
 
     def test_schema5_insert_plan_declares_chapter_but_adds_none_rejected(self) -> None:
@@ -342,7 +342,7 @@ class DeclaredChapterNeverMaterializedTests(unittest.TestCase):
         staged['planHash'] = _plan_hash({k: v for k, v in staged.items()
                                          if k != 'planHash'})
         write_json(plan_path, staged)
-        structure_path = root / '.gnovel' / 'structure.json'
+        structure_path = root / '.govel' / 'structure.json'
         before = structure_path.read_bytes()
         with self.assertRaises(StructureError) as caught:
             structure_commands.commit_plan(root, operation_id=plan['operationId'],
@@ -366,7 +366,7 @@ class DamagedSiblingMaterializationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
-        self.structure_path = self.root / '.gnovel' / 'structure.json'
+        self.structure_path = self.root / '.govel' / 'structure.json'
         on_disk = read_json(self.structure_path)
         damaged = next(row for row in on_disk['chapters'] if row['chapterId'] == CHAPTER_A)
         broken = dict(damaged['proseBinding'])
@@ -623,8 +623,8 @@ class CurrentWriterGateTests(unittest.TestCase):
             undo_operation(root5, 'OP-0000000000000000')
         self.assertEqual(caught.exception.code, 'OPERATION_NOT_FOUND')
         # 直接入口同样在写入之前按证据形状确定性拒绝（空 journal 连操作身份都对不上）。
-        (root5 / '.gnovel' / 'operations').mkdir(parents=True, exist_ok=True)
-        write_json(root5 / '.gnovel' / 'operations' / 'OP-0000000000000000.json', {})
+        (root5 / '.govel' / 'operations').mkdir(parents=True, exist_ok=True)
+        write_json(root5 / '.govel' / 'operations' / 'OP-0000000000000000.json', {})
         with self.assertRaises(StructureError) as direct:
             undo(root5, 'OP-0000000000000000', actor='test')
         self.assertEqual(direct.exception.code, 'OPERATION_ID_MISMATCH')
@@ -648,7 +648,7 @@ class ReservedLocatorInvariantTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             structure = ownership_project(root)
-            structure_path = root / '.gnovel' / 'structure.json'
+            structure_path = root / '.govel' / 'structure.json'
             on_disk = read_json(structure_path)
             victim = next(row for row in on_disk['chapters'] if row['chapterId'] == CHAPTER_C)
             # 复制一份带相同 filePath 的章（模拟另一章 claim 同一规范槽）；换新身份与
@@ -678,7 +678,7 @@ class ReservedLocatorInvariantTests(unittest.TestCase):
 
 def _staged_plan_path(root: Path, plan: dict) -> Path:
     """The staged plan file a preview writes; committing reads this, not the report."""
-    return root / '.gnovel' / 'plans' / f"{plan['operationId']}.json"
+    return root / '.govel' / 'plans' / f"{plan['operationId']}.json"
 
 
 def _staged_plan(root: Path, plan: dict) -> dict:
@@ -703,7 +703,7 @@ class Schema5FoundationTests(unittest.TestCase):
         self.structure['fragments'] = [
             {'fragmentId': 'SF-PLAN-1', 'ownerId': CHAPTER_A, 'text': '本章推演：白塔在雾里塌了一半。',
              'order': 0, 'contentBindings': ['AT-PLAN-1'], 'contentRole': 'plan'}]
-        write_json(self.root / '.gnovel' / 'structure.json', self.structure)
+        write_json(self.root / '.govel' / 'structure.json', self.structure)
         from scripts.core.structure_store import validate_structure as validate
         validate(self.structure)
 
@@ -776,7 +776,7 @@ class Schema5FoundationTests(unittest.TestCase):
         # R5 / S5-6：schema 5 只落 structure.json（+ extras），绝不走 维护型 Markdown 视图。
         from scripts.core.derived_views import derived_outputs, source_files
         outputs, owners = derived_outputs(self.root, self.structure)
-        self.assertEqual(list(outputs), ['.gnovel/structure.json'])
+        self.assertEqual(list(outputs), ['.govel/structure.json'])
         self.assertEqual(owners, {})
         sources = source_files(self.root)
         self.assertNotIn('规划/结构索引.md', outputs)
@@ -798,7 +798,7 @@ class InitialOwnershipBoundaryTests(unittest.TestCase):
 
     def _current_structure(self, root: Path) -> dict:
         structure = ownership_project(root)
-        (root / '.gnovel' / 'structure.json').unlink()
+        (root / '.govel' / 'structure.json').unlink()
         return structure
 
     def test_generic_initial_managed_save_rejected(self) -> None:
@@ -809,7 +809,7 @@ class InitialOwnershipBoundaryTests(unittest.TestCase):
             with self.assertRaises(StructureError) as caught:
                 save_structure(root, structure)
             self.assertEqual(caught.exception.code, 'OWNERSHIP_UNAUTHORIZED_MUTATION')
-            self.assertFalse((root / '.gnovel' / 'structure.json').exists())
+            self.assertFalse((root / '.govel' / 'structure.json').exists())
 
 
     def test_generic_initial_unbound_only_save_rejected(self) -> None:
@@ -835,7 +835,7 @@ class InitialOwnershipBoundaryTests(unittest.TestCase):
             with self.assertRaises(StructureError) as caught:
                 save_structure(root, empty_structure('PRJ-GREENFIELD-1', '新项目'))
             self.assertEqual(caught.exception.code, 'OWNERSHIP_UNAUTHORIZED_MUTATION')
-            self.assertFalse((root / '.gnovel' / 'structure.json').exists())
+            self.assertFalse((root / '.govel' / 'structure.json').exists())
             from scripts.core.prose_binding import initializer_authority
             saved = save_structure(root, empty_structure('PRJ-GREENFIELD-1', '新项目'),
                                    _initializer=initializer_authority('test'))

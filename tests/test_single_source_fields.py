@@ -8,7 +8,7 @@ UNSUPPORTED_PROJECT_VERSION 有 3 份、keep-backups 有 2 份。机制版本 36
 1. **消费规则**（纪律第 3 条）：被声明为真源的字段，必须在代码里被访问器读取，
    且访问器值与注册表逐字节一致；改注册表即改变行为——这是「改一处全局生效」的
    可执行证明。
-2. **绑定规则**（纪律第 4 条）：布局不变量类字段（.gnovel、工作台）是文档常量，
+2. **绑定规则**（纪律第 4 条）：布局不变量类字段（.govel、工作台）是文档常量，
    由 check_layout_invariants() 断言与机制常量一致，一侧漂移即 fail；反向的
    「断言被删空」由逐个篡改 manifest 的参数化测试锁住（M9 变异证明只有前者不够）。
 3. **豁免规则**：文档性字段（_comment、version、skills、promptPlan 等）列在白名单
@@ -79,7 +79,6 @@ DOCUMENTED_ONLY_PATHS = {
     'name': 'Package identity; release manifest metadata.',
     'language': 'Describes the workstation language, not a runtime language toggle.',
     'schemaVersion': 'Bound to projectVersionPolicy by tests.test_architecture.',
-    'workflowVersion': 'Current marker protocol; tests.test_architecture binds the declaration.',
     'compatibilityVersion': 'Every contract frontmatter is checked by tests.test_contract_frontmatter.',
     'sharedProtocols.contracts': 'Describes the fixed contract directory; contract frontmatter tests enumerate it.',
     'sharedProtocols.contractsList': 'tests.test_contract_frontmatter and tests.test_prompt_plan bind files and loading.',
@@ -95,7 +94,7 @@ DOCUMENTED_ONLY_PATHS = {
     'humanApproval.shaBindings': 'Documents the exact artifact bindings enforced by finalization_preflight.',
     'corpusRoots.catalog': 'Documents the corpus catalog boundary; not an arbitrary external path option.',
     'corpusRoots.activeWritingReferences': 'Documents knowledge/assets as the writing reference source.',
-    'promptPlan.gnovel-writer._note': 'Human-readable explanation of Writer loading.',
+    'promptPlan.govel-writer._note': 'Human-readable explanation of Writer loading.',
 }
 
 # Aliased/dynamic reads cannot be recognized as one AST access chain. Register
@@ -302,9 +301,9 @@ class HanCountSingleSourceTests(unittest.TestCase):
         real_dirs = list(importer.REQUIRED_PROJECT_DIRS)
         cases = [
             ("未篡改的 manifest（对照：不抛）", None, None, False),
-            ("storage.projectMarker 移出 .gnovel", storage("projectMarker", "notes"), None, True),
-            ("storage.cache 移出 .gnovel", storage("cache", ".cache/state.json"), None, True),
-            ("storage.aux 移出 .gnovel", storage("aux", "aux"), None, True),
+            ("storage.projectMarker 移出 .govel", storage("projectMarker", "notes"), None, True),
+            ("storage.cache 移出 .govel", storage("cache", ".cache/state.json"), None, True),
+            ("storage.aux 移出 .govel", storage("aux", "aux"), None, True),
             ("storage.projectMarker 不是字符串", storage("projectMarker", 5), None, True),
             ("agileWorkbench.preferredPath 改值", workbench("notes"), None, True),
             ("agileWorkbench 整节缺失", lambda manifest: manifest.pop("agileWorkbench"), None, True),

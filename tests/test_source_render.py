@@ -33,7 +33,7 @@ class SourceRenderingTests(unittest.TestCase):
     def test_long_fragment_is_read_completely_at_character_boundaries(self):
         content = ('他说：“你好。”\n' * 4000) + '末尾标志'
         self.source['fragments'][0]['text'] = content
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         page = read_fragment(self.root, fragmentId='SF-HEIGHT', maxBytes=1000)
         chunks = [page['text']]
         while page['hasMore']:
@@ -47,14 +47,14 @@ class SourceRenderingTests(unittest.TestCase):
     def test_export_is_complete_even_when_inline_response_cannot_fit(self):
         content = '长段内容。' * 12000
         self.source['fragments'][0]['text'] = content
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as error:
             render_source(self.root)
         self.assertEqual(error.exception.code, 'SOURCE_EXPORT_REQUIRED')
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         receipt = export_source(self.root, output='工作台/阅读.md')
         self.assertIn(content, Path(receipt['output']).read_text())
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         self.assertFalse(receipt['maintained'])
         Path(receipt['output']).unlink()
         self.assertTrue(query_source(self.root)['ok'])
@@ -72,7 +72,7 @@ class SourceRenderingTests(unittest.TestCase):
         self.assertIn('初次守门', target.read_text())
 
     def test_export_cannot_target_source_or_prose(self):
-        for output in ('.gnovel/structure.json', '正文/第一章.md', '设定/人物设定.md', '../outside.md'):
+        for output in ('.govel/structure.json', '正文/第一章.md', '设定/人物设定.md', '../outside.md'):
             with self.subTest(output=output), self.assertRaises(ValueError):
                 export_source(self.root, output=output)
 
@@ -90,7 +90,7 @@ class SourceRenderingTests(unittest.TestCase):
         for state, permitted in [('not_applicable', True), ('unknown', False), ('unfilled', False)]:
             with self.subTest(state=state):
                 value['state'] = state
-                write_json(self.root / '.gnovel/structure.json', self.source)
+                write_json(self.root / '.govel/structure.json', self.source)
                 settings = query_settings_source(self.root, self.source, selector='C-ALPHA')['matches'][0]
                 self.assertEqual('appearance.skin' not in settings['unfilled'], permitted)
                 if permitted:
@@ -105,7 +105,7 @@ class SourceRenderingTests(unittest.TestCase):
                     self.assertEqual(error.exception.code, 'SOURCE_REVIEW_REQUIRED')
 
     def test_pending_transaction_cannot_be_queried_or_exported(self):
-        write_json(self.root / '.gnovel/transactions/TX-PENDING.json', {'phase': 'prepared'})
+        write_json(self.root / '.govel/transactions/TX-PENDING.json', {'phase': 'prepared'})
         with self.assertRaises(StructureError) as error:
             query_source(self.root)
         self.assertEqual(error.exception.code, 'TRANSACTION_INCOMPLETE')
@@ -138,7 +138,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         self.save()
 
     def save(self):
-        write_json(self.root/'.gnovel/structure.json', self.source)
+        write_json(self.root/'.govel/structure.json', self.source)
 
     def add_belief(self):
         self.source['fragments'].append({'fragmentId': 'SF-VISIBLE-BELIEF', 'ownerId': 'C-BETA',
@@ -207,7 +207,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         fragment['sourceRefs'] = [{'path': 'AUTHOR-PROVENANCE/结局.md', 'note': 'AUTHOR-PROVENANCE'}]
         fragment['dependsOn'] = ['FV-HEIGHT']
         self.save()
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         result = query_source(self.root, selection=self.choice, view='detail')
         content = result['items'][0]['content']
         self.assertEqual(content['text'], fragment['text'])
@@ -221,4 +221,4 @@ class PerspectiveMetadataTests(unittest.TestCase):
         author = query_source(self.root, selection={'roles': ['belief']}, view='detail')
         self.assertEqual(next(row['content'] for row in author['items']
                               if row['id'] == fragment['fragmentId']), fragment)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)

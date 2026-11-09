@@ -60,7 +60,7 @@ class SourceIdentityTests(unittest.TestCase):
             function()
         self.assertEqual(error.exception.code, 'SOURCE_ID_RETIRED')
         self.assertIn(identity, error.exception.details['recordIds'])
-        self.assertTrue(error.exception.details['path'].startswith('.gnovel/operations/'))
+        self.assertTrue(error.exception.details['path'].startswith('.govel/operations/'))
         self.assertEqual(self.snapshot(), before)
 
     def test_deleted_fragment_cannot_be_given_to_another_owner(self):
@@ -146,12 +146,12 @@ class SourceIdentityTests(unittest.TestCase):
     def test_failed_commit_does_not_reserve_identity(self):
         first = self.put(self.fragment())
         def fail(phase, relative=None):
-            if phase == 'write' and relative == '.gnovel/structure.json':
+            if phase == 'write' and relative == '.govel/structure.json':
                 raise OSError('simulated interruption')
         with patch('scripts.core.write_sets.checkpoint', side_effect=fail):
             with self.assertRaises(OSError):
                 self.commit(first)
-        self.assertFalse((self.root / '.gnovel/operations' / f"{first['operationId']}.json").exists())
+        self.assertFalse((self.root / '.govel/operations' / f"{first['operationId']}.json").exists())
         self.commit(self.put(self.fragment(text='选定另一项计划。')))
 
     def test_deleted_unused_field_definition_also_retires_its_identity(self):
@@ -176,8 +176,8 @@ class SourceIdentityTests(unittest.TestCase):
         deletion = self.retire()
         self.commit(self.put(self.fragment('SF-NEXT')))
         gc_project(self.root, keep_backups=0)
-        self.assertFalse((self.root / '.gnovel/backups' / deletion['operationId']).exists())
-        self.assertTrue((self.root / '.gnovel/operations' / f"{deletion['operationId']}.json").is_file())
+        self.assertFalse((self.root / '.govel/backups' / deletion['operationId']).exists())
+        self.assertTrue((self.root / '.govel/operations' / f"{deletion['operationId']}.json").is_file())
         self.assert_retired(lambda: self.put(self.fragment()))
 
     def test_commit_rechecks_retirement_even_if_preview_guard_was_bypassed(self):
@@ -188,7 +188,7 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_corrupted_ledger_cannot_be_treated_as_empty_history(self):
         deletion = self.retire()
-        path = self.root / '.gnovel/operations' / f"{deletion['operationId']}.json"
+        path = self.root / '.govel/operations' / f"{deletion['operationId']}.json"
         original = read_json(path)
         invalids = [[], {'operationId': 'wrong'}, {**original, 'impact': {}},
                     {**original, 'impact': {**original['impact'], 'changedIds': 'SF-ORIGINAL'}}]
@@ -208,14 +208,14 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_existing_record_update_does_not_depend_on_unrelated_history(self):
         self.commit(self.put(self.fragment()))
-        path = next((self.root / '.gnovel/operations').glob('OP-*.json'))
+        path = next((self.root / '.govel/operations').glob('OP-*.json'))
         path.write_text('{unreadable', encoding='utf-8')
         self.commit(self.put(self.fragment(text='整理档案并登记归还时间。')))
 
     def test_commit_rechecks_ledger_damage_after_preview(self):
         deletion = self.retire()
         plan = self.put(self.fragment('SF-FRESH'))
-        path = self.root / '.gnovel/operations' / f"{deletion['operationId']}.json"
+        path = self.root / '.govel/operations' / f"{deletion['operationId']}.json"
         path.write_text('{unreadable', encoding='utf-8')
         before = self.snapshot()
         with self.assertRaises(StructureError) as error:
@@ -285,7 +285,7 @@ class SourceIdentityTests(unittest.TestCase):
         self.assertEqual(actual['ownerId'], 'C-BETA')
 
     def rewrite_plan(self, plan, transform):
-        path = self.root / '.gnovel/plans' / f"{plan['operationId']}.json"
+        path = self.root / '.govel/plans' / f"{plan['operationId']}.json"
         stored = read_json(path)
         transform(stored)
         stored['planHash'] = _plan_hash({key: value for key, value in stored.items() if key != 'planHash'})
@@ -299,13 +299,13 @@ class SourceIdentityTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 'SOURCE_IDENTITY_IMPACT_MISMATCH')
         self.assertEqual(error.exception.details['fields'], fields)
         self.assertEqual(self.snapshot(), before)
-        self.assertFalse((self.root / '.gnovel/backups' / plan['operationId']).exists())
-        self.assertFalse((self.root / '.gnovel/operations' / f"{plan['operationId']}.json").exists())
+        self.assertFalse((self.root / '.govel/backups' / plan['operationId']).exists())
+        self.assertFalse((self.root / '.govel/operations' / f"{plan['operationId']}.json").exists())
 
     def test_rehashed_delete_plan_cannot_omit_initial_record_from_ledger(self):
         source = load_structure(self.root)
         source['fragments'].append(self.fragment('SF-INITIAL'))
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'SF-INITIAL'}])
         self.assertEqual(plan['impact']['changedIds'], ['SF-INITIAL'])
         tampered = self.rewrite_plan(plan, lambda value: value['impact'].update(changedIds=[]))
@@ -314,7 +314,7 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_rehashed_plan_cannot_remove_or_fabricate_any_identity_projection(self):
         plan = self.put(self.fragment())
-        path = self.root / '.gnovel/plans' / f"{plan['operationId']}.json"
+        path = self.root / '.govel/plans' / f"{plan['operationId']}.json"
         original = read_json(path)
         keys = ('changedIds', 'planningCandidateChanges', 'authorDecisionChanges', 'workVoiceProfileChanged')
         for key in keys:
@@ -358,16 +358,16 @@ class SourceIdentityTests(unittest.TestCase):
         self.assertIn('refactor', expected, 'shared producer adds legitimate non-identity impact details')
         with patch('scripts.core.source_impact.source_impact', side_effect=AssertionError('unexpected semantic rescan')):
             self.commit(plan)
-        journal = read_json(self.root / '.gnovel/operations' / f"{plan['operationId']}.json")
+        journal = read_json(self.root / '.govel/operations' / f"{plan['operationId']}.json")
         self.assertEqual(journal['impact'], expected)
 
     def test_initial_record_delete_is_recorded_and_blocks_later_reuse(self):
         source = load_structure(self.root)
         source['fragments'].append(self.fragment('SF-INITIAL'))
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'SF-INITIAL'}])
         self.commit(plan)
-        journal = read_json(self.root / '.gnovel/operations' / f"{plan['operationId']}.json")
+        journal = read_json(self.root / '.govel/operations' / f"{plan['operationId']}.json")
         self.assertEqual(journal['impact']['changedIds'], ['SF-INITIAL'])
         self.assert_retired(lambda: self.put(self.fragment('SF-INITIAL', ownerId='C-BETA')), 'SF-INITIAL')
 

@@ -54,7 +54,7 @@ def ownership_project(root: Path, *, revision: int = 7, extra_chapters: list[dic
     """
     schema_version = PROJECT_SCHEMA_VERSION
     root.mkdir(parents=True, exist_ok=True)
-    for relative in ('.gnovel', '正文', '规划', '设定', '工作台'):
+    for relative in ('.govel', '正文', '规划', '设定', '工作台'):
         (root / relative).mkdir(parents=True, exist_ok=True)
     structure = empty_structure(PROJECT_ID, '绑定测试')
     structure['volumes'] = [{'volumeId': VOLUME_A, 'ordinal': 1, 'title': '第一卷', 'status': 'planned'}]
@@ -89,16 +89,16 @@ def ownership_project(root: Path, *, revision: int = 7, extra_chapters: list[dic
     (root / '正文' / f'{CHAPTER_A}.md').write_text(MANAGED_PROSE, encoding='utf-8')
     for relative, text in (prose_on_disk or {}).items():
         (root / relative).write_text(text, encoding='utf-8')
-    write_json(root / '.gnovel' / 'project.json', {
+    write_json(root / '.govel' / 'project.json', {
         'schemaVersion': PROJECT_SCHEMA_VERSION, 'workflowVersion': WORKFLOW_VERSION,
         'projectId': PROJECT_ID, 'bookName': '绑定测试', 'projectRevision': revision,
         'createdAt': '2026-09-28T00:00:00Z', 'approvalMode': 'manual'})
-    write_json(root / '.gnovel' / 'workflow.json', {
+    write_json(root / '.govel' / 'workflow.json', {
         'schemaVersion': 2, 'approvedChapterIds': [], 'chapterStates': {}, 'artifacts': {},
         'approvals': {}, 'repairRounds': {}, 'nextAction': None,
         'updatedAt': '2026-09-28T00:00:00Z'})
     validate_structure(structure)
-    write_json(root / '.gnovel' / 'structure.json', structure)
+    write_json(root / '.govel' / 'structure.json', structure)
     return structure
 
 

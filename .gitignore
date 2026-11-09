@@ -11,11 +11,17 @@ build/
 .env.*
 *.local.json
 .claude/settings.local.json
-.gnovel/
+.govel/
 knowledge/assets/
 knowledge/sources/
 knowledge/.cache/
 knowledge/.history/
 provider-config.json
 provider.json
+# Track only the public layout; user content always stays local.
+/local/*
+!/local/README.md
+!/local/knowledge/
+/local/knowledge/*
+!/local/knowledge/.gitkeep
 node_modules/

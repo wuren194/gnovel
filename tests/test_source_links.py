@@ -19,7 +19,7 @@ class SourceLinkTraversalTests(unittest.TestCase):
             {'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA', 'toEntity': 'C-BETA', 'kind': 'protects'},
             {'relationId': 'REL-BETA-ALPHA', 'fromEntity': 'C-BETA', 'toEntity': 'C-ALPHA', 'kind': 'trusts'},
         ]
-        validate_structure(source); write_json(self.root / '.gnovel/structure.json', source)
+        validate_structure(source); write_json(self.root / '.govel/structure.json', source)
 
     def test_typed_dependencies_and_entity_relations_are_distinct(self):
         result = query_source_links(self.root, recordId='AT-HEIGHT', direction='out', depth=1)

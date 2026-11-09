@@ -545,7 +545,7 @@ def serial_planning_policy() -> dict:
 
 
 def project_marker_path(root: Path) -> Path:
-    return root.expanduser().resolve() / ".gnovel" / "project.json"
+    return root.expanduser().resolve() / ".govel" / "project.json"
 
 
 def project_marker(root: Path) -> dict:
@@ -618,7 +618,7 @@ def state_compaction_policy() -> dict:
 def check_layout_invariants() -> None:
     """校验机制不变量与 manifest 文档常量一致；一侧改动另一侧未跟上时 fail closed。
 
-    `.gnovel`/`工作台`/`正文` 等是布局不变量而非可调配置——manifest 字段是文档
+    `.govel`/`工作台`/`正文` 等是布局不变量而非可调配置——manifest 字段是文档
     常量，本函数是真源纪律第 4 条要求的一致性绑定，由 tests 调用。
     """
     from .importer import REQUIRED_PROJECT_DIRS  # 延迟导入避免环（importer → project）
@@ -627,8 +627,8 @@ def check_layout_invariants() -> None:
     storage = manifest.get("storage", {})
     for key in ("projectMarker", "cache", "aux"):
         value = storage.get(key)
-        if not isinstance(value, str) or not value.startswith(".gnovel"):
-            raise ValueError(f"manifest storage.{key} 必须是 .gnovel 下的路径（布局不变量）")
+        if not isinstance(value, str) or not value.startswith(".govel"):
+            raise ValueError(f"manifest storage.{key} 必须是 .govel 下的路径（布局不变量）")
     workbench = manifest.get("agileWorkbench", {}).get("preferredPath")
     if workbench != "工作台":
         raise ValueError("manifest agileWorkbench.preferredPath 必须等于机制常量 工作台")

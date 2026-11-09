@@ -92,7 +92,7 @@ def query_settings_source(root, source, *, selector=None, kind=None, fields=None
             bucket['fieldFill'][key] = bucket['fieldFill'].get(key, 0) + 1
         matches.append({'entityId': entity['entityId'], 'entityType': entity['entityType'], 'name': entity['name'],
             'path': None, 'startLine': None, 'endLine': None, 'sha256': None,
-            'valueSource': '.gnovel/structure.json',
+            'valueSource': '.govel/structure.json',
             'fields': {key: value for key, value in projected['fields'].items() if wanted is None or key in wanted},
             'fragments': [row for row in projected['fragments'] if wanted is None or wanted.intersection(row['fieldKeys'])],
             'unfilled': sorted(set(specs.get(entity['entityType'], {})) - projected['fieldPresence'])})

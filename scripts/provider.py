@@ -8,13 +8,13 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.core.data_provider import ProviderError, active_provider, binding
+from scripts.core.data_provider import ProviderError, active_provider, binding, data_path_allowed, roundtable_resource
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
-    create = commands.add_parser('create', help='create an example provider in an empty external directory')
+    create = commands.add_parser('create', help='create an example provider in an empty local/ or external directory')
     create.add_argument('--root', type=Path, required=True)
     commands.add_parser('validate', help='validate the configured provider without printing its contents')
     args = parser.parse_args(argv)
@@ -22,9 +22,9 @@ def main(argv=None):
         if args.command == 'create':
             from scripts.core.data_provider import ROOT
             target = args.root.expanduser().absolute()
-            if (target.is_symlink() or target.resolve().is_relative_to(ROOT)
+            if (target.is_symlink() or not data_path_allowed(target)
                     or target.exists() and (not target.is_dir() or any(target.iterdir()))):
-                raise ProviderError('PROVIDER_DESTINATION_INVALID', 'use an empty directory outside the checkout')
+                raise ProviderError('PROVIDER_DESTINATION_INVALID', 'use an empty directory in local/ or outside the checkout')
             sample = json.loads((ROOT / 'knowledge/example.json').read_text())
             body = '---\n' + json.dumps(sample['metadata'], ensure_ascii=False, indent=2) + '\n---\n\n' + sample['body'] + '\n'
             from scripts.core.knowledge_store import _parse
@@ -35,14 +35,17 @@ def main(argv=None):
             (assets / 'example.md').write_text(body)
             manifest = {'schemaVersion': 1, 'providerId': 'local-example', 'version': '1', 'registries': {}, 'materials': []}
             (target / 'provider.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
+            (target / 'roundtable.md').write_text('')
             config = target / 'config.json'
-            config.write_text(json.dumps({'schemaVersion': 1, 'root': str(target.resolve())}, ensure_ascii=False, indent=2) + '\n')
+            config.write_text(json.dumps({'schemaVersion': 1, 'root': '.'}, ensure_ascii=False, indent=2) + '\n')
             result = {'ok': True, 'code': 'PROVIDER_CREATED', 'config': str(config)}
         else:
             provider = active_provider()
+            roundtable = roundtable_resource()
             from scripts.core.knowledge_store import list_assets
             result = {'ok': True, 'code': 'PROVIDER_VALID', 'configured': provider is not None,
-                      'binding': binding(), 'assetCount': len(list_assets()['items'])}
+                      'binding': binding(), 'assetCount': len(list_assets()['items']),
+                      'roundtable': '用户圆桌' if roundtable else '通用圆桌', 'roundtableResource': roundtable}
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (OSError, ValueError) as exc:

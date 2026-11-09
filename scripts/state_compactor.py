@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""State compactor for gnovel long-form StoryState cache projections.
+"""State compactor for govel long-form StoryState cache projections.
 
 Four-tier compression when item count exceeds threshold:
 
@@ -8,7 +8,7 @@ Four-tier compression when item count exceeds threshold:
   Tier 3 — timeline summarization: events > 50 chapters old → merge into single fact
   Tier 4 — recency cutoff: still over limit → keep active first, then by recency
 
-Operates on project cache layer (.claude/ or .gnovel/aux/), NOT on
+Operates on project cache layer (.claude/ or .govel/aux/), NOT on
 immutable StoryState objects. Outputs compression report with audit trail.
 """
 

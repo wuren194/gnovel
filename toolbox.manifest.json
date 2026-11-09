@@ -1,17 +1,17 @@
 {
-  "name": "gnovel",
-  "version": "1.0.0",
+  "name": "govel",
+  "version": "0.2.0",
   "schemaVersion": 5,
   "workflowVersion": "5.0",
   "compatibilityVersion": 5,
   "language": "zh-CN",
   "skills": [
-    "gnovel-composer",
-    "gnovel-router",
-    "gnovel-planner",
-    "gnovel-writer",
-    "gnovel-editor",
-    "gnovel-titler"
+    "govel-composer",
+    "govel-router",
+    "govel-planner",
+    "govel-writer",
+    "govel-editor",
+    "govel-titler"
   ],
   "sharedProtocols": {
     "contracts": "shared/contracts",
@@ -57,13 +57,13 @@
     "preferredPath": "工作台",
     "protectedCheckoutPaths": [
       "正文",
-      ".gnovel/structure.json"
+      ".govel/structure.json"
     ]
   },
   "storage": {
-    "projectMarker": ".gnovel/project.json",
-    "cache": ".gnovel/cache",
-    "aux": ".gnovel/aux",
+    "projectMarker": ".govel/project.json",
+    "cache": ".govel/cache",
+    "aux": ".govel/aux",
     "cacheDependencies": [
       "toolbox.manifest.json",
       "scripts/state_cache.py",
@@ -133,16 +133,16 @@
   },
   "corpusRoots": {},
   "promptPlan": {
-    "gnovel-writer": {
+    "govel-writer": {
       "always": [
         "STYLE-AND-VOICE.md",
         "G-WRITING-BANS.md",
         "G-RHYTHM.md"
       ],
       "conditional": [],
-      "_note": "writer 有读取能力：文风契约直接读取原文执行，不再由 Router 内联转述。机械门基线读 gnovel-router/references/mechanical-baseline.md。"
+      "_note": "writer 有读取能力：文风契约直接读取原文执行，不再由 Router 内联转述。机械门基线读 govel-router/references/mechanical-baseline.md。"
     },
-    "gnovel-editor": {
+    "govel-editor": {
       "always": [
         "STYLE-AND-VOICE.md",
         "G-WRITING-BANS.md",
@@ -168,7 +168,7 @@
         }
       ]
     },
-    "gnovel-planner": {
+    "govel-planner": {
       "always": [
         "G-CAUSAL.md",
         "TENSION-AND-EMOTION.md",
@@ -199,7 +199,7 @@
         }
       ]
     },
-    "gnovel-composer": {
+    "govel-composer": {
       "always": [
         "G-INTENSITY-SCALE-V2.md",
         "G-STORY-ARCHITECTURE.md",
@@ -218,7 +218,7 @@
         }
       ]
     },
-    "gnovel-router": {
+    "govel-router": {
       "always": [
         "G-LONGFORM.md",
         "G-MULTI-IDENTITY-REVIEW.md",
@@ -230,7 +230,7 @@
       ],
       "conditional": []
     },
-    "gnovel-titler": {
+    "govel-titler": {
       "always": [
         "G-MULTI-IDENTITY-REVIEW.md"
       ],
@@ -238,7 +238,7 @@
     }
   },
   "promptSlices": {
-    "gnovel-composer": {
+    "govel-composer": {
       "default": {
         "G-MULTI-IDENTITY-REVIEW.md": [
           "common",
@@ -251,7 +251,7 @@
         ]
       }
     },
-    "gnovel-planner": {
+    "govel-planner": {
       "default": {
         "G-MULTI-IDENTITY-REVIEW.md": [
           "common",
@@ -261,7 +261,7 @@
         ]
       }
     },
-    "gnovel-editor": {
+    "govel-editor": {
       "default": {
         "G-MULTI-IDENTITY-REVIEW.md": [
           "common",
@@ -278,7 +278,7 @@
         ]
       }
     },
-    "gnovel-titler": {
+    "govel-titler": {
       "default": {
         "G-MULTI-IDENTITY-REVIEW.md": [
           "common",
@@ -288,7 +288,7 @@
         ]
       }
     },
-    "gnovel-router": {
+    "govel-router": {
       "default": {
         "G-MULTI-IDENTITY-REVIEW.md": [
           "common",
@@ -300,26 +300,26 @@
     }
   },
   "onDemandReferences": {
-    "gnovel-planner": [
-      "gnovel-router/references/chapter-outline-review-template.md",
-      "gnovel-router/references/mechanical-baseline.md"
+    "govel-planner": [
+      "govel-router/references/chapter-outline-review-template.md",
+      "govel-router/references/mechanical-baseline.md"
     ],
-    "gnovel-editor": [
-      "gnovel-editor/references/chapter-acceptance-checklist.md",
-      "gnovel-router/references/mechanical-baseline.md"
+    "govel-editor": [
+      "govel-editor/references/chapter-acceptance-checklist.md",
+      "govel-router/references/mechanical-baseline.md"
     ],
-    "gnovel-writer": [
-      "gnovel-router/references/mechanical-baseline.md"
+    "govel-writer": [
+      "govel-router/references/mechanical-baseline.md"
     ],
-    "gnovel-router": [
-      "gnovel-router/references/chapter-outline-review-template.md",
-      "gnovel-router/references/mechanical-baseline.md"
+    "govel-router": [
+      "govel-router/references/chapter-outline-review-template.md",
+      "govel-router/references/mechanical-baseline.md"
     ],
-    "gnovel-composer": [
-      "gnovel-composer/references/design-candidate-template.md"
+    "govel-composer": [
+      "govel-composer/references/design-candidate-template.md"
     ],
-    "gnovel-titler": [
-      "gnovel-titler/references/title-guide.md"
+    "govel-titler": [
+      "govel-titler/references/title-guide.md"
     ]
   }
 }

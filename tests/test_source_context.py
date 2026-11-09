@@ -16,12 +16,12 @@ class SourceContextTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.source, self.chapter = planning_source(self.root); self.cid = self.chapter['chapterId']
-        write_json(self.root / '.gnovel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
+        write_json(self.root / '.govel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
             'workflowVersion': WORKFLOW_VERSION, 'projectId': self.source['projectId']})
 
     def save(self):
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
 
     def test_design_projection_declares_source_model_without_copying_reading_export(self):
         state, design = state_cache.project_projections(self.root)

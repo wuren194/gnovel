@@ -74,7 +74,7 @@ class DoctorDeliveryTests(unittest.TestCase):
         current = self.prepare(againstRef=first['doctorRef'])
         self.assertTrue(current['comparison']['comparable'])
         self.source['projectId'] = 'another-project'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         replaced = self.prepare(againstRef=first['doctorRef'])
         self.assertFalse(replaced['comparison']['comparable'])
 
@@ -91,7 +91,7 @@ class DoctorDeliveryTests(unittest.TestCase):
         self.assertEqual(self.assess.call_count, 1)
         chunks = [row['text'] for page in pages for row in page['issues'] if row['id'].startswith('DI-')]
         self.assertEqual(json.loads(''.join(chunks))['current'], self.report['issues'])
-        self.source['bookName'] += 'changed'; write_json(self.root / '.gnovel/structure.json', self.source)
+        self.source['bookName'] += 'changed'; write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError):
             self.prepare(maxBytes=3000, cursor=pages[0]['nextCursor'])
 

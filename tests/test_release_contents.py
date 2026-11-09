@@ -6,12 +6,74 @@ import unittest
 import zipfile
 import stat
 from pathlib import Path
+from unittest.mock import patch
 
 import scripts.check_release_contents as checker
+import scripts.package_toolbox as packager
 from scripts.check_release_contents import check_paths, check_worktree, check_zip
 
 
 class ReleaseContentsTests(unittest.TestCase):
+    def test_local_data_stays_untracked_and_out_of_packages_even_after_force_add(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            (root / '.gitignore').write_bytes((checker.TOOLBOX_ROOT / '.gitignore').read_bytes())
+            (root / 'README.md').write_text('Example source')
+            private = ['local/knowledge/assets/example.md', 'local/materials/seat.md',
+                       'local/provider.json', 'local/roundtable.md', 'local/bin/govel']
+            public = ['local/README.md', 'local/knowledge/.gitkeep']
+            for name in public:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('Local layout instructions' if name.endswith('README.md') else '')
+            for name in private:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('LOCAL_PRIVATE_MARKER')
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            subprocess.run(['git', 'add', '.'], cwd=root, check=True)
+            tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=root).decode().split('\0')
+            self.assertFalse(set(private) & set(tracked))
+            self.assertTrue(set(public) <= set(tracked))
+            with patch.object(checker, 'TOOLBOX_ROOT', root), patch.object(packager, 'TOOLBOX_ROOT', root):
+                self.assertTrue(checker.check_worktree()['ok'])
+                subprocess.run(['git', 'add', '-f', *private], cwd=root, check=True)
+                self.assertFalse(checker.check_worktree()['ok'])
+                collected = packager.collect()
+                self.assertFalse(set(private) & set(collected['packaged']))
+                self.assertTrue(set(private) <= set(collected['excluded']))
+                self.assertTrue(set(public) <= set(collected['packaged']))
+                manifest = packager.build_manifest(mode='zip', local_paths={})
+                archive = root / 'release.zip'
+                packager.build_zip(archive, manifest)
+                self.assertTrue(checker.check_zip(archive)['ok'])
+                with zipfile.ZipFile(archive) as output:
+                    self.assertFalse(set(private) & set(output.namelist()))
+                    self.assertTrue(set(public) <= set(output.namelist()))
+                    self.assertEqual(output.read('local/knowledge/.gitkeep'), b'')
+                    self.assertNotIn(b'LOCAL_PRIVATE_MARKER', b''.join(output.read(name) for name in output.namelist()))
+                with zipfile.ZipFile(archive, 'a') as output:
+                    output.writestr(private[0], 'LOCAL_PRIVATE_MARKER')
+                self.assertFalse(checker.check_zip(archive)['ok'])
+                self.assertFalse(packager.check(root / 'release.zip.MANIFEST.json', archive)['ok'])
+
+    def test_public_placeholder_cannot_carry_private_content(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            name = 'local/knowledge/.gitkeep'
+            target = root / name
+            target.parent.mkdir(parents=True)
+            target.write_text('PRIVATE CONTENT')
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            subprocess.run(['git', 'add', '.'], cwd=root, check=True)
+            with patch.object(checker, 'TOOLBOX_ROOT', root), patch.object(packager, 'TOOLBOX_ROOT', root):
+                self.assertFalse(checker.check_worktree()['ok'])
+                self.assertNotIn(name, packager.collect()['packaged'])
+            archive = root / 'bad.zip'
+            with zipfile.ZipFile(archive, 'w') as output:
+                output.writestr(name, 'PRIVATE CONTENT')
+            self.assertIn('local_placeholder_not_empty', {row['code'] for row in checker.check_zip(archive)['problems']})
+
     def test_private_originals_and_alias_are_excluded_from_worktree(self):
         result = check_worktree()
         self.assertTrue(result['ok'], result['problems'])

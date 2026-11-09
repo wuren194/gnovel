@@ -1,4 +1,4 @@
-"""Strict story structure model for gnovel projects."""
+"""Strict story structure model for govel projects."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ from typing import Any
 
 from .clock import utc_now
 from .jsonio import read_json, write_json
-from .project import current_schema_version, source_model_policy
+from .project import current_schema_version, source_model_policy, toolbox_manifest
 
 # 唯一真源是 toolbox.manifest.json 的 projectVersionPolicy.supportedSchemaVersions；
 # 禁止在本文件写字面量（AGENTS.md 真源纪律第 2 条）。
 PROJECT_SCHEMA_VERSION = current_schema_version()
-WORKFLOW_VERSION = "5.0"
+WORKFLOW_VERSION = str(toolbox_manifest()["workflowVersion"])
 ENTITY_TYPES = {
     "character", "prop", "location", "event", "faction", "rule",
     "secret", "hook", "soft_limit", "time_anchor",
@@ -46,7 +46,7 @@ def is_time_ordinal(value: Any) -> bool:
 
 
 def structure_path(root: Path) -> Path:
-    return root.expanduser().resolve() / ".gnovel" / "structure.json"
+    return root.expanduser().resolve() / ".govel" / "structure.json"
 
 
 def new_id(kind: str) -> str:
@@ -291,7 +291,7 @@ def load_structure(root: Path) -> dict:
     require_project_provider(root)
     path = structure_path(root)
     if not path.is_file():
-        raise StructureError("STRUCTURE_NOT_INITIALIZED", "missing .gnovel/structure.json")
+        raise StructureError("STRUCTURE_NOT_INITIALIZED", "missing .govel/structure.json")
     try:
         data = read_json(path)
     except (OSError, json.JSONDecodeError) as exc:

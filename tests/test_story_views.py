@@ -66,7 +66,7 @@ class TimeOrdinalTests(unittest.TestCase):
             'fieldId': 'FD-TIME-EVIDENCE', 'values': []})
         source['fragments'].append({'fragmentId': 'SF-TIME-EVIDENCE', 'ownerId': anchor_id, 'order': 1,
             'contentRole': 'fact', 'contentBindings': ['AT-TIME-EVIDENCE'], 'text': '此时点由作者审定。'})
-        write_json(self.root/'.gnovel/structure.json', source)
+        write_json(self.root/'.govel/structure.json', source)
         for value in (7, None):
             current = self.anchors()[anchor_id]
             ref = resolve_canon_target(self.root, selector=anchor_id)['sessionRef']
@@ -227,7 +227,7 @@ class GraphMermaidTests(unittest.TestCase):
         structure = load_structure(self.root)
         entity = next(e for e in structure["entities"] if e["entityId"] == self.fixture["characterId"])
         entity["name"] = "沈\n砚"
-        write_json(self.root/".gnovel/structure.json", structure)
+        write_json(self.root/".govel/structure.json", structure)
         text = graph_mermaid(entity_graph(self.root))
         self.assertIn('C_TEST_ALPHA["沈 砚 ·1"]', text)
 

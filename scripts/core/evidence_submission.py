@@ -229,7 +229,7 @@ def submit_evidence(root: Path, *, submissionRef=None, requestId=None, maxBytes=
             other_operation = 'source.evidence-register' if value['operation'] == 'source.review-submit' else 'source.review-submit'
             if key in _ledger(root, other_operation)[1].get('requests', {}):
                 raise StructureError('SOURCE_REQUEST_REUSED', 'requestId already identifies a different evidence kind')
-            guards = capture_guards(root, ['.gnovel/structure.json'])
+            guards = capture_guards(root, ['.govel/structure.json'])
             _assert_current(root, value)
             ledger.setdefault('requests', {})[key] = deepcopy(value)
             apply_write_set(root, {path: json_bytes(ledger)}, operation='evidence_request', guards=guards)
@@ -238,7 +238,7 @@ def submit_evidence(root: Path, *, submissionRef=None, requestId=None, maxBytes=
             if index in done:
                 continue
             try:
-                guards = capture_guards(root, ['.gnovel/structure.json'] +
+                guards = capture_guards(root, ['.govel/structure.json'] +
                     ([value['snapshot']['path']] if value['snapshot']['kind'] == 'prose' else []))
                 _assert_current(root, value)
                 if value['operation'] == 'source.review-submit':

@@ -200,7 +200,7 @@ class PathTransactionTests(unittest.TestCase):
         chapter = structure['chapters'][-1]
         chapter['proseBinding'] = seal_binding(structure['projectId'], chapter['chapterId'], chapter['filePath'],
             state='managed', generation=structure['revision'], expected_content_digest='sha256:'+file_sha256(self.root/chapter['filePath']))
-        write_json(self.root/'.gnovel/structure.json', structure)
+        write_json(self.root/'.govel/structure.json', structure)
 
     def test_a_relocated_body_keeps_its_bytes_and_its_identity(self) -> None:
         payload = (self.root / f'正文/{self.info["chapterOne"]}.md').read_bytes()
@@ -222,7 +222,7 @@ class PathTransactionTests(unittest.TestCase):
         old_body = self.root / f'正文/{self.info["chapterOne"]}.md'
         new_body = self.root / '正文' / '001-白塔坠落.md'
         prose = old_body.read_bytes()
-        structure_before = (self.root / '.gnovel' / 'structure.json').read_bytes()
+        structure_before = (self.root / '.govel' / 'structure.json').read_bytes()
 
         def fail_on_body_write(phase, relative=None):
             if phase == 'write' and relative == '正文/001-白塔坠落.md':
@@ -234,10 +234,10 @@ class PathTransactionTests(unittest.TestCase):
         self.assertTrue(old_body.is_file(), 'the old file is still there')
         self.assertFalse(new_body.exists(), 'the new file is not there')
         self.assertEqual(old_body.read_bytes(), prose, 'prose is byte-for-byte intact')
-        self.assertEqual((self.root / '.gnovel' / 'structure.json').read_bytes(), structure_before)
+        self.assertEqual((self.root / '.govel' / 'structure.json').read_bytes(), structure_before)
         self.assertEqual(self._chapter(self.info['chapterOne'])['filePath'],
                          f'正文/{self.info["chapterOne"]}.md')
-        self.assertFalse(list((self.root / '.gnovel' / 'transactions').glob('*.json')))
+        self.assertFalse(list((self.root / '.govel' / 'transactions').glob('*.json')))
         _commit(self.root, preview_relocate_chapter_paths(
             self.root, chapter_id=self.info['chapterOne'], file_path='正文/001-白塔坠落.md'))
         self.assertEqual(self._chapter(self.info['chapterOne'])['filePath'], '正文/001-白塔坠落.md')
@@ -324,7 +324,7 @@ class HardLinkAliasTests(unittest.TestCase):
         chapter = structure['chapters'][-1]
         chapter['proseBinding'] = seal_binding(structure['projectId'], chapter['chapterId'], chapter['filePath'],
             state='managed', generation=structure['revision'], expected_content_digest='sha256:'+file_sha256(self.root/chapter['filePath']))
-        write_json(self.root/'.gnovel/structure.json', structure)
+        write_json(self.root/'.govel/structure.json', structure)
         return f'正文/{name}'
 
     def _chapter(self) -> dict:
@@ -479,13 +479,13 @@ class DoctorRefactorChecksTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = (Path(self.temp.name) / '书').resolve()
         self.info = refactor_project(self.root)
-        self.marker = self.root / '.gnovel' / 'structure.json'
+        self.marker = self.root / '.govel' / 'structure.json'
 
     def _truth(self) -> dict:
         """Authored bytes outside staged plans and the persistent lock anchor."""
         return {path.relative_to(self.root).as_posix(): path.read_bytes()
                 for path in sorted(self.root.rglob('*'))
-                if path.is_file() and '.gnovel/plans' not in path.relative_to(self.root).as_posix()
+                if path.is_file() and '.govel/plans' not in path.relative_to(self.root).as_posix()
                 and path.name != 'structure.lock'}
 
     def _codes(self, domain='project'):
@@ -565,7 +565,7 @@ class ProjectFolderRelocationTests(unittest.TestCase):
         self.assertFalse(preview['impact']['crossDevice'])
         # The approval is durable: what the author was shown is the plan the commit
         # binds to, not a hash the caller had to keep somewhere safe.
-        self.assertTrue((self.root / '.gnovel' / 'plans' / f"{preview['operationId']}.json").is_file())
+        self.assertTrue((self.root / '.govel' / 'plans' / f"{preview['operationId']}.json").is_file())
         result = commit_relocate_project(self.root, operation_id=preview['operationId'],
                                          plan_hash=preview['planHash'], approved=True, actor='test')
         self.assertEqual(result['code'], 'PROJECT_RELOCATED')
@@ -582,7 +582,7 @@ class ProjectFolderRelocationTests(unittest.TestCase):
         self.assertEqual(receipt['planHash'], preview['planHash'])
         self.assertEqual(receipt['actor'], 'test')
         self.assertEqual(result['operationId'], preview['operationId'])
-        self.assertFalse((target / '.gnovel' / 'plans' / f"{preview['operationId']}.json").exists(),
+        self.assertFalse((target / '.govel' / 'plans' / f"{preview['operationId']}.json").exists(),
                          'the consumed plan is gone; the same approval cannot be spent twice')
         self.assertEqual(result['authoredInventoryHash'], receipt['authoredInventoryHash'])
         for relative, text in self.info['bodies'].items():
@@ -688,7 +688,7 @@ class ProjectFolderRelocationTests(unittest.TestCase):
 
     def test_a_pending_transaction_blocks_relocation(self) -> None:
         from scripts.core.project_relocate import ProjectRelocateError, preview_relocate_project
-        pending = self.root / '.gnovel' / 'transactions'
+        pending = self.root / '.govel' / 'transactions'
         pending.mkdir(parents=True, exist_ok=True)
         (pending / 'TX-STUCK.json').write_text('{}', encoding='utf-8')
         with self.assertRaises(ProjectRelocateError) as caught:
@@ -705,9 +705,9 @@ class ProjectFolderRelocationTests(unittest.TestCase):
         self.assertTrue(target.is_dir())
         self.assertFalse(self.root.exists())
         self.assertEqual(load_structure(target)['bookName'], '神弃之冠')
-        self.assertEqual(read_json(target / '.gnovel' / 'project.json')['bookName'], '神弃之冠')
+        self.assertEqual(read_json(target / '.govel' / 'project.json')['bookName'], '神弃之冠')
         # The receipt keeps history and current locator apart, never rewriting either.
-        journal = read_json(target / '.gnovel' / 'operations' / f"{preview['operationId']}.json")
+        journal = read_json(target / '.govel' / 'operations' / f"{preview['operationId']}.json")
         self.assertEqual(journal['impact']['projectFolderRelocation']['sourceRoot'], str(self.root))
         self.assertEqual([row['field'] for row in journal['changes']], ['bookName', 'projectFolder'])
         locator = read_json(target / RECEIPT_PATH)
@@ -725,7 +725,7 @@ class ProjectFolderRelocationTests(unittest.TestCase):
         self.assertTrue(self.root.is_dir(), 'the folder came back')
         self.assertFalse(target.exists())
         self.assertEqual(load_structure(self.root)['bookName'], '山城旧事')
-        self.assertEqual(read_json(self.root / '.gnovel' / 'project.json')['bookName'], '山城旧事')
+        self.assertEqual(read_json(self.root / '.govel' / 'project.json')['bookName'], '山城旧事')
 
     def test_a_failed_locator_receipt_write_rolls_the_book_and_the_folder_back(self) -> None:
         """Book rename, folder move and locator receipt: all three, or none.
@@ -758,12 +758,12 @@ class ProjectFolderRelocationTests(unittest.TestCase):
                 _commit(self.root, preview)
         self.assertTrue(self.root.is_dir(), 'the folder came back')
         self.assertFalse(target.exists())
-        self.assertEqual(read_json(self.root / '.gnovel' / 'project.json')['bookName'], '山城旧事')
+        self.assertEqual(read_json(self.root / '.govel' / 'project.json')['bookName'], '山城旧事')
         self.assertEqual(load_structure(self.root)['bookName'], '山城旧事')
         self.assertFalse((self.root / RECEIPT_PATH).exists(), 'no receipt for a move that did not happen')
-        self.assertFalse((self.root / '.gnovel' / 'operations' / f"{preview['operationId']}.json").exists(),
+        self.assertFalse((self.root / '.govel' / 'operations' / f"{preview['operationId']}.json").exists(),
                          'no journal for a commit that never landed')
-        self.assertFalse(list((self.root / '.gnovel' / 'transactions').glob('*.json')),
+        self.assertFalse(list((self.root / '.govel' / 'transactions').glob('*.json')),
                          'no orphan transaction manifest')
         self.assertFalse(project_lock_observation(self.root)['locked'])
         pending = [row for row in _pending(self.root) if row['operationId'] == preview['operationId']]
@@ -775,7 +775,7 @@ class ProjectFolderRelocationTests(unittest.TestCase):
         self.assertTrue(target.is_dir())
         self.assertFalse(self.root.exists())
         self.assertEqual(load_structure(target)['bookName'], '神弃之冠')
-        self.assertEqual(read_json(target / '.gnovel' / 'project.json')['bookName'], '神弃之冠')
+        self.assertEqual(read_json(target / '.govel' / 'project.json')['bookName'], '神弃之冠')
         receipt = read_json(target / RECEIPT_PATH)
         self.assertEqual(receipt['rootAtOperation'], str(self.root))
         self.assertEqual(receipt['currentLocator'], str(target))

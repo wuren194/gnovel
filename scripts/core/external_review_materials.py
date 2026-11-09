@@ -36,7 +36,7 @@ def _accepted_bytes(root: Path, source: dict, chapter: dict) -> tuple[bytes | No
     relative = chapter['filePath']
     # The registered artifact is usable only when the existing finalization record
     # binds its exact identity. A same-hash unrelated manuscript is not provenance.
-    workflow_path = safe_project_path(root, '.gnovel/workflow.json')
+    workflow_path = safe_project_path(root, '.govel/workflow.json')
     workflow = read_json(workflow_path) if workflow_path.is_file() else {}
     approval = workflow.get('approvals', {}).get(chapter['chapterId'], {})
     entry = workflow.get('artifacts', {}).get(chapter['chapterId'], {}).get('candidate_prose', {})
@@ -54,7 +54,7 @@ def _accepted_bytes(root: Path, source: dict, chapter: dict) -> tuple[bytes | No
             pass
     # Current transaction archives contain immutable after-images together with
     # the actual structure/ownership image committed by that same transaction.
-    directory = safe_project_path(root, '.gnovel/transactions')
+    directory = safe_project_path(root, '.govel/transactions')
     for terminal in sorted(directory.glob('TX-*/completed.json'), reverse=True):
         try:
             manifest = read_json(safe_project_path(root, terminal.relative_to(root)))
@@ -63,11 +63,11 @@ def _accepted_bytes(root: Path, source: dict, chapter: dict) -> tuple[bytes | No
                 continue
             rows = {row['path']: row for row in manifest['files']}
             for side in ('after', 'before'):
-                source_row = rows.get('.gnovel/structure.json', {}).get(side, {})
+                source_row = rows.get('.govel/structure.json', {}).get(side, {})
                 prose_row = rows.get(relative, {}).get(side, {})
                 if not source_row.get('exists') or not prose_row.get('exists'):
                     continue
-                source_path = safe_project_path(root, terminal.parent.relative_to(root)/side/'.gnovel/structure.json')
+                source_path = safe_project_path(root, terminal.parent.relative_to(root)/side/'.govel/structure.json')
                 prose_path = safe_project_path(root, terminal.parent.relative_to(root)/side/relative)
                 source_bytes, payload = source_path.read_bytes(), prose_path.read_bytes()
                 if (digest(source_bytes) == source_row['sha256'] and digest(payload) == prose_row['sha256']
@@ -79,19 +79,19 @@ def _accepted_bytes(root: Path, source: dict, chapter: dict) -> tuple[bytes | No
             continue
     # Existing operation backups preserve a structure image that identifies the
     # same generation, chapter and locator; raw hash-only files are not searched.
-    for journal_path in sorted(safe_project_path(root, '.gnovel/operations').glob('OP-*.json'), reverse=True):
+    for journal_path in sorted(safe_project_path(root, '.govel/operations').glob('OP-*.json'), reverse=True):
         try:
             journal = read_json(safe_project_path(root, journal_path.relative_to(root)))
             if journal.get('schemaVersion') != 4 or journal.get('operationId') != journal_path.stem:
                 continue
             rows = journal.get('beforeFiles', {})
-            if not rows.get(relative, {}).get('exists') or not rows.get('.gnovel/structure.json', {}).get('exists'):
+            if not rows.get(relative, {}).get('exists') or not rows.get('.govel/structure.json', {}).get('exists'):
                 continue
             backup = safe_project_path(root, journal['backupPath'])
             source_path = safe_project_path(root, backup.relative_to(root)/'structure.json')
             prose_path = safe_project_path(root, backup.relative_to(root)/relative)
             source_bytes, payload = source_path.read_bytes(), prose_path.read_bytes()
-            if (digest(source_bytes) == rows['.gnovel/structure.json']['sha256']
+            if (digest(source_bytes) == rows['.govel/structure.json']['sha256']
                     and digest(payload) == rows[relative]['sha256'] and 'sha256:' + digest(payload) == expected
                     and _matching_chapter(json.loads(source_bytes), source, chapter)):
                 return payload, {'kind': 'operation_before_image', 'operationId': journal['operationId'],
@@ -107,7 +107,7 @@ def freeze_external_materials(root: Path, source: dict, chapter: dict, operation
     observed, h2 = observation(live)
     if h2 is None:
         raise StructureError('EXTERNAL_REVIEW_BYTES_UNAVAILABLE', 'external prose is not a readable regular file')
-    prefix = f'.gnovel/plans/{operation_id}.external'
+    prefix = f'.govel/plans/{operation_id}.external'
     prior_path = safe_project_path(root, f'{prefix}/material.json')
     if prior_path.is_file():
         prior = read_json(prior_path)

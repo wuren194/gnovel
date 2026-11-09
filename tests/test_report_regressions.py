@@ -23,7 +23,7 @@ class ReportRegressionTests(unittest.TestCase):
         plan = next(row for row in source['fragments'] if row['ownerId'] == cid and row['contentRole'] == 'plan')
         text = 'AGENTS.md 偏离 L1：本轮需要明确的作者例外。'
         (self.root / 'AGENTS.md').write_text('中性测试项目。\n', encoding='utf-8')
-        before = (self.root / '.gnovel/structure.json').read_bytes()
+        before = (self.root / '.govel/structure.json').read_bytes()
         for added in (False, True):
             proposed = deepcopy(source)
             changed = deepcopy(plan)
@@ -36,7 +36,7 @@ class ReportRegressionTests(unittest.TestCase):
                 proposed['fragments'][proposed['fragments'].index(plan)] = changed
             result = inspect_outline(self.root, chapterId=cid, structure=proposed)
             self.assertEqual(result['projectConstraints']['exceptionDeclaration'], text)
-        self.assertEqual((self.root / '.gnovel/structure.json').read_bytes(), before)
+        self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
 
     def test_serial_policy_uses_placement_and_real_unfinished_chapters(self):
         from scripts.core.workflow import default_workflow, validate_next_action_for_project, WorkflowError

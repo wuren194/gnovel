@@ -62,7 +62,7 @@
   },
   "protectedPaths": [
     "正文",
-    ".gnovel/structure.json"
+    ".govel/structure.json"
   ],
   "userWorkflow": {
     "stages": {

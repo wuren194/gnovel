@@ -21,7 +21,7 @@ def request_identity(source: dict, request_id: str) -> tuple[str, str]:
 
 
 def operation_undone(root: Path, operation_id: str) -> bool:
-    directory = safe_project_path(root, '.gnovel/undo-receipts')
+    directory = safe_project_path(root, '.govel/undo-receipts')
     return directory.is_dir() and any(directory.glob(operation_id + '-*.json'))
 
 

@@ -70,14 +70,14 @@ class InvalidatedArtifactApprovalTests(unittest.TestCase):
                 workflow = default_workflow()
                 workflow['artifacts']['CH-TIME'] = {'stage_b_review': {
                     'artifactSha256': 'prior', 'repairHistory': history}}
-                path = root / '.gnovel/workflow.json'
+                path = root / '.govel/workflow.json'
                 write_json(path, workflow)
                 original = path.read_bytes()
                 with self.assertRaises(StructureError) as caught:
                     review_outputs(root, before, after, source_impact(before, after))
                 self.assertEqual(caught.exception.code, 'REPAIR_HISTORY_INVALID')
                 self.assertEqual(path.read_bytes(), original)
-                self.assertFalse((root / '.gnovel/source-review.json').exists())
+                self.assertFalse((root / '.govel/source-review.json').exists())
 
     def test_time_change_cannot_reapprove_or_rebind_old_review_but_new_review_can_finalize(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -97,9 +97,9 @@ class InvalidatedArtifactApprovalTests(unittest.TestCase):
             source['fragments'].append({'fragmentId': 'SF-TIME-EVIDENCE', 'ownerId': 'TA-REVIEW',
                 'text': '已核对日期。', 'order': 1, 'contentRole': 'fact', 'contentBindings': ['AT-TIME-EVIDENCE']})
             validate_structure(source)
-            write_json(root / '.gnovel/structure.json', source)
+            write_json(root / '.govel/structure.json', source)
             review_ready_project(root)
-            workflow_path = root / '.gnovel/workflow.json'
+            workflow_path = root / '.govel/workflow.json'
 
             def cli(action, *args, cid=None):
                 output = io.StringIO()

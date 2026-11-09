@@ -10,8 +10,16 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRIES = {'intensity', 'text-patterns', 'knowledge'}
 STATIONS = {'composer', 'router', 'planner', 'writer', 'editor', 'titler'}
+ROUNDTABLE_MATERIAL_ID = 'GOVEL-ROUNDTABLE'
 _VALIDATED = {}
-EXPECTED_PROVIDER_ENV = 'GNOVEL_EXPECTED_PROVIDER'
+EXPECTED_PROVIDER_ENV = 'GOVEL_EXPECTED_PROVIDER'
+
+
+def data_path_allowed(path):
+    """Checkout-local data belongs only in the reserved, unpublished local/ tree."""
+    resolved = path.resolve()
+    return path.is_absolute() and (not resolved.is_relative_to(ROOT)
+                                   or resolved.is_relative_to(ROOT / 'local'))
 
 
 def _check_expected(current):
@@ -100,26 +108,40 @@ def _resource(root, spec):
     return path, data
 
 
-def active_provider():
-    """Absence is optional. An explicitly configured but broken provider fails."""
-    configured = os.environ.get('GNOVEL_PROVIDER_CONFIG')
-    if configured is None:
-        _check_expected({'providerId': None, 'version': None, 'sha256': None})
-        return None
+def _default_data_root():
+    value = os.environ.get('GOVEL_DATA_HOME')
+    path = Path(value).expanduser() if value else ROOT / 'local'
+    if not data_path_allowed(path):
+        raise ProviderError('PROVIDER_ROOT_INVALID', 'data directory must be absolute and in local/ or outside the checkout')
+    return path
+
+
+def _configured_root(configured):
     path = Path(configured).expanduser()
-    if (not configured or not path.is_absolute() or path.is_symlink()
-            or path.resolve().is_relative_to(ROOT)):
-        raise ProviderError('PROVIDER_CONFIG_INVALID', 'GNOVEL_PROVIDER_CONFIG must name an absolute regular file outside the checkout')
+    if not configured or path.is_symlink() or not data_path_allowed(path):
+        raise ProviderError('PROVIDER_CONFIG_INVALID', 'configuration must be an absolute regular file in local/ or outside the checkout')
     config = _json(path)
     if set(config) != {'schemaVersion', 'root'} or type(config['schemaVersion']) is not int or config['schemaVersion'] != 1:
         raise ProviderError('PROVIDER_CONFIG_INVALID', 'unsupported provider configuration')
     if not isinstance(config['root'], str) or not config['root']:
         raise ProviderError('PROVIDER_CONFIG_INVALID', 'provider root must be a directory')
     root = Path(config['root']).expanduser()
-    if (not root.is_absolute() or root.is_symlink() or not root.is_dir()
-            or root.resolve().is_relative_to(ROOT)):
-        raise ProviderError('PROVIDER_ROOT_INVALID', 'provider must be an existing directory outside the source checkout')
-    manifest = _json(confined_path(root, 'provider.json'))
+    if not root.is_absolute():
+        root = confined_path(path.parent, config['root'])
+    if root.is_symlink() or not root.is_dir() or not data_path_allowed(root):
+        raise ProviderError('PROVIDER_ROOT_INVALID', 'provider must be an existing directory in local/ or outside the checkout')
+    return root
+
+
+def active_provider():
+    """Use optional local/provider.json, or an explicitly selected external pack."""
+    configured = os.environ.get('GOVEL_PROVIDER_CONFIG')
+    root = _default_data_root() if configured is None else _configured_root(configured)
+    manifest_path = confined_path(root, 'provider.json')
+    if configured is None and not manifest_path.exists():
+        _check_expected({'providerId': None, 'version': None, 'sha256': None})
+        return None
+    manifest = _json(manifest_path)
     identity = hashlib.sha256(json.dumps(manifest, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     _check_expected({key: manifest.get(key) for key in ('providerId', 'version')} | {'sha256': identity})
     key = (str(root), identity)
@@ -139,7 +161,8 @@ def active_provider():
     for item in manifest['materials']:
         if (not isinstance(item, dict) or set(item) != {'id', 'role', 'stations', 'resource', 'when'}
                 or not isinstance(item['id'], str) or not re.fullmatch('[A-Za-z0-9-]+', item['id'])
-                or item['id'] in seen or item['role'] not in {'reference', 'rule'}
+                or item['id'] in seen or item['id'] == ROUNDTABLE_MATERIAL_ID
+                or item['role'] not in {'reference', 'rule'}
                 or not isinstance(item['stations'], list) or not item['stations']
                 or any(not isinstance(s, str) for s in item['stations'])
                 or set(item['stations']) - STATIONS):
@@ -150,6 +173,8 @@ def active_provider():
                 or not isinstance(condition['field'], str)):
             raise ProviderError('PROVIDER_MATERIAL_INVALID', 'invalid material applicability condition')
         seen.add(item['id'])
+        if isinstance(item['resource'], dict) and item['resource'].get('path') == 'roundtable.md':
+            raise ProviderError('PROVIDER_MATERIAL_INVALID', 'roundtable.md is a live file, not a pinned material')
         _resource(root, item['resource'])
     before = _resource_states(root, manifest)
     # Bind the cached validation to a stable physical observation. Resource
@@ -174,7 +199,7 @@ def binding():
 
 def require_project_provider(root):
     """A project created with a provider cannot silently run without that pack."""
-    marker = Path(root) / '.gnovel/project.json'
+    marker = Path(root) / '.govel/project.json'
     if not marker.is_file():
         return
     required = _json(marker).get('dataProvider')
@@ -208,21 +233,51 @@ def storage_root():
     provider = active_provider()
     if provider is not None:
         return provider['root']
-    value = os.environ.get('GNOVEL_DATA_HOME')
-    path = Path(value).expanduser() if value else Path.home() / 'Library/Application Support/gnovel'
-    if not path.is_absolute() or path.resolve().is_relative_to(ROOT):
-        raise ProviderError('PROVIDER_ROOT_INVALID', 'data directory must be absolute and outside the source checkout')
-    return path
+    return _default_data_root()
+
+
+def roundtable_resource():
+    """Read the editable singleton; absent/blank means use the built-in table."""
+    root = storage_root()
+    path = confined_path(root, 'roundtable.md')
+    from .static_cache import cached_bytes
+    try:
+        body = cached_bytes(path)
+    except FileNotFoundError:
+        body = b''
+    except (OSError, ValueError) as exc:
+        raise ProviderError('ROUNDTABLE_UNREADABLE', 'cannot read roundtable.md; check the file and prepare again') from exc
+    try:
+        text = body.decode('utf-8-sig')
+    except UnicodeError as exc:
+        raise ProviderError('ROUNDTABLE_INVALID', 'roundtable.md must be UTF-8 text') from exc
+    resource = {'path': 'roundtable.md', 'sha256': hashlib.sha256(body).hexdigest()} if text.strip() else None
+    from .prepare_dependencies import observe_roundtable
+    observe_roundtable(root, resource)
+    return resource
 
 
 def materials(station, design=None):
     provider = active_provider()
-    if provider is None:
-        return []
     if station not in STATIONS:
+        if provider is None:
+            return []
         raise ProviderError('PROVIDER_STATION_INVALID', 'unknown workstation')
     result = []
-    for item in provider['manifest']['materials']:
+    roundtable = roundtable_resource() if station != 'writer' else None
+    if roundtable is not None:
+        try:
+            _, body = _resource(storage_root(), roundtable)
+        except ProviderError as exc:
+            raise ProviderError('ROUNDTABLE_CHANGED', 'roundtable.md changed while preparing; prepare again') from exc
+        result.append({'id': ROUNDTABLE_MATERIAL_ID, 'role': 'rule', 'path': roundtable['path'],
+                       'sha256': roundtable['sha256'], 'bytes': len(body), 'active': True, 'condition': None})
+    for item in provider['manifest']['materials'] if provider else []:
+        # One authoritative file may not be injected again through the ordinary
+        # material list, even if a package still lists the same resource there.
+        if roundtable is not None and (item['resource']['path'] == roundtable['path']
+                                      or item['resource']['sha256'] == roundtable['sha256']):
+            continue
         if station in item['stations']:
             matched, evidence = True, None
             if item['when'] is not None:

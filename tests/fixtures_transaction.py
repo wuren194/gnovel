@@ -16,7 +16,7 @@ def interrupted_write_set(root: Path, outputs: dict[str, bytes | None], *, phase
     No manifest format or before/after hash is manufactured by the fixture.
     lock_held is only used inside the lock-acquisition race seam after O_EXCL won.
     """
-    directory = root/'.gnovel/transactions'
+    directory = root/'.govel/transactions'
     prior = set(directory.glob('*.json'))
 
     def crash(at, path=None):
@@ -46,7 +46,7 @@ def assert_preserved_rollback(case, root: Path, before: dict, after: dict) -> No
     """Business bytes stay OLD; new archives must prove a completed rollback."""
     import hashlib
     from scripts.core.finalization import pending_transactions
-    prefix = '.gnovel/transactions/'
+    prefix = '.govel/transactions/'
     business = lambda rows: {str(key): value for key, value in rows.items()
                              if not str(key).startswith(prefix)}
     case.assertEqual(business(before), business(after))

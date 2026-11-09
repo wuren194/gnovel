@@ -61,7 +61,7 @@ def review_materials(root, record_ids, selection, current_materials, dependencie
         operation_id = state['items'].get(rid, {}).get('operationId')
         if not perspective and isinstance(operation_id, str) and OPERATION_ID_PATTERN.fullmatch(operation_id):
             from .prepare_dependencies import capture_query
-            capture_query(root, dependencies, '.gnovel/undo-receipts', operation_id + '-*.json')
+            capture_query(root, dependencies, '.govel/undo-receipts', operation_id + '-*.json')
         origin = {} if perspective else review_origin(root, state, rid, operations)
         input_hash = inputs.fingerprint(rid)
         status = fragment_review_status(inputs, state, rid, input_hash=input_hash)
@@ -118,7 +118,7 @@ def change_material(root, operation, operation_id, scope, visible, selection):
     before_path = safe_project_path(root, str((backup / 'structure.json').relative_to(root)))
     try:
         raw = before_path.read_bytes()
-        if digest(raw) != receipt.get('beforeFiles', {}).get('.gnovel/structure.json', {}).get('sha256'):
+        if digest(raw) != receipt.get('beforeFiles', {}).get('.govel/structure.json', {}).get('sha256'):
             raise ValueError('before-image differs from its receipt')
         _, before_records = review_visibility(json.loads(raw), [], selection)
         result['beforeAvailable'] = True

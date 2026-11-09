@@ -56,7 +56,7 @@ binding generation 随正式变更的提交 revision 前进，不是正文内容
 
 正式撤销是向前提交的反向事务，只恢复该操作实际改变的 binding 语义字段，绝不恢复旧 generation 或 integrityDigest。没有 binding 变化的操作不为章节无理由推进 generation。目标不在链顶端则返回 `UNDO_NOT_CHAIN_TOP`；有冲突、外部改动或证据缺失时拒绝。
 
-事务的持久清单是 `.gnovel/transactions/<TX-ID>.json`，镜像分别位于 `.gnovel/transactions/<TX-ID>/before/` 与 `.gnovel/transactions/<TX-ID>/after/`。`phase != committed` 时恢复精确 before-image（COMPLETE OLD），after-state 尚未取得已提交权威；`phase == committed` 时保留完整 after-state（COMPLETE NEW）并清理。不新增 `prepared → forward replay` 路径。未提交事务恢复可恢复当时 revision；已经提交的业务状态撤销仍必须前向提交。
+事务的持久清单是 `.govel/transactions/<TX-ID>.json`，镜像分别位于 `.govel/transactions/<TX-ID>/before/` 与 `.govel/transactions/<TX-ID>/after/`。`phase != committed` 时恢复精确 before-image（COMPLETE OLD），after-state 尚未取得已提交权威；`phase == committed` 时保留完整 after-state（COMPLETE NEW）并清理。不新增 `prepared → forward replay` 路径。未提交事务恢复可恢复当时 revision；已经提交的业务状态撤销仍必须前向提交。
 
 只读 file guards 与目录成员 guards 不能成为恢复写入目标。被校验的正文状态直接作为写集 before-image；提交期间出现外部修改时否决本次发布并保留外部对象，不能把新出现的文件认领为自己的旧字节。
 

@@ -44,12 +44,12 @@ class BindingFillTests(unittest.TestCase):
         self.chapter = self.fixture["chapterIds"][0]
 
     def _workflow(self) -> dict:
-        return read_json(self.root / ".gnovel/workflow.json")
+        return read_json(self.root / ".govel/workflow.json")
 
     def test_stage_b_binds_prose_from_registered_candidate(self):
         """裸字段绑定：从已注册 candidate_prose 计算正文 hash，注入后信封自洽、可入库。"""
         workflow = self._workflow()
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         artifact = envelope("stage_b_review", {'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}, 'factAssessment': {'status': 'no_change'},
             "verdict": "POLISH_READY",
             "slots": evidenced_slots('他把钥匙放回桌上，合上了登记本。'),
@@ -58,7 +58,7 @@ class BindingFillTests(unittest.TestCase):
         filled, provenance = self._bind(artifact, [("finalProseSha256", None), ("sourcePlanHash", None)])
         self.assertEqual(provenance["finalProseSha256"]["source"], "current_truth")
         validate_review_artifact(filled)
-        registered = json.loads((self.root / ".gnovel/workflow.json").read_text())  # unchanged by bind
+        registered = json.loads((self.root / ".govel/workflow.json").read_text())  # unchanged by bind
         prose_payload = read_json(Path(registered["artifacts"][self.chapter]["candidate_prose"]["artifactPath"]))
         self.assertEqual(filled["payload"]["finalProseSha256"], sha256_text(prose_payload["payload"]["text"]))
         record_artifact(workflow, self.chapter, filled, structure=structure,
@@ -69,7 +69,7 @@ class BindingFillTests(unittest.TestCase):
 
     def _bind(self, artifact: dict, bindings):
         from scripts.core.artifact_bindings import bind_fields
-        return bind_fields(self.root, structure=read_json(self.root / ".gnovel/structure.json"),
+        return bind_fields(self.root, structure=read_json(self.root / ".govel/structure.json"),
                            workflow=self._workflow(), chapter_id=self.chapter,
                            artifact=artifact, bindings=bindings)
 
@@ -77,7 +77,7 @@ class BindingFillTests(unittest.TestCase):
         """带路径绑定必须与当前真源一致：绑定漂移的文件在注册时就被拒绝。"""
         stranger = self.root / "工作台" / "外稿.md"
         stranger.write_text("别的稿子", encoding="utf-8")
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         artifact = envelope("stage_b_review", {'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}, 'factAssessment': {'status': 'no_change'},
             "verdict": "POLISH_READY",
             "slots": evidenced_slots('他把钥匙放回桌上，合上了登记本。'),
@@ -95,7 +95,7 @@ class BindingFillTests(unittest.TestCase):
         prose_text = json.loads(Path(registered["artifactPath"]).read_bytes())["payload"]["text"]
         prose_path = self.root / "工作台" / "正文副本.md"
         prose_path.write_text(prose_text, encoding="utf-8")
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         artifact = envelope("diagnostics", {"passed": True},
                             project_id=structure["projectId"], chapter_id=self.chapter)
         from scripts.core.artifact_bindings import bind_fields
@@ -106,7 +106,7 @@ class BindingFillTests(unittest.TestCase):
         self.assertEqual(provenance["draftSha256"]["sourcePath"], str(prose_path.resolve()))
 
     def test_unsupported_and_duplicate_fields_are_rejected(self):
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         from scripts.core.artifact_bindings import ArtifactBindError, bind_fields
         diagnostics = envelope("diagnostics", {"passed": True},
                                project_id=structure["projectId"], chapter_id=self.chapter)
@@ -128,12 +128,12 @@ class BindingFillTests(unittest.TestCase):
 
     def test_state_binding_uses_current_source_and_ignores_cache(self):
         state, design = state_cache.build_state(self.root), state_cache.build_design(self.root)
-        structure = read_json(self.root / '.gnovel/structure.json')
+        structure = read_json(self.root / '.govel/structure.json')
         artifact = envelope('state_candidate', {'finalProseSha256': sha256_text('他把钥匙放回桌上，合上了登记本。'),
             'changes': []}, project_id=structure['projectId'], chapter_id=self.chapter)
         from scripts.core.artifacts import sha256_json
         for name in ('state', 'design'):
-            (self.root/f'.gnovel/cache/story-{name}.json').write_text('damaged optional cache')
+            (self.root/f'.govel/cache/story-{name}.json').write_text('damaged optional cache')
         filled, _ = bind_fields(self.root, structure=structure, workflow=self._workflow(),
             chapter_id=self.chapter, artifact=artifact, bindings=[('baseStateSha256', None), ('designSha256', None)])
         self.assertEqual(filled['payload']['baseStateSha256'], sha256_json(state))
@@ -142,7 +142,7 @@ class BindingFillTests(unittest.TestCase):
     def test_plan_binding_is_source_hash_and_rejects_markdown_binding(self):
         from scripts.core.source_plan import chapter_plan
         from scripts.core.artifacts import sha256_json
-        structure = read_json(self.root/'.gnovel/structure.json')
+        structure = read_json(self.root/'.govel/structure.json')
         artifact = envelope('stage_a_review', {'decision': 'adopt', 'activeSeats': [1]},
                             project_id=structure['projectId'], chapter_id=self.chapter)
         with self.assertRaises(ArtifactBindError) as caught:
@@ -165,18 +165,18 @@ class ApprovalByFileTests(unittest.TestCase):
 
     def test_approve_by_file_matches_registered_hash(self):
         """--artifact @file：从文件读信封 hash，批准当前登记版本。"""
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         entry = workflow["artifacts"][self.chapter]["candidate_prose"]
         result = cli("project", "workflow", "artifact-approve", "--project-root", str(self.root),
                      "--chapter-id", self.chapter, "--artifact", "@" + entry["artifactPath"])
         self.assertTrue(result["ok"], result)
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         self.assertEqual(workflow["approvals"][self.chapter]["artifactHashes"]["candidate_prose"],
                          entry["artifactSha256"])
 
     def test_approve_by_stale_file_is_rejected(self):
         """文件内容与注册条目不一致时批准失败（不能借路径绕过注册约束）。"""
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         path = Path(workflow["artifacts"][self.chapter]["candidate_prose"]["artifactPath"])
         forged = read_json(path)
         forged["payload"]["text"] = "篡改后的正文"
@@ -188,7 +188,7 @@ class ApprovalByFileTests(unittest.TestCase):
         self.assertIn(result.get("code", ""), {"ARTIFACT_APPROVAL_HASH_MISMATCH", "ARTIFACT_HASH_MISMATCH"})
 
     def test_approve_hash_and_file_conflict_is_rejected(self):
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         entry = workflow["artifacts"][self.chapter]["candidate_prose"]
         result = cli("project", "workflow", "artifact-approve", "--project-root", str(self.root),
                      "--chapter-id", self.chapter, "--artifact", "@" + entry["artifactPath"],
@@ -198,7 +198,7 @@ class ApprovalByFileTests(unittest.TestCase):
 
     def test_explicit_hash_approval_matches_registered_artifact(self):
         """显式 hash 批准仍绑定当前已登记工件。"""
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         entry = workflow["artifacts"][self.chapter]["candidate_prose"]
         result = cli("project", "workflow", "artifact-approve", "--project-root", str(self.root),
                      "--chapter-id", self.chapter,
@@ -215,7 +215,7 @@ class ApprovalByFileTests(unittest.TestCase):
         """信封 chapterId 与目标章不同时拒绝，防止跨章误批准。"""
         other = self.fixture["chapterIds"][-1]
         self.assertNotEqual(other, self.chapter)
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         entry = workflow["artifacts"][self.chapter]["candidate_prose"]
         result = cli("project", "workflow", "artifact-approve", "--project-root", str(self.root),
                      "--chapter-id", other, "--artifact", "@" + entry["artifactPath"])
@@ -233,7 +233,7 @@ class RegisterBindCliTests(unittest.TestCase):
 
     def test_cli_register_with_bind_and_approve_by_file(self):
         """端到端：写一个缺 hash 的 stage_b，注册时 --bind 注入，批准按文件，全程零手抄 hash。"""
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         artifact = envelope("stage_b_review", {'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}, 'factAssessment': {'status': 'no_change'},
             "verdict": "POLISH_READY",
             "slots": evidenced_slots('他把钥匙放回桌上，合上了登记本。'),
@@ -251,7 +251,7 @@ class RegisterBindCliTests(unittest.TestCase):
         approve = cli("project", "workflow", "artifact-approve", "--project-root", str(self.root),
                       "--chapter-id", self.chapter, "--artifact", "@" + str(path))
         self.assertTrue(approve["ok"], approve)
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         self.assertEqual(workflow["approvals"][self.chapter]["artifactHashes"]["stage_b_review"],
                          registered["artifactSha256"])
         self.assertEqual(workflow["artifacts"][self.chapter]["stage_b_review"]["artifactSha256"],
@@ -263,10 +263,10 @@ class RegisterBindCliTests(unittest.TestCase):
     def test_bind_registration_failures_preserve_both_files(self):
         from unittest.mock import patch
         from scripts.novelctl import _dispatch, build_parser, NovelError
-        structure = read_json(self.root / '.gnovel/structure.json')
+        structure = read_json(self.root / '.govel/structure.json')
         artifact = envelope('diagnostics', {'passed': True},
                             project_id=structure['projectId'], chapter_id=self.chapter)
-        workflow_path = self.root / '.gnovel/workflow.json'
+        workflow_path = self.root / '.govel/workflow.json'
         for relative in ('forbidden.json', '工作台/bound.json'):
             path = self.root / relative
             write_json(path, artifact)
@@ -278,7 +278,7 @@ class RegisterBindCliTests(unittest.TestCase):
                 with self.assertRaises(NovelError):
                     _dispatch(args)
             else:
-                for fail_at in ('.gnovel/workflow.json', relative):
+                for fail_at in ('.govel/workflow.json', relative):
                     def fail(phase, target=None):
                         if phase == 'write' and target == fail_at:
                             raise OSError('injected registration write failure')
@@ -290,7 +290,7 @@ class RegisterBindCliTests(unittest.TestCase):
 
     def test_cli_register_complete_payload_preserves_bytes(self):
         """完整载荷注册不触碰 payload，不伪造字段注入来源。"""
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         prose = "他把钥匙放回桌上，合上了登记本。"
         artifact = envelope("stage_b_review", {'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}, 'factAssessment': {'status': 'no_change'},
             "verdict": "POLISH_READY", "finalProseSha256": sha256_text(prose),
@@ -306,11 +306,11 @@ class RegisterBindCliTests(unittest.TestCase):
         self.assertTrue(result["ok"], result)
         self.assertNotIn("bindings", result)
         self.assertEqual(path.read_bytes(), before)
-        workflow = read_json(self.root / ".gnovel/workflow.json")
+        workflow = read_json(self.root / ".govel/workflow.json")
         self.assertNotIn("bindings", workflow["artifacts"][self.chapter]["stage_b_review"])
 
     def test_cli_register_bind_rejects_unknown_field(self):
-        structure = read_json(self.root / ".gnovel/structure.json")
+        structure = read_json(self.root / ".govel/structure.json")
         artifact = envelope("diagnostics", {"passed": True},
                             project_id=structure["projectId"], chapter_id=self.chapter)
         path = self.root / "工作台" / f"{self.chapter}-diag.json"
@@ -330,8 +330,8 @@ class TrustBoundaryTests(unittest.TestCase):
             root = Path(directory)
             self.fixture = review_ready_project(root, chapter_count=1)
             chapter = self.fixture["chapterIds"][0]
-            workflow = read_json(root / ".gnovel/workflow.json")
-            structure = read_json(root / ".gnovel/structure.json")
+            workflow = read_json(root / ".govel/workflow.json")
+            structure = read_json(root / ".govel/structure.json")
             outsider = envelope("title_candidates", {"candidates": [{"candidateId": "T", "title": "x"}]},
                                 project_id=structure["projectId"], chapter_id=chapter)
             with self.assertRaises(Exception):
@@ -345,7 +345,7 @@ class TrustBoundaryTests(unittest.TestCase):
             fixture = review_ready_project(root, chapter_count=1)
             chapter = fixture["chapterIds"][0]
             from scripts.core.finalization_preflight import preflight_finalization
-            workflow = read_json(root / ".gnovel/workflow.json")
+            workflow = read_json(root / ".govel/workflow.json")
             entry = workflow["artifacts"][chapter]["stage_b_review"]
             data = read_json(Path(entry["artifactPath"]))
             data["payload"]["finalProseSha256"] = "f" * 64  # 与已注册 candidate_prose 不一致

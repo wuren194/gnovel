@@ -76,11 +76,11 @@ class ReviewMaterialPackageTests(unittest.TestCase):
             'decision': 'compatible', 'reason': 'Prior explicit decision', 'evidence': [{'start': 0, 'end': len(text), 'text': text}]}])
         plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         source['entities'].append({'entityId': 'RU-HEIGHT', 'entityType': 'rule', 'name': 'Height consistency',
             'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
                         'scopeIds': ['C-ALPHA'], 'actions': ['review'], 'inputIds': ['AT-HEIGHT']}})
-        validate_structure(source); write_json(self.root / '.gnovel/structure.json', source)
+        validate_structure(source); write_json(self.root / '.govel/structure.json', source)
         page, rows = self.materials({'kind': 'review', 'recordIds': [rid], 'aggregateRef': self.aggregate()['selectionRef']})
         prior = self.restored(rows, 'prior-review')[0]
         self.assertFalse(prior['inputsStillCurrent'])
@@ -101,7 +101,7 @@ class ReviewMaterialPackageTests(unittest.TestCase):
             self.source['fragments'].append({'fragmentId': rid, 'ownerId': 'C-ALPHA', 'text': text,
                 'order': len(self.source['fragments']) + 1, 'contentRole': 'belief', 'perspectiveId': pov,
                 'contentBindings': ['AT-HEIGHT'], 'dependsOn': dependencies})
-        validate_structure(self.source); write_json(self.root / '.gnovel/structure.json', self.source)
+        validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
         selection = {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}
         pending = self.aggregate(selection=selection)
         page, rows = self.materials({'kind': 'review', 'recordIds': ['SF-KNOWN'], 'aggregateRef': pending['selectionRef']})
@@ -122,7 +122,7 @@ class ReviewMaterialPackageTests(unittest.TestCase):
         args = {'kind': 'review', 'recordIds': ['SF-HEIGHT'], 'aggregateRef': pending['selectionRef']}
         page = call_operation('evidence.prepare', self.root, {**args, 'maxBytes': 1800})
         self.source['fragments'][0]['text'] += ' Changed.'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as caught:
             call_operation('evidence.prepare', self.root, args)
         self.assertEqual(caught.exception.code, 'AGGREGATE_SELECTION_STALE')
@@ -141,7 +141,7 @@ class ReviewMaterialPackageTests(unittest.TestCase):
         args = {'kind': 'review', 'recordIds': ['SF-HEIGHT'], 'includeContext': True, 'limit': 1}
         page = call_operation('evidence.prepare', self.root, args)
         self.assertTrue(page['hasMore'])
-        write_json(self.root / f'.gnovel/undo-receipts/{plan["operationId"]}-2.json', {'operationId': plan['operationId']})
+        write_json(self.root / f'.govel/undo-receipts/{plan["operationId"]}-2.json', {'operationId': plan['operationId']})
         with self.assertRaises(StructureError) as caught:
             call_operation('evidence.prepare', self.root, {**args, 'cursor': page['nextCursor']})
         self.assertEqual(caught.exception.code, 'CURSOR_STALE')

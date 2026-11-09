@@ -16,8 +16,8 @@ from .transport_cache import get, put
 from .write_sets import (apply_write_set, capture_guards, digest, guard_observation,
                          inventory, json_bytes, safe_project_path, tree_membership)
 
-SUMMARY_PATH = '.gnovel/aux/story-summary.json'
-HISTORY_PATH = '.gnovel/aux/story-summary-history'
+SUMMARY_PATH = '.govel/aux/story-summary.json'
+HISTORY_PATH = '.govel/aux/story-summary-history'
 MACHINE_FIELDS = ('schemaVersion', 'projectId', 'asOfChapterId', 'structureRevision',
                   'coveredChapterIds', 'sourceCommitId', 'asOfDisplayOrdinal')
 
@@ -144,7 +144,7 @@ def persist_summary(root, payload, *, prepare_ref=None, review_reason=None, clos
     files = [relative for relative in dependencies['files'] if relative != SUMMARY_PATH]
     guards = capture_guards(root, files)
     trees = [tree_membership(root, [query['directory']]) for query in dependencies['queries']
-             if query['directory'] != '.gnovel/transactions']
+             if query['directory'] != '.govel/transactions']
     validate_dependencies(root, dependencies, code='SUMMARY_INPUT_CHANGED')
     if _load_prior(root)[0] != before:
         raise StructureError('SUMMARY_VERSION_CONFLICT', 'summary changed while assembling the update')

@@ -149,7 +149,7 @@ def source_contract(source, chapter_id):
     dirty = explicit.get('intensityLevel', fields.get('张力等级'))
     dirty = int(dirty) if isinstance(dirty, str) and dirty.isdigit() else dirty
     return {'applicable': True, 'available': bool(local), 'sourceMode': True,
-            'path': '.gnovel/structure.json', 'planFragmentIds': [f['fragmentId'] for f in local],
+            'path': '.govel/structure.json', 'planFragmentIds': [f['fragmentId'] for f in local],
             'sourcePlanHash': chapter_plan(source, chapter_id)['sourcePlanHash'],
             'positionFieldsPresent': bool(fields),
             'contractSource': 'chapterContract' if contracts else 'explicit_plan_text',

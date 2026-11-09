@@ -42,7 +42,7 @@ class AggregateQueryTests(unittest.TestCase):
         self.assertEqual(report['items'][0]['itemCount'], 3)
         source = load_structure(self.root)
         source['attributes'][0]['values'][0]['value']['number'] = 185
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         report = query_aggregates(self.root, kind='character-reviews', view='items')
         actual = {row['recordId']: row['status'] for row in report['items']}
         inputs, review = ReviewInputs(source), read_review(self.root)
@@ -56,7 +56,7 @@ class AggregateQueryTests(unittest.TestCase):
         review_ids = {row['recordId'] for row in report['items'] if row['kind'] == 'source-review'}
         self.assertEqual(review_ids, {'SF-PLAN'})
         self.source['chapters'][0]['status'] = 'review'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         report = query_aggregates(self.root, kind='chapter-issues', chapterId=self.cid, view='items')
         from scripts.core.chapter_status import chapter_status
         expected = {row['code'] for row in chapter_status(self.root, self.cid)['blockers']}
@@ -67,7 +67,7 @@ class AggregateQueryTests(unittest.TestCase):
             self.source['fragments'].append({'fragmentId': rid, 'ownerId': 'C-ALPHA', 'text': '独立认识内容。',
                 'order': len(self.source['fragments']) + 1, 'contentBindings': ['AT-HEIGHT'],
                 'contentRole': 'belief', 'perspectiveId': perspective})
-        validate_structure(self.source); write_json(self.root / '.gnovel/structure.json', self.source)
+        validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
         selection = {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}
         report = query_aggregates(self.root, kind='character-reviews', view='items', selection=selection)
         self.assertEqual([row['recordId'] for row in report['items']], ['SF-ALPHA-BELIEF'])
@@ -99,7 +99,7 @@ class AggregateQueryTests(unittest.TestCase):
         arguments = {'kind': 'setting-impact', 'view': 'items', 'operationId': plan['operationId'], 'limit': 1}
         first = query_aggregates(self.root, **arguments)
         self.assertTrue(first['hasMore'])
-        receipt = self.root / f'.gnovel/undo-receipts/{plan["operationId"]}-2.json'
+        receipt = self.root / f'.govel/undo-receipts/{plan["operationId"]}-2.json'
         write_json(receipt, {'operationId': plan['operationId']})
         with self.assertRaises(StructureError) as caught:
             query_aggregates(self.root, **arguments, cursor=first['nextCursor'])
@@ -133,7 +133,7 @@ class AggregateQueryTests(unittest.TestCase):
         self.assertTrue(details['items'][0]['globalScope'])
         source = load_structure(self.root)
         source['attributes'][0]['values'][0]['value']['number'] = 175
-        write_json(self.root / '.gnovel/structure.json', source)
+        write_json(self.root / '.govel/structure.json', source)
         self.assertTrue(query_aggregates(self.root, kind='decision-plans', decisionId=first)['items'][0]['stale'])
 
     def test_bounded_pages_and_cursor_refuse_input_drift(self):
@@ -147,7 +147,7 @@ class AggregateQueryTests(unittest.TestCase):
             rows.extend(page['items']); cursor = page['nextCursor']
         self.assertEqual(len({row['recordId'] for row in rows}), 4)
         self.source['fragments'][0]['text'] += '内容变化。'
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as caught:
             query_aggregates(self.root, kind='character-reviews', view='items', limit=1, maxBytes=1800, cursor=first['nextCursor'])
         self.assertEqual(caught.exception.code, 'CURSOR_STALE')
@@ -178,7 +178,7 @@ class AggregateQueryTests(unittest.TestCase):
                                                'role': 'primary'})
         self.source['chapters'][0]['status'] = 'review'
         validate_structure(self.source)
-        write_json(self.root / '.gnovel/structure.json', self.source)
+        write_json(self.root / '.govel/structure.json', self.source)
         loaded = []
 
         def recording_load(root):

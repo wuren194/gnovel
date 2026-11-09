@@ -369,7 +369,7 @@ def knowledge_health() -> dict:
                     source_path = PurePosixPath(relative)
                     if (source_path.is_absolute() or '..' in source_path.parts
                             or not (relative.startswith('libraries/') or relative.startswith('corpus/')
-                                    or relative.startswith('gnovel-'))):
+                                    or relative.startswith('govel-'))):
                         raise ValueError('unsafe source path')
                     archive = store_path('knowledge/sources/legacy/' + relative)
                     if (archive.is_symlink() or not archive.is_file()

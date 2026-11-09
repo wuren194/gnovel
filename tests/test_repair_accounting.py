@@ -28,7 +28,7 @@ class RepairAccountingTests(unittest.TestCase):
         self.cid = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
 
     def workflow(self):
-        return read_json(self.root / '.gnovel/workflow.json')
+        return read_json(self.root / '.govel/workflow.json')
 
     def inventory(self):
         return {path.relative_to(self.root).as_posix(): path.read_bytes()
@@ -40,7 +40,7 @@ class RepairAccountingTests(unittest.TestCase):
     def set_count(self, count):
         workflow = self.workflow()
         workflow['repairRounds'][self.cid] = count
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
 
     def pack(self, **kwargs):
         return pack_artifact(self.root, chapterId=self.cid, artifactType='candidate_prose',
@@ -98,8 +98,8 @@ class RepairAccountingTests(unittest.TestCase):
         observed = []
 
         def inspect(root, outputs, **kwargs):
-            staged_workflow = json.loads(outputs['.gnovel/workflow.json'])
-            request_path = artifact_request_path(read_json(root / '.gnovel/structure.json')['projectId'], 'repair-pack')
+            staged_workflow = json.loads(outputs['.govel/workflow.json'])
+            request_path = artifact_request_path(read_json(root / '.govel/structure.json')['projectId'], 'repair-pack')
             request = json.loads(outputs[request_path])
             self.assertEqual(staged_workflow['repairRounds'][self.cid], 1)
             self.assertIn(request['receipt']['artifactPath'], outputs)
@@ -145,7 +145,7 @@ class RepairAccountingTests(unittest.TestCase):
         self.assertEqual(self.inventory(), before)
 
         def interrupt(phase, relative=None):
-            if phase == 'write' and relative == '.gnovel/workflow.json':
+            if phase == 'write' and relative == '.govel/workflow.json':
                 raise RuntimeError('interrupt after staging the counter and candidate')
 
         with patch('scripts.core.write_sets.checkpoint', side_effect=interrupt):
@@ -159,10 +159,10 @@ class RepairAccountingTests(unittest.TestCase):
         terminal = json.loads(after[completed[0]])
         self.assertEqual(terminal['phase'], 'rolled_back')
         self.assertEqual(terminal['publicationProtocol'], 'preserve-exclusive-v1')
-        prefix = '.gnovel/transactions/' + terminal['transactionId'] + '/'
+        prefix = '.govel/transactions/' + terminal['transactionId'] + '/'
         self.assertTrue(all(name.startswith(prefix) for name in added), added)
         self.assertEqual({key: value for key, value in after.items() if key not in added}, before)
-        self.assertFalse((self.root / '.gnovel/transactions' / (terminal['transactionId'] + '.json')).exists())
+        self.assertFalse((self.root / '.govel/transactions' / (terminal['transactionId'] + '.json')).exists())
         for row in terminal['files']:
             if row['before']['exists']:
                 self.assertEqual(after[row['path']], before[row['path']])
@@ -303,7 +303,7 @@ class RepairAccountingTests(unittest.TestCase):
                 workflow['repairRounds']['CH-ANOTHER'] = 1
             else:
                 workflow['approvedChapterIds'] = []
-            write_json(self.root / '.gnovel/workflow.json', workflow)
+            write_json(self.root / '.govel/workflow.json', workflow)
             before = self.inventory()
             with self.subTest(change=name):
                 replay = submit_artifacts(self.root, requestId='repair-submit')
@@ -322,7 +322,7 @@ class RepairAccountingTests(unittest.TestCase):
                 self.pack(automaticRepair=True)
         self.assertEqual(self.count(), 1)
         self.assertEqual(self.workflow()['artifacts'][self.cid]['candidate_prose'], before)
-        source = read_json(self.root / '.gnovel/structure.json')
+        source = read_json(self.root / '.govel/structure.json')
         self.assertFalse((self.root / artifact_request_path(source['projectId'], 'repair-pack')).exists())
 
 

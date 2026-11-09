@@ -36,7 +36,7 @@ class PreservationSafetyTests(unittest.TestCase):
                               cwd=REPO, capture_output=True, text=True, timeout=30)
 
     def test_thread_owner_reentrancy_and_pending_reads(self):
-        pending = self.root/'.gnovel/transactions/TX-THREAD.json'; outcomes = []
+        pending = self.root/'.govel/transactions/TX-THREAD.json'; outcomes = []
         with project_lock(self.root):
             with project_lock_reentrant(self.root):
                 self.assertTrue(current_thread_owns_lock(self.root))
@@ -61,7 +61,7 @@ class PreservationSafetyTests(unittest.TestCase):
 
     def test_replaced_anchor_stops_holder_and_other_thread_cannot_release(self):
         from scripts.core import locks
-        lock = self.root/'.gnovel/structure.lock'
+        lock = self.root/'.govel/structure.lock'
         with project_lock(self.root):
             owner = next(owner for owner in locks._owners.values() if owner.path == lock); result = []
             def release():
@@ -78,7 +78,7 @@ class PreservationSafetyTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), b'old')
 
     def test_pid_text_does_not_grant_lock_or_trigger_unlink(self):
-        lock = self.root/'.gnovel/structure.lock'; lock.write_text('999999999'); inode = lock.stat().st_ino
+        lock = self.root/'.govel/structure.lock'; lock.write_text('999999999'); inode = lock.stat().st_ino
         with self.assertRaises(StructureError) as caught:
             with project_lock_reentrant(self.root): pass
         self.assertEqual(caught.exception.code, 'PROJECT_LOCK_PROTOCOL_UNSUPPORTED')
@@ -95,7 +95,7 @@ with project_lock(Path(sys.argv[1])):
 ''', str(self.root)], cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         self.addCleanup(lambda: holder.poll() is None and holder.kill())
         self.assertEqual(holder.stdout.readline().strip(), 'held')
-        inode = (self.root/'.gnovel/structure.lock').stat().st_ino
+        inode = (self.root/'.govel/structure.lock').stat().st_ino
         holder.kill(); holder.communicate(timeout=10)
         code = '''
 from pathlib import Path
@@ -114,7 +114,7 @@ except StructureError as exc: print(exc.code,flush=True)
         results = [proc.stdout.readline().strip() for proc in contenders]
         self.assertEqual(sorted(results), ['PROJECT_LOCKED', 'won'])
         for proc in contenders: proc.communicate('\n', timeout=10)
-        self.assertEqual((self.root/'.gnovel/structure.lock').stat().st_ino, inode)
+        self.assertEqual((self.root/'.govel/structure.lock').stat().st_ino, inode)
         self.assertFalse(project_lock_observation(self.root)['locked'])
 
     def test_fork_cannot_inherit_reentry_or_unlock_parent(self):
@@ -145,7 +145,7 @@ foreign.write_bytes(b'author-late-save'); os.replace(foreign,path)
             with self.assertRaises((OSError, StructureError)):
                 write_sets.apply_write_set(self.root, {self.relative: b'approved'}, operation='late_external')
         self.assertEqual(self.path.read_bytes(), b'author-late-save'); self.assertTrue(pending_transactions(self.root))
-        self.assertEqual(next((self.root/'.gnovel/transactions').glob('TX-*/before/正文/guarded.md')).read_bytes(), b'old')
+        self.assertEqual(next((self.root/'.govel/transactions').glob('TX-*/before/正文/guarded.md')).read_bytes(), b'old')
         with self.assertRaises(StructureError): recover_transactions(self.root, apply=True)
         self.assertEqual(self.path.read_bytes(), b'author-late-save')
 
@@ -183,7 +183,7 @@ foreign.write_bytes(b'author-late-save'); os.replace(foreign,path)
             old_ino = os.fstat(fd).st_ino
             with project_lock(self.root):
                 write_sets.apply_write_set(self.root, {self.relative: b'approved'}, operation='held_fd')
-            tx = next(p for p in (self.root/'.gnovel/transactions').glob('TX-*')
+            tx = next(p for p in (self.root/'.govel/transactions').glob('TX-*')
                 if (p/'completed.json').is_file() and read_json(p/'completed.json')['operation'] == 'held_fd')
             displaced = tx/'displaced/forward/0'; self.assertEqual(displaced.stat().st_ino, old_ino)
             self.assertNotEqual((tx/'after'/self.relative).stat().st_ino, self.path.stat().st_ino)
@@ -204,7 +204,7 @@ foreign.write_bytes(b'author-late-save'); os.replace(foreign,path)
                 write_sets.apply_write_set(self.root, {self.relative: b'approved'}, operation='occupied')
         self.assertEqual(self.path.read_bytes(), b'new occupant'); tx = pending_transactions(self.root)[0]
         row = next(r for r in tx['files'] if r['path'] == self.relative)
-        directory = self.root/'.gnovel/transactions'/tx['transactionId']
+        directory = self.root/'.govel/transactions'/tx['transactionId']
         self.assertEqual((directory/row['preservedSlot']).read_bytes(), b'old')
         self.assertEqual((directory/row['publishSlot']).read_bytes(), b'approved')
 
@@ -368,7 +368,7 @@ save_candidate_version(root,chapter,body='frozen body',request_id='R1',base_cand
             payload = json.dumps({'chapterId': self.chapter, 'body': body, 'requestId': request_id,
                                   'baseCandidateVersion': None})
             connection.request('POST', '/api/candidate/save', body=payload, headers={
-                'Content-Type': 'application/json', 'X-gnovel-Token': 'test-frozen-token'})
+                'Content-Type': 'application/json', 'X-govel-Token': 'test-frozen-token'})
             response = connection.getresponse()
             results[request_id] = (response.status, json.loads(response.read()))
             connection.close()
@@ -397,8 +397,8 @@ save_candidate_version(root,chapter,body='frozen body',request_id='R1',base_cand
 
     def test_bad_or_old_source_never_creates_lock(self):
         import json
-        lock = self.root/'.gnovel/structure.lock'; lock.unlink()
-        source = self.root/'.gnovel/structure.json'; original = source.read_bytes()
+        lock = self.root/'.govel/structure.lock'; lock.unlink()
+        source = self.root/'.govel/structure.json'; original = source.read_bytes()
         for content in ('not json', json.dumps({**read_json(source), 'schemaVersion': 4})):
             source.write_text(content)
             before = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}

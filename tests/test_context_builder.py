@@ -54,8 +54,8 @@ def context_source(root: Path, *, fragments: tuple = (), candidates: tuple = (),
 
 def save_context_source(root: Path, source: dict) -> None:
     validate_structure(source)
-    write_json(root / '.gnovel/structure.json', source)
-    write_json(root / '.gnovel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
+    write_json(root / '.govel/structure.json', source)
+    write_json(root / '.govel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
                                                  'workflowVersion': WORKFLOW_VERSION,
                                                  'projectId': source['projectId']})
 

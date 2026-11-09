@@ -136,7 +136,7 @@ def write_checklist(root: Path, *, documentRef: str, items: list, output: str) -
     validate_arguments({'type': 'array', 'minItems': 1, 'items': MAINTENANCE_SELECTION}, items, 'items')
     root = root.expanduser().resolve()
     with project_lock_reentrant(root):
-        source_state, _ = guard_observation(root / '.gnovel/structure.json')
+        source_state, _ = guard_observation(root / '.govel/structure.json')
         source = source_snapshot(root)
         text, origin, segments, document_guard = _load_document(root, documentRef)
         selected = _checklist_items(text, origin, segments, items, SourceIndex.build(source).records)
@@ -146,7 +146,7 @@ def write_checklist(root: Path, *, documentRef: str, items: list, output: str) -
             raise StructureError('MAINTENANCE_OUTPUT_INVALID', 'checklist needs a file under 工作台')
         checklist = {'source': origin, 'items': selected}
         outputs = {relative: json_bytes(checklist)}
-        guards = [document_guard, {'path': '.gnovel/structure.json', **source_state}]
+        guards = [document_guard, {'path': '.govel/structure.json', **source_state}]
         output_state, existing = guard_observation(path)
         reused = existing is not None
         if reused:

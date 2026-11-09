@@ -18,7 +18,7 @@ import threading
 from .paths import ProjectPathError, safe_project_path
 from .structure_store import StructureError
 
-_PROTOCOL = b"gnovel-stable-flock-v1\n"
+_PROTOCOL = b"govel-stable-flock-v1\n"
 _mutex = threading.RLock()
 _owners: dict[tuple[int, int], '_Owner'] = {}
 
@@ -56,8 +56,8 @@ os.register_at_fork(after_in_child=_after_fork)
 def _lock_paths(root: Path) -> tuple[Path, Path]:
     root = root.expanduser().resolve()
     try:
-        return (safe_project_path(root, '.gnovel/structure.lock'),
-                safe_project_path(root, '.gnovel/transactions'))
+        return (safe_project_path(root, '.govel/structure.lock'),
+                safe_project_path(root, '.govel/transactions'))
     except ProjectPathError as exc:
         raise StructureError(exc.code, str(exc), exc.details) from exc
 
@@ -67,7 +67,7 @@ def _require_project(root: Path, *, recovering: bool) -> None:
     from .jsonio import read_json
     from .project import current_schema_version, unsupported_error_code
     from .structure_store import load_structure, WORKFLOW_VERSION
-    marker_path = safe_project_path(root, '.gnovel/project.json')
+    marker_path = safe_project_path(root, '.govel/project.json')
     if marker_path.exists():
         try:
             marker = read_json(marker_path)
@@ -80,7 +80,7 @@ def _require_project(root: Path, *, recovering: bool) -> None:
     # marker is sufficient to take the lock; the recovery validator then checks
     # every immutable image and the publication protocol before any business write.
     if not recovering or not marker_path.exists():
-        safe_project_path(root, '.gnovel/structure.json')
+        safe_project_path(root, '.govel/structure.json')
         load_structure(root)
 
 

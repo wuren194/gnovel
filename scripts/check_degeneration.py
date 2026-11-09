@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Model degeneration detection for gnovel long-form prose.
+"""Model degeneration detection for govel long-form prose.
 
 Detects four classes of model degeneration that the model itself cannot notice:
 - Verbatim repetition / near-duplicate sentences
@@ -286,7 +286,7 @@ def scan(text: str, file_label: str = "") -> dict:
 
 def main():
     parser = FailClosedArgumentParser(
-        description="Model degeneration detection for gnovel long-form prose"
+        description="Model degeneration detection for govel long-form prose"
     )
     parser.add_argument("file", help="File to scan")
     parser.add_argument("--json", action="store_true", help="Output JSON")

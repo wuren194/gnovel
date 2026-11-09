@@ -89,10 +89,10 @@ class CompletionEvidenceTests(unittest.TestCase):
     def test_explicit_not_applicable_is_recorded_without_approval(self):
         payload = self.payload()
         payload['slots']['continuity'] = {'conclusion': '本章没有前章依赖', 'notApplicableReason': '合成项目仅有首章，无前章可比对'}
-        before = read_json(self.root / '.gnovel/workflow.json')['approvals']
+        before = read_json(self.root / '.govel/workflow.json')['approvals']
         result = self.pack(payload)
         self.assertFalse(result['approvalPerformed'])
-        self.assertEqual(read_json(self.root / '.gnovel/workflow.json')['approvals'], before)
+        self.assertEqual(read_json(self.root / '.govel/workflow.json')['approvals'], before)
         self.assertEqual(read_json(self.root / result['artifactPath'])['payload']['slots'], payload['slots'])
         payload['slots']['continuity']['notApplicableReason'] = '待填写'
         with self.assertRaises(ValueError): self.pack(payload)
@@ -108,7 +108,7 @@ class CompletionEvidenceTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'REVIEW_COMPLETION_CONFLICT')
 
     def test_missing_review_evidence_cannot_finalize(self):
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         payload = self.payload()
         for row in payload['slots'].values(): row.pop('evidence')
         artifact = envelope('stage_b_review', payload,
@@ -119,7 +119,7 @@ class CompletionEvidenceTests(unittest.TestCase):
         workflow['artifacts'][self.cid]['stage_b_review'].update(
             artifactSha256=artifact['artifactSha256'], artifactFileSha256=file_sha256(path))
         workflow['approvals'][self.cid]['artifactHashes']['stage_b_review'] = artifact['artifactSha256']
-        write_json(self.root / '.gnovel/workflow.json', workflow)
+        write_json(self.root / '.govel/workflow.json', workflow)
         before = files(self.root)
         preflight = preflight_finalization(self.root, self.cid, skip_title=True)
         self.assertIn('REVIEW_EVIDENCE_REQUIRED', {row['code'] for row in preflight.blockers})
@@ -153,7 +153,7 @@ class CompletionEvidenceTests(unittest.TestCase):
         self.assertEqual(files(self.root), before)
 
     def test_invalid_prose_payload_keeps_structured_blockers_in_model_view(self):
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         entry = workflow['artifacts'][self.cid]['candidate_prose']
         path = Path(entry['artifactPath'])
         for invalid in ([], None, 'invalid', 7):
@@ -162,7 +162,7 @@ class CompletionEvidenceTests(unittest.TestCase):
             write_json(path, artifact)
             entry.update(artifactSha256=artifact['artifactSha256'], artifactFileSha256=file_sha256(path))
             workflow['approvals'][self.cid]['artifactHashes']['candidate_prose'] = artifact['artifactSha256']
-            write_json(self.root / '.gnovel/workflow.json', workflow)
+            write_json(self.root / '.govel/workflow.json', workflow)
             before = files(self.root)
             result = chapter_receipt(self.root, self.cid, skip_title=True, view='model')
             self.assertIn('PROSE_PAYLOAD_INVALID', {row['code'] for row in result['blockers']})
@@ -183,7 +183,7 @@ class CompletionEvidenceTests(unittest.TestCase):
         from copy import deepcopy
         from scripts.core.workflow import record_artifact
         source = load_structure(self.root)
-        workflow = read_json(self.root / '.gnovel/workflow.json')
+        workflow = read_json(self.root / '.govel/workflow.json')
         entry = workflow['artifacts'][self.cid]['candidate_prose']
         path = Path(entry['artifactPath'])
         for invalid in ([], None, {}, {'text': []}, {'text': '  '}):
@@ -215,7 +215,7 @@ class WorkflowProjectionTests(unittest.TestCase):
             source = load_structure(root); before = files(root)
             outputs, owners = derived_outputs(root, source, current=source,
                                                extras={chapter['filePath']: b'prospective prose'})
-            self.assertEqual(set(outputs), {'.gnovel/structure.json', chapter['filePath']})
+            self.assertEqual(set(outputs), {'.govel/structure.json', chapter['filePath']})
             self.assertEqual(owners, {})
             self.assertEqual(files(root), before)
             receipt = chapter_receipt(root, chapter['chapterId'], skip_title=True)

@@ -58,7 +58,7 @@ Planner 推演（阶段 A）
 章节标题有两个时点，不得合并：
 
 1. **建条目时的工作标题**：`workflow chapter-preview` 或 `structure insert-preview` 的 title，此时正文还不存在，只写一个可识别的工作标题（可以是本章定位一句话）。工作标题不经 Titler，也不作为定稿。
-2. **定稿标题**：Editor 放行后、入库前由 Titler 产出。此时正文、签名瞬间与章节离场状态都已确定，标题才有素材可依。Titler 按 `G-MULTI-IDENTITY-REVIEW.md` 阶段 A 开标题固定 5 席（1/2/3/6/10），候选与圆桌结论一起展示，**由作者选定**，Router 再写入 structure 的 `title` 字段。
+2. **定稿标题**：Editor 放行后、入库前由 Titler 产出。此时正文、签名瞬间与章节离场状态都已确定，标题才有素材可依。Titler 按当次选中的圆桌规则阶段 A 开标题固定 5 席（1/2/3/6/10），候选与圆桌结论一起展示，**由作者选定**，Router 再写入 structure 的 `title` 字段。
 
 章节 `filePath` 在建章时分配，之后只经正式路径事务修改。默认改标题不改文件、不动正文。作者跳过定名时 Router 显式使用 `--skip-title`，保留工作标题并在入库报告标注未定稿；不得把跳过与直接传任意标题混为一条通路。
 
@@ -70,7 +70,7 @@ Planner 推演（阶段 A）
 python3 <toolbox_root>/scripts/aggregate_diagnostics.py <draft> --mode <mode> --intensity-level <level> --project-root <project> --json
 ```
 
-`mixed` 模式必须显式提供 `--scene-paragraphs`。单检查器只用于开发调试，不构成独立流水线步骤。阈值来自注册表和 `workflowPolicy`，执笔说明见 `gnovel-router/references/mechanical-baseline.md`。
+`mixed` 模式必须显式提供 `--scene-paragraphs`。单检查器只用于开发调试，不构成独立流水线步骤。阈值来自注册表和 `workflowPolicy`，执笔说明见 `govel-router/references/mechanical-baseline.md`。
 
 ## 叙事与表达核对
 
@@ -88,13 +88,13 @@ python3 <toolbox_root>/scripts/aggregate_diagnostics.py <draft> --mode <mode> --
    - **扩写**（`expansion`）：字数不足下限，或某段写淡了要写厚。按 `G-EXPANSION.md` 放慢已批准节奏段内部的镜头速度——**不新增事件、不改章末钩子、不新增场景、不改关系阶段**。放慢到头仍不够字数时报 `EXPANSION_BUDGET_MISMATCH` 退回 Planner，不在正文阶段加戏。
    - **结构返修**（`structural`）：OOC、因果、物理、主线和全章空转。
 3. 每轮返修后重新运行完整 aggregator，不手写或改变检查器顺序。
-4. 自动修复显式声明 automaticRepair 并绑定 requestId，轮次由工具与候选登记同事务写入 `.gnovel/workflow.json.repairRounds`；同请求重试不重复计数，候选提交前失败不计轮，提交后的诊断失败保留已记轮次，不另行补记。达到 `workflowPolicy.repair.maxAutomaticRounds` 后停止；向作者展示剩余 findings，并提供带债入库、升级重规划或继续修三种明确决策。
+4. 自动修复显式声明 automaticRepair 并绑定 requestId，轮次由工具与候选登记同事务写入 `.govel/workflow.json.repairRounds`；同请求重试不重复计数，候选提交前失败不计轮，提交后的诊断失败保留已记轮次，不另行补记。达到 `workflowPolicy.repair.maxAutomaticRounds` 后停止；向作者展示剩余 findings，并提供带债入库、升级重规划或继续修三种明确决策。
 
 扩写不得升级为结构返修：字数不足本身不是结构问题。反过来，结构问题也不得用扩写掩盖——在有 OOC 或因果硬伤的正文上加字数只是把问题埋深。
 
 返修问题的稳定身份与报告／正文版本定位分开保存。旧报告失效后，其问题和补丁前后文本仍可作为待复核材料；未处置项不得因换报告或省略字段而消失，无法可靠定位的标为待定位。工具不以补丁成功、检查命中消失或身份匹配判断语义已修复。
 
-工位可提交本轮逐项处置、理由和当前原文证据，由工具装配未处置问题；历史结论不是当前通过或批准。正文或输入变化后重新判断，阶段 B 的独立结论位仍按 `G-MULTI-IDENTITY-REVIEW.md` 完整提供。保留的报告与回执只供复核，不参与正文所有权裁定。
+工位可提交本轮逐项处置、理由和当前原文证据，由工具装配未处置问题；历史结论不是当前通过或批准。正文或输入变化后重新判断，阶段 B 的独立结论位仍按当次选中的圆桌规则完整提供。保留的报告与回执只供复核，不参与正文所有权裁定。
 
 [M] fresh B 与 repair 表单、登记、批准和最终门共用现有报告历史。旧 S1/S2/blocking 必须有绑定当前候选身份与计划的显式处置；省略、改级为 S3 或重登较早 resolved 信封不能抹掉较新问题。有效处置不因无关报告换 ID 重开，输入变后待复核；S3/info 建议随稿可见且不自动升阻断。
 
@@ -109,7 +109,7 @@ python3 <toolbox_root>/scripts/aggregate_diagnostics.py <draft> --mode <mode> --
 - 摘要新鲜度是交接建议：缺失或过期时 `stale=true`、`refreshRecommended=true`；当前策略不据此单独阻断续写，`refreshRequired=false`。收尾填写 `not_required` 必须说明本批次不刷新的理由，完成回执保留原新鲜度；填写 `refreshed` 必须验证当前摘要新鲜且 hash 相符，不得把声明当成刷新。
 - 普通正式续写以稳定前章、连续性和事实交接完成为前提。仅委托整批候选时，采用下述冻结候选链，不提前定稿解锁后章。
 - 到达批准范围末尾后进入等待授权，不自动扩大范围或跨卷。
-- 恢复时读取 `.gnovel/workflow.json`，再运行 `project workflow reconcile`，据真实输入及已登记候选链校验唯一 `nextAction`；无法证明兼容的多个中间态返回 `WORKFLOW_AMBIGUOUS`，不得凭会话记忆选择。
+- 恢复时读取 `.govel/workflow.json`，再运行 `project workflow reconcile`，据真实输入及已登记候选链校验唯一 `nextAction`；无法证明兼容的多个中间态返回 `WORKFLOW_AMBIGUOUS`，不得凭会话记忆选择。
 
 ### 约定范围的候选批次
 

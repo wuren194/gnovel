@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal stdio MCP server for the gnovel project service."""
+"""Minimal stdio MCP server for the govel project service."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ except ImportError:
     from core.transport_contract import operation_is_mutating, operation_is_read_only
 
 # 版本读 manifest：产品版本唯一真源是 toolbox.manifest.json，不在此硬编码第二份。
-SERVER_INFO = {"name": "gnovel", "version": str(toolbox_manifest()["version"])}
+SERVER_INFO = {"name": "govel", "version": str(toolbox_manifest()["version"])}
 
 TOOLS = [
     {"name": "get_project_overview", "description": "读取项目卷、弧线、章节和实体数量摘要，不返回正文。", "inputSchema": {"type": "object", "properties": {"projectRoot": {"type": "string"}}, "required": ["projectRoot"], "additionalProperties": False}, "annotations": {"readOnlyHint": True}},
