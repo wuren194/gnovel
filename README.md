@@ -137,6 +137,8 @@ python3 scripts/local_ci.py
 
 接入规范见 [knowledge/README.md](knowledge/README.md)，职责边界见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
+外部投稿请先阅读 [贡献规则](CONTRIBUTING.md) 和 [CLA 草稿（需律师审阅）](CLA.md)。漏洞走 [私密报告说明](SECURITY.md)；仓库维护者可按 [GitHub 网页清单](docs/GITHUB-MAINTAINER.md) 配置检查与分支保护。
+
 ## 许可证
 
 Copyright (C) 2026 wuren194 and govel contributors.

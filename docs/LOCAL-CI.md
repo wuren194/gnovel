@@ -192,7 +192,9 @@ untracked 归属变化都判 `repositoryMutatedByCI=true` 并逐项报出 before
 
 ## 外部 CI
 
-本发行版不把远程工作流结果设为唯一门禁。后续接入外部 CI 时，记录实际平台和真正执行的测试；基础设施不可用与代码测试失败分别报告。远程通过不等于本机运行环境已经验证。
+GitHub Actions 的 `macos-ci` 在 `macos-15`、Python 3.11 上执行 `python3 scripts/local_ci.py`，并额外运行公开发布内容检查与贡献流程脚本回归。它使用只读仓库权限，不加载个人 Provider 或审核词表；报告写入 runner 的仓库外临时目录，不作为源码或附件提交。
+
+外部 CI 补充公开干净环境的证据，不替代本机门禁。基础设施不可用与代码测试失败分别报告，远程通过不等于作者本机已验证。签署流程与工程 CI 分开，GitHub 分支保护的配置见 [维护清单](GITHUB-MAINTAINER.md)。
 
 ## 长期工程原则
 
