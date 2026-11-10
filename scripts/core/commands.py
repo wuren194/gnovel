@@ -427,7 +427,7 @@ def get_entity(root: Path, selector: str) -> dict:
             "sourceProjection": source_projection}
 
 
-EXPORT_STATUSES = ("stable", "review", "draft")
+EXPORT_STATUSES = ("stable", "review", "draft", "planning_required")
 EXPORT_DIR = "工作台"
 
 

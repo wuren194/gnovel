@@ -94,11 +94,24 @@ Claude Desktop、Cursor 等使用 `mcpServers` JSON 配置的客户端：
 python3 scripts/check_mcp_registration.py
 ```
 
-客户端连接后，先调用 `list_capabilities` 并用自然语言描述意图（例如 `{"query": "导出全部设定"}`），按返回的 `invocation` 调用对应工具。默认目录不是全部能力清单。
+客户端连接后，不熟悉命令时调用 `get_tool_help`（例如 `{"query":"续写这个"}`），按返回的定义和 `invocation` 调用工具；已了解命令时直接执行。`list_capabilities` 继续可用，默认目录不是全部能力清单。
+
+## 查帮助，再调用工具
+
+CLI 和 MCP 提供相同的公开项目操作。模型可查询帮助来了解参数，不需要读取工具箱源码或内部 JSON 推测操作。CLI 命令从工具箱目录执行；在小说目录中使用 `novelctl.py` 的绝对路径（MCP help 也会返回该路径）。
+
+```bash
+python3 scripts/novelctl.py --help
+python3 scripts/novelctl.py project tools help --query "续写这个"
+python3 scripts/novelctl.py project task prepare --help
+python3 scripts/novelctl.py project tools help --command-group workflow
+```
+
+“续写这个／继续上次”首先调用 `prepare_task`，传项目路径、`task=continue` 和 `view=model`。工具给出当前任务、材料与下一步；尚无授权任务或发生冲突时，按返回的查询动作核对。初始技能／项目指引可以直接读取，项目数据与运行状态通过工具读取，修改沿预览与批准提交。详细映射见[操作说明](docs/OPERATIONS.md#查找命令与开始任务)。
 
 ## 五分钟体验
 
-1. 按上节注册 MCP。新建项目目前只提供 CLI 入口；可让具备本地命令执行能力的 AI 客户端运行以下命令，或在终端执行：
+1. 按上节注册 MCP，在对话中说明新书名称和存放目录。模型调用 `project.create-preview` 展示新建预览，作者确认后调用 `project.create-commit`。CLI 提供相同入口，也保留直接初始化命令：
 
    ```bash
    python3 scripts/novelctl.py project quick-init --project-root ~/govel-books/山城旧事 --book-name 山城旧事
@@ -109,6 +122,18 @@ python3 scripts/check_mcp_registration.py
 4. 审阅设定变更预览和章节候选，在对应阶段明确批准后提交或定稿。随时可要求“运行 doctor”查看项目状态，或“导出全部设定”生成阅读快照。
 
 不使用 MCP 时，同样的流程可由具备本地命令执行能力的 AI 客户端通过 CLI 完成，也可手动执行。命令见上文“安装与接入”，完整操作见 [docs/OPERATIONS.md](docs/OPERATIONS.md)。
+
+## 导入已有原稿
+
+已有 TXT/Markdown 小说时，可以直接在对话中说：“把这份原稿导入 Govel 新项目，先让我核对分章。”模型通过 `import.preview` 获取分章候选，可分页查看原文、按行号调整分章；确认后由 `import.commit` 创建含正文与来源证据的项目，无须为每本书编写脚本。
+
+导入会保留原文、自动建立新身份与正文归属，设定和规划继续标为待整理。命令与编码选项见[外部稿件入库](docs/OPERATIONS.md#外部稿件入库)。
+
+导入后可让 AI “校验导入，再把原稿整理到可以接续”。`import.verify` 自动核对全文保存情况；`import.organization-prepare/read/preview` 支持 AI 分批读稿、提交带引文的设定、关系和回溯梗概。作者采用后由工具记录已写原稿的回溯审阅，随后沿现有工具补齐风格和摘要。`import.organization-status` 与 doctor 共用实时待办；无需手写校验脚本或重建旧式规划目录。
+
+已有项目可通过 `import.append-preview` 追加外部章节；章节拆分、合并分别使用 `chapter.split-preview` 与 `chapter.merge-preview`。工具保留来源正文，生成新章节身份和待整理状态，作者核对后提交。
+
+自行修改受管正文后，使用 `workflow.external-preview` 核对旧版、新版与差异，再由 `workflow.external-commit` 请求本机 macOS 确认。接受后重新标记待审，不直接定稿。整本项目的可恢复备份使用 `project.backup`，恢复先调用 `project.restore-preview`，核对后恢复到新目录。以上能力均有 MCP 和 CLI 入口，参数与执行逻辑共用；详见[项目管理与章节整理](docs/OPERATIONS.md#项目管理与章节整理)。
 
 ## 接入本地资料
 
@@ -141,19 +166,19 @@ python3 scripts/novelctl.py project source export --project-root ~/govel-books/�
 
 正文导出会核验归属；请检查导出结果是否完整。阅读快照不包含批准、事务及运行证据，不能代替项目备份。
 
-升级后通过外部稿件导入流程重建项目。先建立只读核对副本：
+升级后通过外部稿件导入流程重建项目，先预览分章：
 
 ```bash
-python3 scripts/novelctl.py project import review --source ~/govel-backups/山城旧事-正文.md --target-root ~/govel-books/山城旧事-导入核对
+python3 scripts/novelctl.py project import preview --source ~/govel-backups/山城旧事-正文.md --project-root ~/govel-books/山城旧事-重建 --book-name 山城旧事
 ```
 
-结合导出的设定与规划，人工整理并校对 `candidate.json` 后，再创建新项目：
+确认预览后，使用该次返回的 `planId`、`planHash` 创建新项目：
 
 ```bash
-python3 scripts/novelctl.py project import create --project-root ~/govel-books/山城旧事-重建 --candidate ~/govel-backups/candidate.json
+python3 scripts/novelctl.py project import commit --project-root ~/govel-books/山城旧事-重建 --plan-id "$IMPORT_PLAN_ID" --plan-hash "$IMPORT_PLAN_HASH" --approve
 ```
 
-导入不会继承旧批准或正文归属证明。候选文件要求与导入步骤见 [操作说明](docs/OPERATIONS.md)。
+导入不会继承旧批准或正文归属证明。之后结合已导出的设定与规划，经现有源预览与批准入口整理。高级结构候选入口与完整导入步骤见 [操作说明](docs/OPERATIONS.md)。
 
 ## 开发
 

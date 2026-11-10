@@ -44,6 +44,10 @@ def stale_reasons(root: Path, source: dict, prior: dict) -> list[str]:
         validate_external_materials(root, prior, stage='external-request-status')
         validate_guards(root, prior.get('maintenanceGuards', []), stage='request-status')
         validate_guards(root, prior.get('chapterFactGuards', []), stage='request-status')
+        validate_guards(root, prior.get('organizationGuards', []), stage='request-status')
+        validate_guards(root, prior.get('manuscriptGuards', []), stage='request-status')
+        from .write_sets import validate_guard_groups
+        validate_guard_groups(prior.get('manuscriptGuardGroups', []), stage='request-status')
         if 'writeSet' not in prior:
             raise StructureError('PLAN_REPREVIEW_REQUIRED', 'plan has no frozen write set')
         validate_inventory(root, prior['writeSet'])
@@ -131,9 +135,12 @@ def query_request_status(root: Path, *, requestId: str) -> dict:
                             'arguments': {'projectRoot': str(root.resolve()), 'requestId': requestId}}
                            if renewable else report.get('nextAction') if state == 'prepared' else None),
             **({'execution': report['execution'], 'materialsAction': report.get('diffAction'),
+                **({'approvalAction': report['approvalAction']} if report.get('approvalAction') else {}),
                 'externalReviewMaterials': report.get('externalReviewMaterials')} if unavailable else {}),
             'planHash': prior['planHash'] if state == 'prepared' else None,
             'afterRevision': prior.get('afterRevision') if prior else None,
-            'nextStep': {'not_started': 'preview_saved_request', 'prepared': 'read_frozen_external_materials' if unavailable else 'commit_existing_plan',
+            'nextStep': {'not_started': 'preview_saved_request', 'prepared':
+                         ('confirm_external_on_device' if report.get('approvalAction') else 'read_frozen_external_materials')
+                         if unavailable else 'commit_existing_plan',
                          'stale': 'renew_existing_preview' if renewable else 'reread_inputs_and_use_new_request_id', 'committed': 'check_current_reviews',
                          'undone': 'do_not_reapply_without_new_request'}[state]}

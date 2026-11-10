@@ -167,7 +167,13 @@ def validate_structure(data: dict) -> None:
         for item in items:
             item_id = str(item.get(field, ""))
             if not pattern.fullmatch(item_id):
-                errors.append({"code": "INVALID_ID", "path": name, "id": item_id})
+                detail = {"code": "INVALID_ID", "path": name, "id": item_id, "expectedPattern": pattern.pattern}
+                if name == 'entities':
+                    from .entity_registry import PREFIX_BY_TYPE
+                    entity_type = item.get('entityType')
+                    detail.update(entityType=entity_type, generatedPrefix=PREFIX_BY_TYPE.get(entity_type) if isinstance(entity_type, str) else None,
+                                  guidance='使用实体创建预览自动分配 ID；源批量新增可省略 ID 或使用 $临时引用。')
+                errors.append(detail)
             if item_id in all_ids:
                 errors.append({"code": "GLOBAL_ID_COLLISION", "id": item_id, "paths": [all_ids[item_id], name]})
             all_ids[item_id] = name

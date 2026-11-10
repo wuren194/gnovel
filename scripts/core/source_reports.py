@@ -42,10 +42,16 @@ def public_report(report: dict, *, root: Path | None = None) -> dict:
         if privileged:
             result.pop('nextAction', None)
             result['execution'] = {'executable': False, 'code': 'PRIVILEGED_APPROVAL_REQUIRED',
-                'reason': '预览已冻结；独立采用批准能力尚未提供，普通 commit 不能采用外改。',
+                'reason': '预览已冻结；采用前须在本机 macOS 确认，普通 commit 不授予该能力。',
                 'missingPrerequisites': ['independent_user_presence_capability',
                     *report.get('externalReviewMaterials', {}).get('missingPrerequisites', [])],
                 'approvalPerformed': False}
+            if root is not None and report.get('externalReviewMaterials', {}).get('protocol'):
+                result['approvalAction'] = {'operation': 'workflow.external-commit',
+                    'tool': 'accept_external_manuscript_edit', 'requiresLocalConfirmation': True,
+                    'requiresExplicitApproval': True, 'arguments': {'projectRoot': str(root.resolve()),
+                        'operationId': report['operationId'], 'planHash': report['planHash'],
+                        'approve': True, 'confirmOnDevice': True}}
         else:
             result['nextAction'] = commit_action(report, root)
     if 'diff' in result:
@@ -53,6 +59,9 @@ def public_report(report: dict, *, root: Path | None = None) -> dict:
                                  'recordCount': len({row['recordId'] for row in result['diff']})}
         result['diffAction'] = {'operation': 'source.change-report', 'tool': 'query_source_change_report',
                                 'arguments': {'operationId': report['operationId'], 'section': 'diff', 'view': 'markdown'}}
+    if 'importOrganization' in report:
+        result['reviewAction'] = {'operation': 'source.change-report', 'tool': 'query_source_change_report',
+                                 'arguments': {'operationId': report['operationId'], 'section': 'rationale', 'view': 'text'}}
     if _size(result) <= query_policy()['maxBytes']['detail']:
         return result
     impact = report.get('impact', {})
@@ -61,7 +70,8 @@ def public_report(report: dict, *, root: Path | None = None) -> dict:
     summary['detailsIncluded'] = False
     keys = {'ok', 'code', 'operationId', 'operation', 'planHash', 'baseRevision', 'afterRevision',
             'historical', 'requestId', 'currentRevision', 'beforeRevision', 'revision', 'undoReceiptPath', 'undoAuthorityPath', 'requiresApproval', 'expiresAtEpoch', 'alreadyCommitted', 'operationState',
-            'nextAction', 'execution', 'diffSummary', 'diffAction', 'identities', 'identityRoles'}
+            'nextAction', 'approvalAction', 'execution', 'diffSummary', 'diffAction', 'identities', 'identityRoles',
+            'reversible', 'recovery', 'authorConfirmation', 'replayed', 'reviewAction'}
     compact = {key: value for key, value in result.items() if key in keys}
     # Ownership observations are part of the reviewable operation, not optional
     # prose detail. Keep the tokens visible when large source diffs are paged.
@@ -152,6 +162,12 @@ def query_change_report(root: Path, *, operationId: str, section: str = 'impact'
             proposals = [proposal]
         reason = report.get('reason', parameters.get('reason'))
         rows = ([{'reason': reason}] if reason is not None else []) + list(proposals)
+        if 'importOrganization' in report:
+            organization = report['importOrganization']
+            rows.extend({'kind': 'import_retrospective_review', 'chapterId': cid, 'review': review,
+                         'acceptedHistoryRequested': cid in organization['accepted'], 'historicalStageAClaimed': False}
+                        for cid, review in organization['reviews'].items())
+            rows.extend({'kind': 'import_quote', **row} for row in organization['citations'])
     else:
         raise StructureError('SOURCE_REPORT_SECTION_INVALID', 'unknown report section')
     require_no_pending(root)

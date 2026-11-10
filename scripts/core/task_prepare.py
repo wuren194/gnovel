@@ -234,6 +234,14 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
         # Consume the existing conflict-aware reconciler; no second status table.
         from .finalization import reconcile_workflow
         route = reconcile_workflow(root, persist=False)
+        # A failed continuation still supplies public, non-authorizing reads.
+        # The caller does not need to inspect workflow.json or structure.json.
+        route = {**route, 'recovery': {
+            'automatic': False, 'instruction': '先查询项目概览与诊断，核对缺项及作者范围，再按领域入口处理；不要修改内部 JSON 绕过。',
+            'readActions': [
+                {'operation': 'project.overview', 'arguments': {'projectRoot': str(root)}},
+                {'operation': 'project.doctor', 'arguments': {'projectRoot': str(root), 'view': 'model'}},
+            ]}}
         if not route["ok"]:
             raise TaskPrepareError(route["code"], "机器工作流存在冲突，先解决再继续", route)
         action = route["nextAction"]
@@ -470,7 +478,7 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
     pending = []
     if structure is not None:
         try:
-            pending = pending_continuity(structure, workflow)
+            pending = pending_continuity(structure, workflow, root=root)
         except ContinuityError as exc:
             missing.append({"code": exc.code, "message": str(exc), "blocking": True, "details": exc.details})
     # Include late continuity failures before publishing readiness or an executable action.

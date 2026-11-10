@@ -6,11 +6,39 @@
 
 工具提供可计算的证据，模型判断语义，作者作出创作选择与批准。责任边界见 [产品意图](PRODUCT-INTENT.md)。
 
+## 查找命令与开始任务
+
+不熟悉命令时先查 help；已持有当前定义时直接调用，不在每一步重复读取。帮助、发现目录、CLI 参数与 MCP schema 都从实际操作定义生成，不需要读取源码或工具 schema 缓存文件来寻找业务流程。
+
+```bash
+python3 scripts/novelctl.py project tools help
+python3 scripts/novelctl.py project tools help --query "续写这个"
+python3 scripts/novelctl.py project tools help --operation "project task prepare"
+python3 scripts/novelctl.py project tools help --command-group workflow --offset 0 --limit 10
+python3 scripts/novelctl.py project task prepare --help
+```
+
+MCP 对应 `get_tool_help`，支持 `query`、`operation` 或 `commandGroup` 三选一。`operation` 接受操作 ID、MCP 工具名和 CLI 命令路径；分组按 `readAction` 翻页。help 不要求项目存在，也不读取小说；它返回当前 CLI 路径、参数、示例和调用方式。意图没有匹配只说明该说法未命中，按命令分组继续查，不自行编写脚本代替现有操作。
+
+| 作者意图 | 起始操作 | 后续依据 |
+| --- | --- | --- |
+| 续写这个、接着写、继续上次 | `task.prepare`，`task=continue`、`view=model` | 工具解析机器状态，返回当前工位与材料 |
+| 修改、润色明确的一章 | `task.prepare`，`task=revise`，指定章节 | 读取当前准备与返修范围，不自动重规划 |
+| 看写到哪、未完成事项 | `project.overview` | 项目概览；具体章再读 chapter-status／receipt |
+| 读正式正文／章节计划 | `project.prose`／`source.chapter-plan` | 使用稳定 ID 或显示编号，不自己从结构文件找路径 |
+| 查看审校意见 | `review.report-view` | 核验当前适用性，失效结论不冒充当前通过 |
+| 撤销刚才的修改 | `project.structure.operations` | 先核对历史、可撤销标记和绑定，再执行相应撤销 |
+| 导入、新建、备份、拆章、改名 | help 按意图或分组查 | 领域入口的预览、授权及提交边界 |
+
+`continue` 没有可继续的已授权任务、遇到冲突或需先完成批准时，错误保持原状态，`recovery.readActions` 提供项目概览和诊断。查询可能再次报告真实缺项；按领域入口补齐或交作者决定，不将错误改成就绪，也不读取／修改内部 JSON 绕过。`readAction` 与 `nextAction` 只是下一步参数，仍核对动作的效果及已有授权。
+
+初始 Skill、AGENTS、宿主工具说明可用于了解使用约定；进入项目任务后，材料、正文和运行证据沿工具的读取与分页入口交付。作者的圆桌编辑、外部原始输入和明确请求的开发／故障排查不受日常项目查询路径限制。
+
 ## 不写临时脚本的章节交接
 
 以下入口只接受 manifest 声明的当前项目格式。工具承担确定性搬运：分配 ID、保存输入、生成工件信封、绑定 hash、运行机械诊断、计算引文偏移和接续中断。工位提交正文、计划、审校结论、事实与摘要；执行批准动作时消费已经明确覆盖本章及该步骤的作者授权，不因工具分步而重复询问。
 
-客户端已连接MCP时优先使用目录给出的结构化调用，CLI是同一操作的备用入口；两者都沿下表的高层流程。开始写审校内容前先取review-form，已有完整内容才交submit或artifact-pack；静态artifact-template和低层artifact-register不用于拼当前绑定或猜实际席位。
+客户端可使用 MCP 结构化调用或 CLI 命令；两者都沿下表的高层流程。开始写审校内容前先取review-form，已有完整内容才交submit或artifact-pack；静态artifact-template和低层artifact-register不用于拼当前绑定或猜实际席位。
 
 | 已有内容 | 首选操作 | 工具完成的工作 |
 |---|---|---|
@@ -63,7 +91,11 @@ python3 scripts/novelctl.py project workflow submit --project-root /path/to/书 
 
 ### 外部改稿检查材料
 
-accept-external 预览返回原 requestId、冻结 H1/H2、对象观测与差异。找不到准确 H1 时明确材料不足；不会用摘要还原稿件。原请求状态与仅到期续期已接通，输入变为 H3、对象更换或附件变化都拒绝续用。当前独立用户在场批准组件尚未提供，`execution.executable=false`；预览成功不是采用批准，普通 commit 仍拒绝。重新取最新 hash 不能修复这个能力缺口。
+`workflow.external-preview` 返回原 requestId、冻结 H1/H2、对象观测与差异。找不到准确 H1 时明确材料不足；不会用摘要还原稿件。`workflow.external-read` 按 `part=H1/H2/diff` 分页读取准确原文。原请求可续办或仅延长期限；输入变为 H3、对象更换或附件变化都拒绝续用。
+
+预览的 `execution.executable=false` 表示本机确认尚未完成。作者已明确认可后，沿 `approvalAction` 调用 `workflow.external-commit`，同时传 `approve=true` 与 `confirmOnDevice=true`。macOS 确认窗口显示作品、章节、文件位置、旧新摘要与冻结计划；作者确认后，服务端签发不进入传输载荷的一次性能力，在提交锁内消费。普通 `source.commit` 或单独 `--approve` 仍不能完成外改采用。取消、超时或无桌面环境都不会采用正文。
+
+采用只推进正文归属并标记本章 `stale`，保留原文和历史连续性，失效依赖旧正文的工件；不证明语义审查、定稿或新事实批准。确认期间和写入末次仍核对原文、全部冻结材料及文件对象，H3 不沿用 H2 的确认。原 CLI `workflow accept-external` 也支持 `--confirm-on-device`，与 MCP 共用处理器。
 
 ### 直接填写审校表单与生成状态工件
 
@@ -671,7 +703,7 @@ python3 scripts/novelctl.py project structure refactor-references --project-root
 
 `refactor-references` 只读报告旧名在正文与推演中的出现位置；命中只是候选，保留旧称还是改成新称由作者决定，脚本不自动替换正文。`--file-name-strategy` 缺省 `display_only`（只改标题不碰文件）；`sync_safe_paths` 将正文位置与当前绑定一起事务更新；源计划留在结构真源，失败恢复本次写集。
 
-项目文件夹改名/移动是独立的 top-level 文件系统操作（只走 CLI）。预览在 `.govel/plans` 落一份带 `operationId` 与 TTL 的计划；执行全程持有 `structure.lock`，锁文件随文件夹一起搬到新位置、释放也跟到新位置：
+项目文件夹改名/移动是独立的 top-level 文件系统操作，CLI 与 MCP `relocate` 共用处理器。预览在 `.govel/plans` 落一份带 `operationId` 与 TTL 的计划；执行全程持有 `structure.lock`，锁文件随文件夹一起搬到新位置、释放也跟到新位置：
 
 ```bash
 python3 scripts/novelctl.py project relocate --project-root /path/to/旧书名 --target /path/to/新书名
@@ -743,6 +775,42 @@ python3 scripts/release_audit.py --zip dist/x.zip --terms /path/to/local-review/
 
 ## 外部稿件入库
 
+把现成小说变成带正文的新项目，优先使用 `import.preview → import.commit`。两者均可通过 MCP 调用；不需要编写导入脚本或生成项目结构 JSON。目标目录必须尚不存在，且位于仓库外或 `local/` 内。
+
+```bash
+python3 scripts/novelctl.py project import preview --source ~/Downloads/山城旧事.txt --project-root ~/govel-books/山城旧事 --book-name 山城旧事
+```
+
+预览返回 `planId`、`planHash`、分章数量和分页章列表，每项包含源文件相对路径、标题、起止行号以及原文读取动作。沿 `readAction` 调用 `import.inspect` 看完后续章；每章的 `import.read` 动作读取冻结原文，返回字符偏移、起始行及下一页动作，长行也不会截断丢失。标题匹配只是分章候选；目录、重复标题、卷首内容应由作者或模型核对。
+
+默认识别中文“第…章／回／节”、英文 `Chapter`／`CH`、`（一）`、`（1）`、`(1)`、`【一】`、`一、` 等序数标题。括号和序数也可能是正文列表或目录，因此只作为待核对的候选。目录输入按文件名自然顺序排列（2 在 10 之前），无章标题时整文件一章。首章前非空内容单独保留并提示核对；空白随第一章保留。需要整文件一章可选 `--split file`。默认严格 UTF-8（可带 BOM），其他编码显式传 `--encoding gb18030` 或 `--encoding utf-16`，解码失败报错，不替换损坏字符。
+
+调整分章时重新预览。`boundaries` 只描述需调整文件的各章起始行和标题，不含 ID、hash 或项目字段。边界依原文顺序递增；首项可以晚于第 1 行，之前的非空内容自动保留为卷首、纯空白随第一章保留，最后一章延伸到文件末尾。以下例子将原稿分为两章，第二章从第 120 行开始：
+
+```bash
+python3 scripts/novelctl.py project import preview --source ~/Downloads/山城旧事.txt --project-root ~/govel-books/山城旧事 --boundaries '[{"sourcePath":"山城旧事.txt","startLine":1,"title":"交班"},{"sourcePath":"山城旧事.txt","startLine":120,"title":"夜路"}]'
+```
+
+展示并确认书名、分章范围和导入正文后，使用**本次预览**返回的 `nextAction`。下例的两个变量取自该预览，`--approve` 转达已有明确作者批准：
+
+```bash
+python3 scripts/novelctl.py project import commit --project-root ~/govel-books/山城旧事 --plan-id "$IMPORT_PLAN_ID" --plan-hash "$IMPORT_PLAN_HASH" --approve
+```
+
+工具自动分配项目、卷、弧线和章节身份，把已确认原文写为 UTF-8 正文，建立新正文归属并重建缓存。原编码字节留在 `.govel/import-source/`；`.govel/import-receipt.json` 保存来源摘要、分章映射和批准范围。`utf8ByteStart/utf8ByteEnd` 是解码后 UTF-8 文本中的左闭右开范围，不是原编码字节偏移。UTF-8 原稿除 BOM 外原样分段，换行、前言和章标题均保留；其他编码仅转为 UTF-8，原始字节仍在证据副本中。
+
+导入章状态为 `planning_required`，卷与主线明确标注待整理，没有设定事实、审校结论或续写授权。此时可查询正文；如需合并阅读稿，显式选择该状态：
+
+```bash
+python3 scripts/novelctl.py project export --project-root ~/govel-books/山城旧事 --status planning_required --output ~/govel-backups/山城旧事-导入阅读稿.txt
+```
+
+预览保存在目标父目录的 `.govel-import-…` 中，包含私人原文，应随个人资料管理，不放入公开源码。提交在其中准备完整项目，再以 macOS 独占目录改名发布；已有目标不会被接管或覆盖。普通失败清理本次暂存项目，进程中断可能留下计划目录内的 `build-…`，原计划可重新执行。发布后丢失响应，同计划重试读取原导入回执，不覆盖当前项目；该历史回执不证明项目此刻未被后续编辑。项目及来源证据确认保存后，用户可自行删除对应预览目录。
+
+`IMPORT_SOURCE_CHANGED` 表示原稿字节、文件对象或文件集合已变化；`IMPORT_PLAN_STALE` 表示计划摘要、目标或引擎／Provider 不匹配。两种情况均重新预览并核对。`IMPORT_SNAPSHOT_DAMAGED` 表示冻结副本损坏。`IMPORT_TARGET_EXISTS` 保留目标中的全部内容，须选择其他新目录。
+
+以下为高级结构／只读证据入口：
+
 ```bash
 python3 scripts/novelctl.py project import review --source /path/to/外来稿 --target-root /path/to/证据副本
 python3 scripts/novelctl.py project import scan --source /path/to/外来稿 --output inventory.json
@@ -750,7 +818,103 @@ python3 scripts/novelctl.py project import validate --project-root . --candidate
 python3 scripts/novelctl.py project import create --project-root /path/to/新书 --candidate candidate.json
 ```
 
-`import review` 只产只读证据副本（章节边界候选、逐字节定位、内容 hash，`writableStoryTruthEnabled=false`），不创建可写真源、不分配正式 Stable ID、候选一律 `unapproved`。它没有 projectRoot 业务语义，因此是**已登记的 transport exception：只走 CLI**，不进 MCP tool list 也不进 dashboard 路由；surface 与 mutations 见 `shared/registries/tools.json` 的 `external-manuscript-intake`。
+`import review` 只产只读证据副本（章节边界候选、逐字节定位、内容 hash，`writableStoryTruthEnabled=false`），不创建可写真源、不分配正式 Stable ID、候选一律 `unapproved`。`import create` 只创建调用者已整理的结构，章节目标为空，不复制正文。这组高级入口也通过 MCP `import_review / import_scan / import_validate / import_create` 调用，参数由同一 CLI 解析器派生；没有对应 dashboard 路由。
+
+## 项目管理与章节整理
+
+### 校验原稿并由 AI 整理
+
+新项目落地后，调用以下命令。校验以项目中冻结的原始字节为依据，不依赖外部原文件仍存在：
+
+```bash
+python3 scripts/novelctl.py project import verify --project-root ~/govel-books/山城旧事
+python3 scripts/novelctl.py project import verify --project-root ~/govel-books/山城旧事 --check-source
+python3 scripts/novelctl.py project import organization-status --project-root ~/govel-books/山城旧事
+python3 scripts/novelctl.py project import organization-prepare --project-root ~/govel-books/山城旧事 --limit 3
+```
+
+`verify` 检查回执映射、各原稿的连续 UTF-8 分段范围、原始副本摘要、当前正文与归属。正文有意修订后不再宣称与初始导入相同；`checkSource` 额外列出外部源文件的 matches／changed／missing／unreadable，其变化不抹掉冻结副本。输出超限时按返回的详情引用读取，不要求模型自己写 hash 校验程序。
+
+`organization-status` 是当前导入待办入口，doctor 的 `importFollowup` 使用同一计算结果。旧导入回执的 pending 保留当时状态并标为 historical，当前进度沿 followupAction 查询。关系盘点必须由模型实际完成；关系数为零不自动报缺陷，也不自动当作已核对。规划 Markdown 是按需导出，不构成缺文件。
+
+prepare 返回本批 `prepareRef`、`fields` 与 `readAction`。AI 先沿 `import.organization-read` 的游标读完全部原文，再查询现有实体／设定，填写 fields。提交采用 `import.organization-preview --prepare-ref … --request-id … --content @整理.json`；JSON 只是模型语义输入，不包含内部项目快照、身份封签或批准记录。MCP 可直接传 content 对象。
+
+| content 内容 | 模型填写 | 工具完成 |
+| --- | --- | --- |
+| chapters | 稳定章 ID、synopsis、quotes、facts/relationships/continuity/structure 四项实际审阅、unresolved、existingRecordIds | 登记回溯事实与当前依赖，不伪造写前计划 |
+| entities | `$` 局部 ref、entityType、name、summary、chapterId、quote | 分配正式 ID，验证引文 |
+| facts | ownerRef、text、chapterId、quote | 登记 topic 事实及原文引证 |
+| relations | fromRef、toRef、kind、chapterId、quote、reason | 将实际关系写入 relations，保留引证 |
+| acceptHistory | 是否提请作者采用本批已写原稿及事实盘点 | 未决项拒绝采用；批准提交后记录回溯历史，不产生 A/B 或新章授权 |
+
+同批新实体可用 `$` 引用，既有实体用稳定 ID；不猜 `SE-` 等前缀。重复名字要求先解析，既有事实修订继续走原受审提案。相同回溯梗概可复用；changed source／引用失效时重新 prepare。每批提交后重新选择剩余章，不把旧 offset 用在缩短后的待办列表。
+
+预览经明确作者批准后沿返回 `source.commit` 提交，结构、引文和回溯审阅索引复用同一事务。既有授权涵盖本批时可继续执行，不重复询问。有效回溯采用将原稿标为 stable 并满足前章历史条件；它依赖匹配的已提交事务、原稿摘要和归属代次、章节结构及实际资料摘要。改文、改相关资料、删证据或撤销采用都会使相应资格失效，不能改旧回执来恢复。
+
+卷弧归属使用既有 volume／arc／relink 工具，四项审阅明确说明本章结构安排。风格由 AI 通过 `source.voice-profile-preview` 提供真实候选，经采用后激活；最后用 `summary.prepare`、`summary.commit-delta` 生成摘要与人物末态。开始新章仍须其正常阶段 A/B 和作者范围。没有原稿导入回执的项目不能凭文件名获得回溯采用资格。
+
+doctor 同时返回 `dataIntegrity`、`authoringReadiness`、`assessment` 与解释。只因作者待办阻断时会明确说明“数据检查通过，仍有创作准备”；旧的 healthy／退出码仍表达全部开工条件，不用于判断是否丢字。导入完整性以 verify 的实际核对为准。
+
+动作的 `arguments` 是 JSON 参数。回执附 `cli`／`cliArgv` 时可以直接使用；其他动作可生成命令：
+
+```bash
+python3 scripts/novelctl.py project tools help --operation project.doctor --arguments '{"projectRoot":"/path/to/小说","view":"model"}'
+```
+
+该调用只校验参数并返回 `--project-root` 等正确写法，不执行 doctor，更不授予写入批准。误传 `--projectRoot` 时，参数错误中的 flagSuggestions 会指出对应 CLI 旗标。显式布尔 false 不能安全地通过省略旗标表达（部分领域默认 true）；此时返回 `CLI_EXPLICIT_FALSE_UNSUPPORTED` 和保留原参数的 mcpAction，不静默改变含义。
+
+公开 `novelctl project` 命令均有 MCP 能力。先用 `list_capabilities` 按自然语言或 operation 查询，或在 CLI 使用 `project tools list --operation` 查看同一参数定义；默认目录按场景收窄，不代表未列出的操作不存在。日志配置／清理、结构批量预览、缓存重建和项目搬移也保留各自的领域保护，不因为 MCP 可发现而自动执行。
+
+| 作者任务 | Operation | CLI `project` 后的命令 | MCP 工具 |
+| --- | --- | --- | --- |
+| 新建空项目预览 | `project.create-preview` | `create-preview` | `preview_project_creation` |
+| 批准新建 | `project.create-commit` | `create-commit` | `commit_project_creation` |
+| 完整备份 | `project.backup` | `backup` | `backup_project` |
+| 校验备份 | `project.backup-verify` | `backup-verify` | `verify_project_backup` |
+| 恢复预览 | `project.restore-preview` | `restore-preview` | `preview_project_restore` |
+| 批准恢复 | `project.restore-commit` | `restore-commit` | `commit_project_restore` |
+| 向已有项目追加原稿 | `import.append-preview` | `import append-preview` | `preview_manuscript_append` |
+| 核对／读取追加原稿 | `import.append-inspect / append-read` | `import append-inspect / append-read` | `inspect_manuscript_append / read_append_manuscript` |
+| 批准追加 | `import.append-commit` | `import append-commit` | `commit_manuscript_append` |
+| 拆分已有章节 | `chapter.split-preview` | `structure chapter-split-preview` | `preview_chapter_split` |
+| 合并已有章节 | `chapter.merge-preview` | `structure chapter-merge-preview` | `preview_chapter_merge` |
+| 核对拆合稿件 | `chapter.reshape-read` | `structure chapter-reshape-read` | `read_chapter_reshape` |
+| 批准拆合 | `chapter.reshape-commit` | `structure chapter-reshape-commit` | `commit_chapter_reshape` |
+| 查询拆合来源 | `chapter.lineage` | `structure chapter-lineage` | `query_chapter_lineage` |
+| 预览／读取外改 | `workflow.external-preview / external-read` | `workflow external-preview / external-read` | `preview_external_manuscript_edit / read_external_manuscript_edit` |
+| 本机确认后采用外改 | `workflow.external-commit` | `workflow external-commit` | `accept_external_manuscript_edit` |
+
+### 新建与完整备份恢复
+
+```bash
+python3 scripts/novelctl.py project create-preview --project-root ~/govel-books/山城旧事 --book-name 山城旧事
+```
+
+预览返回 `commitAction`，携带冻结的 `planRef` 与 `planHash`；作者认可名称和目标目录后沿该动作提交。新项目 ID 由工具生成。`quick-init / init` 保留并共用初始化实现，两种入口都能通过 MCP 调用。
+
+```bash
+python3 scripts/novelctl.py project backup --project-root ~/govel-books/山城旧事 --output ~/govel-backups/山城旧事.zip
+python3 scripts/novelctl.py project backup-verify --archive ~/govel-backups/山城旧事.zip
+python3 scripts/novelctl.py project restore-preview --archive ~/govel-backups/山城旧事.zip --project-root ~/govel-books/山城旧事-恢复
+```
+
+备份包含项目内全部普通文件、空目录、权限位、正式正文、结构、候选、批准和事务证据；项目外 Provider 与个人资料须另行备份。输出为项目外的新 ZIP，已有目标不覆盖。不可读目录、符号链接、必需文件缺失、未恢复事务或扫描期间输入变化均报错，不能报告完整备份。
+
+恢复预览逐文件核验清单、摘要、路径和当前项目格式，返回 `commitAction`。批准后在新目录发布，保留原项目身份及已有证据；它不是新作品分叉，也不替旧格式做迁移。原宿主的活跃交接会停止，原交接索引和定位元数据另存 `.govel/restore-history/`，回执列出实际调整。新目录发布前失败不改变现有项目；原计划在成功但响应丢失后可重试。备份仍须保存，当前格式的阅读导出不能代替它。
+
+### 追加外部章节
+
+`import.append-preview` 接受 `requestId`、`source`、`primaryArcId`，并在 `volumeId` 与 `placement` 中明确一个位置；可给 `beforeChapterId` 指定插入点。编码、自动分章、`boundaries` 的语义与新项目导入相同。卷／弧身份从项目查询取得，不能凭显示序号拼接。
+
+预览沿 `append-inspect / append-read` 核对来源和全部分章，确认后用原 `operationId / planHash` 提交。项目外原稿和工作台内独立稿件均可作为来源；来源目录不能与新增正文或运行证据的写入位置重叠。工具在原结构事务中一次保存新章、正文与原编码来源证据，现有正文不变；原件及稿件目录成员集合在提交末次继续核验。新章保持 `planning_required`，设定、规划与审查不自动填充。
+
+### 拆分、合并及来源
+
+`chapter.split-preview` 使用 `chapterId`、`reason` 与稳定 `requestId`。分界可用 `cutBefore` 指定原文中各段的开头句，工具计算偏移；每个片段必须唯一命中且按原文顺序排列，重复或找不到时明确报错。CLI 多个分界重复传 `--cut-before`。也可显式提供递增的 `cutOffsets`，与 `cutBefore` 二选一；偏移按原文 Unicode 字符计数，CRLF 为两个字符，不归一化换行。可显式提供每段标题。`chapter.merge-preview` 使用有序 `chapterIds`、新标题和理由，默认直接按给定顺序连接原文；显式的 `separator` 会在预览中展示。
+
+工具归档来源章，原稳定 ID、原文及历史仍保留；结果章使用新 ID、受管正文和 `planning_required`，不复制旧批准或把旧规划当作新章规划。默认继承第一个来源章的位置和弧线，可通过 `target` 明确调整；跨卷合并应先核对预览中的位置、序列和单元归属。`chapter.reshape-read` 核对冻结结果，`chapter.lineage` 从实际已提交回执读取来源章、摘要和原文范围。
+
+追加和拆合创建的新身份不会被普通 undo 删除，因此回执明确 `reversible=false`。需要改回时归档新增章，并按需恢复来源章；源正文始终保留。中途失败由原写集恢复旧状态，同一请求不重复建章。历史成功回执需匹配已提交事务镜像；证据损坏会明确报错，不宣称提交成功，也不撤销健康的当前正文归属。
 
 ## 创作任务入口
 

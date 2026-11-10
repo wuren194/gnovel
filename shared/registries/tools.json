@@ -5,6 +5,114 @@
     "maxResults": 3,
     "maxQueryCharacters": 300,
     "intents": {
+      "project.create-preview": [
+        [
+          "新建项目",
+          "创建项目",
+          "新建小说",
+          "创建小说",
+          "new project",
+          "create project"
+        ]
+      ],
+      "project.backup": [
+        [
+          "备份项目",
+          "备份整本",
+          "完整备份",
+          "项目备份",
+          "backup project"
+        ]
+      ],
+      "project.backup-verify": [
+        [
+          "校验备份",
+          "核验备份",
+          "验证备份",
+          "verify backup"
+        ]
+      ],
+      "project.restore-preview": [
+        [
+          "恢复项目",
+          "恢复备份",
+          "还原项目",
+          "从备份恢复",
+          "restore project"
+        ]
+      ],
+      "import.append-preview": [
+        [
+          "追加原稿",
+          "追加章节",
+          "追加外部章节",
+          "导入已有项目",
+          "导入到现有项目",
+          "append manuscript",
+          "append chapters"
+        ]
+      ],
+      "project.relocate": [
+        [
+          "移动项目",
+          "搬移项目",
+          "移动项目文件夹",
+          "项目文件夹改名",
+          "move project",
+          "relocate project"
+        ]
+      ],
+      "chapter.split-preview": [
+        [
+          "拆分章节",
+          "拆章",
+          "拆成两章",
+          "split chapter"
+        ]
+      ],
+      "chapter.merge-preview": [
+        [
+          "合并章节",
+          "合章",
+          "合成一章",
+          "merge chapters"
+        ]
+      ],
+      "chapter.lineage": [
+        [
+          "章节来源",
+          "拆合来源",
+          "chapter lineage"
+        ]
+      ],
+      "workflow.external-preview": [
+        [
+          "外部修改",
+          "外部改稿",
+          "采用外改",
+          "接受外改",
+          "external edit"
+        ]
+      ],
+      "import.preview": [
+        [
+          "导入",
+          "做成",
+          "转成",
+          "转换成",
+          "import"
+        ],
+        [
+          "小说",
+          "原稿",
+          "外部",
+          "txt",
+          "markdown",
+          "govel",
+          "manuscript",
+          "novel"
+        ]
+      ],
       "project.structure.insert-preview": [
         [
           "创建章节",
@@ -63,7 +171,9 @@
           "查询",
           "看看",
           "show",
-          "read"
+          "read",
+          "查",
+          "看"
         ],
         [
           "人物",
@@ -236,7 +346,17 @@
           "准备",
           "开始",
           "怎么",
-          "prepare"
+          "prepare",
+          "续写",
+          "接着写",
+          "继续写",
+          "继续上次",
+          "继续这个项目",
+          "润色",
+          "修改这一章",
+          "修改本章",
+          "重写这一章",
+          "扩写这一章"
         ],
         [
           "写下一章",
@@ -246,7 +366,17 @@
           "章节任务",
           "审校",
           "chapter",
-          "task"
+          "task",
+          "续写",
+          "接着写",
+          "继续写",
+          "继续上次",
+          "继续这个项目",
+          "润色",
+          "修改这一章",
+          "修改本章",
+          "重写这一章",
+          "扩写这一章"
         ]
       ],
       "task.execute": [
@@ -676,6 +806,143 @@
           "恢复事实登记",
           "complete chapter facts"
         ]
+      ],
+      "capabilities.help": [
+        [
+          "怎么用",
+          "如何使用",
+          "工具帮助",
+          "命令帮助",
+          "查帮助",
+          "help"
+        ]
+      ],
+      "project.overview": [
+        [
+          "写到哪",
+          "写到第几章",
+          "项目进度",
+          "小说进度",
+          "当前进度",
+          "没做完",
+          "未完成事项",
+          "待办",
+          "项目概览"
+        ]
+      ],
+      "project.prose": [
+        [
+          "读一下",
+          "读",
+          "查看",
+          "看看",
+          "阅读"
+        ],
+        [
+          "章",
+          "正文"
+        ]
+      ],
+      "source.chapter-plan": [
+        [
+          "看",
+          "读",
+          "查询"
+        ],
+        [
+          "章节计划",
+          "章节推演",
+          "细纲",
+          "本章计划"
+        ]
+      ],
+      "review.report-view": [
+        [
+          "看",
+          "读",
+          "查询"
+        ],
+        [
+          "审校意见",
+          "审查报告",
+          "审校报告"
+        ]
+      ],
+      "project.structure.book-rename-preview": [
+        [
+          "改名",
+          "更名",
+          "改书名",
+          "改个名字"
+        ],
+        [
+          "小说",
+          "书名",
+          "书"
+        ]
+      ],
+      "project.structure.chapter-rename-preview": [
+        [
+          "改名",
+          "改标题",
+          "更名",
+          "换标题"
+        ],
+        [
+          "章"
+        ]
+      ],
+      "project.structure.operations": [
+        [
+          "撤销",
+          "撤回修改",
+          "操作历史",
+          "修改记录",
+          "回退修改"
+        ]
+      ],
+      "project.structure.entity-create-preview": [
+        [
+          "新增",
+          "创建",
+          "添加",
+          "登记"
+        ],
+        [
+          "人物",
+          "角色",
+          "地点",
+          "道具",
+          "势力"
+        ]
+      ],
+      "import.organization-prepare": [
+        [
+          "导入后整理",
+          "整理导入",
+          "原稿整理",
+          "补齐导入",
+          "提取原稿设定",
+          "整理外部小说"
+        ]
+      ],
+      "import.organization-status": [
+        [
+          "导入待办",
+          "导入进度",
+          "原稿整理进度",
+          "导入后还缺什么"
+        ]
+      ],
+      "import.verify": [
+        [
+          "校验导入",
+          "核验导入",
+          "验证导入",
+          "导入完整性",
+          "导入有没有丢字",
+          "verify import"
+        ]
       ]
     }
   },
@@ -708,22 +975,31 @@
       "notes": "静态资源在 dashboard/（index.html + app.js + styles.css）；token 每次启动重新生成，不写入 /api/config 或 stdout"
     },
     {
+      "id": "manuscript-import",
+      "path": "scripts/core/manuscript_import.py",
+      "transport": "CLI/MCP (import.preview / inspect / read / commit)",
+      "audience": "作者；外部小说导入",
+      "surface": "从 TXT/Markdown 自动产生分章预览，分页读原文，按 sourcePath/startLine/title 修订分章；批准后创建带正文的新项目，无须调用者生成稳定 ID 或 candidate.json。",
+      "mutations": "preview 在目标旁保存冻结计划与原始字节，不创建项目；commit 核验计划、源文件和运行配置，再以独占目录发布建立新正文归属。保持 planning_required，不生成文学审校、续写范围或旧项目批准。",
+      "notes": "projectRoot 是尚不存在的目标路径；原稿和预览分别保留身份。旧 review/scan/validate/create 是下列独立高级入口，不是默认全文导入路径。"
+    },
+    {
       "id": "external-manuscript-intake",
       "path": "scripts/core/importer.py",
-      "transport": "CLI (novelctl project import review / scan / validate / create)",
+      "transport": "CLI/MCP (novelctl project import review / scan / validate / create；import_review / import_scan / import_validate / import_create)",
       "audience": "作者；外部稿件入库",
-      "surface": "把外部 .txt/.md 稿件变成只读证据副本（章节边界候选、逐字节定位、内容 hash，writableStoryTruthEnabled=false）；或把已校对的 candidate JSON 建成新项目。入口参数是 --source 与 --target-root/--project-root，不是项目内业务操作",
+      "surface": "高级入口：生成只读外部稿件证据副本（writableStoryTruthEnabled=false），或把已校对的结构 candidate JSON 建成不含正文的新项目。日常全文导入使用 manuscript-import。参数由同一 CLI 解析器派生为 MCP schema。",
       "mutations": "evidence-only 副本不创建可写真源、不生成正式 Stable ID、候选一律 unapproved；只有 import create 在显式 --project-root 下新建项目，且 candidate 必须先过 import validate",
-      "notes": "top-level intake/bootstrap 操作：没有 projectRoot 业务语义，因此是已登记的 transport exception——只进 CLI，不进 MCP tool list，也不进 dashboard 路由。这不是影子入口：surface 与 mutations 在此登记，最终现实报告引用本条。"
+      "notes": "top-level intake/bootstrap 操作经同一 OperationSpec 在 CLI/MCP 提供；文件范围和初始化保护由领域实现校验。没有 dashboard 路由。"
     },
     {
       "id": "project-relocate",
       "path": "scripts/core/project_relocate.py",
-      "transport": "CLI (novelctl project relocate --project-root <当前> --target <新绝对路径> 预览；再用返回的 novelctl project relocate --project-root <当前> --operation-id <OP> --preview-hash <planHash> --approve 执行)",
+      "transport": "CLI/MCP (project.relocate / relocate；CLI novelctl project relocate --project-root <当前> --target <新绝对路径> 预览；再带 operationId/previewHash/approve 执行)",
       "audience": "作者；项目文件夹改名或移动",
       "surface": "把项目文件夹改名或移动到同一文件系统内的新绝对路径。参数是当前项目根与目标绝对路径，不是项目内业务操作：它改变 projectRoot 本身",
       "mutations": "预览在 .govel/plans 落一份带 operationId 与 TTL 的计划（事务簿记，不计入 authored inventory）；执行全程持有 .govel/structure.lock：末次校验 → 一次 os.rename（同文件系统内原子）→ authored 逐字节复核 → 经写集引擎落 .govel/project-locator.json 收据（记 operationId/planHash/rootAtOperation/currentLocator/actor）并消耗该计划 → 释放锁。锁文件在树内，随文件夹一起搬走，释放也跟到新位置，两端都不留残锁。rename 之后任何失败都把文件夹改名回去，改回去也失败就报错而非静默。projectId、全部 Stable ID 与 authored 字节不变；跨设备以 PROJECT_RELOCATE_CROSS_DEVICE_UNSUPPORTED fail closed，不悄悄退化成 copy+delete",
-      "notes": "top-level filesystem operation：没有 projectRoot 业务语义，因此是已申报的 transport exception——只进 CLI，不进 MCP tool list，也不进 dashboard 路由。这不是影子入口：surface 与 mutations 在此登记。与 book rename 是两件事：后者改显示元数据，走 project structure book-rename-preview；二者可在同一次预览里组合，commit 在同一把锁下先改文件夹、再落一份把 project-locator.json 一起算进去的库内写集，写集失败由引擎按 before-image 全部还原，文件夹再改回去。"
+      "notes": "top-level filesystem operation 经 CLI/MCP 共用处理器和路径/批准保护，没有 dashboard 路由。与 book rename 是两件事：后者改显示元数据，走 project structure book-rename-preview；二者可在同一次预览里组合，commit 在同一把锁下先改文件夹、再落定位收据，写集失败由引擎恢复并把文件夹改回去。"
     }
   ],
   "tools": [

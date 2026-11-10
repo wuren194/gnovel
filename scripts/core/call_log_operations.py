@@ -26,8 +26,8 @@ def call_log_operations():
                       examples=({"callId": "CL-0123456789abcdef0123456789abcdef"},)),
         OperationSpec("logs.configure", "configure_call_logging", "设置用户级本地日志模式；环境变量覆盖时会显示实际生效来源。",
                       schema({"mode": {"type": "string", "enum": ["off", "summary", "full"]}}, ["mode"]),
-                      "maintenance", lambda root, a: configure_logging(**a), ("logs", "configure"), mcp=False, category="author",
+                      "maintenance", lambda root, a: configure_logging(**a), ("logs", "configure"), category="author",
                       examples=({"mode": "full"}, {"mode": "off"})),
         OperationSpec("logs.prune", "prune_call_logs", "按当前保留期、数量与容量策略清理本地诊断副本；保留活动调用和用户开关。",
-                      schema({}), "maintenance", lambda root, a: prune_call_logs(), ("logs", "prune"), mcp=False, category="author"),
+                      schema({}), "maintenance", lambda root, a: prune_call_logs(), ("logs", "prune"), category="author"),
     ]

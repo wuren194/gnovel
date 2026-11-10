@@ -160,7 +160,7 @@ def validate_guards(root: Path, rows: list[dict], *, stage: str) -> None:
 # A new authored file, a deletion, a rename or a file→directory swap lands outside every
 # row, so membership is guarded as its own claim about the same roots.
 
-def tree_membership(root: Path, roots: list[str]) -> dict:
+def tree_membership(root: Path, roots: list[str], *, suffixes: list[str] | None = None) -> dict:
     """Canonical member list of `roots` and its digest, recomputed read-only from disk.
 
     Membership is the *path set*, not the contents. Directories are not members — an empty
@@ -169,6 +169,10 @@ def tree_membership(root: Path, roots: list[str]) -> dict:
     the member set. `members` is project-relative, canonical and sorted, which is what makes
     a persisted digest meaningful: the same tree always spells the same list.
     """
+    if suffixes is not None and (not isinstance(suffixes, list) or not suffixes
+            or any(not isinstance(value, str) or not value.startswith('.') for value in suffixes)):
+        raise StructureError('TRANSACTION_GUARD_INVALID', 'tree suffixes must be nonempty file extensions')
+    accepted = {value.lower() for value in suffixes} if suffixes is not None else None
     members = []
     for relative in sorted(roots):
         base = safe_project_path(root, relative)
@@ -176,22 +180,29 @@ def tree_membership(root: Path, roots: list[str]) -> dict:
             members.append(relative)
             continue
         if not base.is_dir():
-            if base.exists():
+            if base.exists() and (accepted is None or base.suffix.lower() in accepted):
                 members.append(relative)
             continue
-        for path in base.rglob('*'):
-            if path.is_dir() and not path.is_symlink():
-                continue
-            members.append(str(path.relative_to(root)))
+        def unreadable(error):
+            raise StructureError('TRANSACTION_GUARD_DRIFT', 'cannot enumerate the complete guarded directory',
+                                 {'path': str(error.filename or base)}) from error
+        for folder, directories, files in os.walk(base, followlinks=False, onerror=unreadable):
+            paths = [Path(folder) / name for name in files]
+            paths.extend(Path(folder) / name for name in directories if (Path(folder) / name).is_symlink())
+            for path in paths:
+                if accepted is not None and not path.is_symlink() and path.suffix.lower() not in accepted:
+                    continue
+                members.append(str(path.relative_to(root)))
     members.sort()
     return {"roots": sorted(roots), "members": members,
+            **({'suffixes': sorted(accepted)} if accepted is not None else {}),
             "membershipDigest": digest(canonical_json(members).encode())}
 
 
 def validate_tree_guards(root: Path, rows: list[dict], *, stage: str) -> None:
     """Recompute every tree guard's membership and fail closed on any drift."""
     for row in rows:
-        observed = tree_membership(root, row["roots"])
+        observed = tree_membership(root, row["roots"], suffixes=row.get('suffixes'))
         if (observed["members"] != row["members"]
                 or observed["membershipDigest"] != row["membershipDigest"]):
             raise StructureError(

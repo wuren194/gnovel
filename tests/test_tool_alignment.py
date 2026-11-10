@@ -179,7 +179,7 @@ class TransportAlignmentGuards(unittest.TestCase):
                 else:
                     self.assertIn(binding['ref'], {s.id for s in operations()})
 
-    def test_mcp_surface_covers_task_chain_without_maintenance_tools(self):
+    def test_mcp_surface_covers_public_cli_and_retains_effect_classification(self):
         proc = subprocess.run([sys.executable, str(ROOT / 'scripts/mcp_server.py')],
                               input=json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list', 'params': {'view': 'audit'}}) + '\n',
                               capture_output=True, text=True)
@@ -187,15 +187,22 @@ class TransportAlignmentGuards(unittest.TestCase):
         names = {tool['name'] for tool in json.loads(proc.stdout)['result']['tools']}
         for required in ('query_logic', 'get_tool_plan', 'run_mechanical_diagnostics', 'prepare_task',
                          'read_continuation_context', 'prepare_story_summary', 'commit_story_summary',
-                         'workflow_chapter_receipt', 'workflow_continuity_complete', 'undo_structure_operation'):
+                         'workflow_chapter_receipt', 'workflow_continuity_complete', 'undo_structure_operation',
+                         'state_rebuild', 'workflow_recover', 'import_scan', 'import_review', 'quick_init',
+                         'relocate', 'structure_gc', 'preview_structure_batch', 'configure_call_logging', 'prune_call_logs'):
             with self.subTest(tool=required):
                 self.assertIn(required, names)
-        for forbidden in ('state_rebuild', 'upgrade_apply', 'import_scan', 'install_antigravity', 'project_structure_gc'):
+        for forbidden in ('upgrade_apply', 'install_antigravity', 'preview_set_entity_timespan'):
             with self.subTest(tool=forbidden):
                 self.assertNotIn(forbidden, names)
         by_name = {tool['name']: tool for tool in json.loads(proc.stdout)['result']['tools']}
         self.assertTrue(by_name['run_mechanical_diagnostics']['annotations']['readOnlyHint'] is False)
         self.assertTrue(by_name['query_logic']['annotations']['readOnlyHint'] is True)
+        for name in ('state_rebuild', 'workflow_recover', 'structure_gc', 'configure_call_logging',
+                     'prune_call_logs', 'preview_structure_batch', 'import_review'):
+            self.assertFalse(by_name[name]['annotations']['readOnlyHint'], name)
+        for name in ('quick_init', 'relocate', 'workflow_recover'):
+            self.assertTrue(by_name[name]['annotations']['destructiveHint'], name)
 
     def test_execution_never_approves_and_skips_protected_writes(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -9,8 +9,8 @@ rollback or receipts.
 Every refactor here preserves identity by construction: the plan carries a whole
 proposed structure snapshot in which only display fields and locators differ, and
 `validate_structure` plus the ID-pattern guards reject any plan that would mint,
-reuse or drop a stable ID. Split, merge and fork are deliberately absent because
-they create new identity and lineage; see `DEFERRED_OPERATIONS`.
+reuse or drop a stable ID. Chapter split and merge use their own manuscript
+materialization transaction; project fork remains deferred.
 """
 
 from __future__ import annotations
@@ -41,9 +41,12 @@ OPERATIONS = {
 # Reserved for a later round: each of these creates identity or lineage, so it
 # needs its own contract rather than a display-field edit.
 DEFERRED_OPERATIONS = {
-    'split': 'new Stable IDs plus source lineage; the source keeps its history.',
-    'merge': 'target Stable ID plus absorbed lineage; absorbed IDs never vanish.',
     'fork': 'new projectId plus parent project lineage.',
+}
+
+IDENTITY_CREATING_OPERATIONS = {
+    'split': {'operation': 'chapter.split-preview', 'rule': 'Archive the source chapter; create new IDs with exact source ranges.'},
+    'merge': {'operation': 'chapter.merge-preview', 'rule': 'Archive source chapters; create a new ID and preserve their original prose.'},
 }
 
 # Display metadata a metadata-only migration rebase may re-bind. Anything outside
@@ -69,6 +72,7 @@ _COLLECTIONS = {
 def operation_contract() -> dict:
     """The published identity contract, for docs, CLI help and tests."""
     return {'supported': dict(OPERATIONS), 'deferred': dict(DEFERRED_OPERATIONS),
+            'identityCreating': deepcopy(IDENTITY_CREATING_OPERATIONS),
             'identityInvariants': [
                 'projectId', 'volumeId', 'arcId', 'unitId', 'chapterId', 'entityId',
                 'relationId', 'candidateId', 'decisionId'],
@@ -225,7 +229,8 @@ def prepare_refactor_writes(root: Path, current: dict, plan: dict, extras: dict[
         from .finalization import accept_external_workflow, _load_workflow
         chapter_id = (plan.get('parameters') or {}).get('chapterId')
         extras['.govel/workflow.json'] = json_bytes(
-            accept_external_workflow(_load_workflow(root), chapter_id))
+            accept_external_workflow(_load_workflow(root), chapter_id,
+                                     updated_at=plan['proposedStructure']['updatedAt']))
     if plan.get('operation') == 'refactor_rename_book':
         extras['.govel/project.json'] = _renamed_marker(root, plan['proposedStructure']['bookName'])
 

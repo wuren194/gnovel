@@ -16,7 +16,7 @@ from .file_preservation import observation
 from .jsonio import read_json
 from .prose_binding import validate_binding
 from .structure_store import StructureError
-from .write_sets import (apply_write_set, digest, guard_state, json_bytes,
+from .write_sets import (GUARD_KEYS, apply_write_set, digest, guard_state, json_bytes,
                          safe_project_path, validate_guards)
 
 
@@ -185,6 +185,19 @@ def validate_external_materials(root: Path, plan: dict, *, stage: str) -> None:
     guards = plan.get('externalReviewGuards')
     if not isinstance(guards, list) or not guards:
         raise StructureError('EXTERNAL_REVIEW_MATERIAL_INVALID', 'external object guard is missing')
+    expected_paths = {material['filePath'], material['metadataPath'],
+                      *[material[name]['path'] for name in ('H1', 'H2', 'diff') if material.get(name)]}
+    if (any(not isinstance(row, dict) or set(row) != {'path', *GUARD_KEYS} for row in guards)
+            or len(guards) != len(expected_paths) or {row['path'] for row in guards} != expected_paths):
+        raise StructureError('EXTERNAL_REVIEW_MATERIAL_INVALID', 'all original prose and frozen material guards are required')
+    indexed = {row['path']: row for row in guards}
+    live = indexed[material['filePath']]
+    if any(live[key] != material['observedObject'][key] for key in GUARD_KEYS):
+        raise StructureError('EXTERNAL_REVIEW_MATERIAL_INVALID', 'live manuscript guard differs from reviewed H2')
+    for name in ('H1', 'H2', 'diff'):
+        row = material.get(name)
+        if row and indexed[row['path']]['sha256'] != row['sha256']:
+            raise StructureError('EXTERNAL_REVIEW_MATERIAL_INVALID', 'material guard and frozen content differ', {'part': name})
     validate_guards(root, guards, stage=stage)
     if {row['path'] for row in guards} & {row['path'] for row in plan.get('writeSet', [])}:
         raise StructureError('EXTERNAL_REVIEW_GUARD_IS_OUTPUT', 'reviewed prose and materials must remain read-only')

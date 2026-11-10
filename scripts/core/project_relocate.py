@@ -1,10 +1,8 @@
 """Top-level project folder relocation.
 
-This is a filesystem operation, not a project-root operation: it changes where the
-project lives, so it cannot be expressed as an OperationSpec over a fixed root. It
-is registered as a declared transport exception in `shared/registries/tools.json`
-(`project-relocate`) and reachable only through the CLI, exactly like the external
-manuscript intake — it is not a shadow entrypoint.
+This filesystem operation changes where the project lives. Its shared CLI/MCP
+OperationSpec receives the current root and the proposed destination, and the
+domain handler keeps the moving lock and locator receipt together.
 
 A relocation is a locator change. `projectId` is untouched, authored bytes are
 untouched, and the receipt records both `rootAtOperation` (where the project was

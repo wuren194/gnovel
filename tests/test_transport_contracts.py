@@ -47,39 +47,47 @@ class TransportContractTests(unittest.TestCase):
     def test_entrypoints_document_shared_core_and_mutation_boundaries(self) -> None:
         registry = json.loads((ROOT / "shared/registries/tools.json").read_text(encoding="utf-8"))
         entries = {item["id"]: item for item in registry["entrypoints"]}
-        # 三个平级传输通道，外加两个已申报的 top-level 例外：外部稿件入库与项目文件夹迁移。
-        self.assertEqual(set(entries), {"novelctl", "mcp-server", "dashboard-server",
+        # 传输和作者任务入口都须登记；CLI/MCP 对齐不代表新增 dashboard 路由。
+        self.assertEqual(set(entries), {"novelctl", "mcp-server", "dashboard-server", "manuscript-import",
                                         "external-manuscript-intake", "project-relocate"})
         self.assertIn("finalize-chapter", entries["novelctl"]["surface"])
         self.assertIn("HttpOnly", entries["dashboard-server"]["mutations"])
 
-    def test_external_manuscript_intake_is_a_declared_exception_not_a_shadow(self) -> None:
-        """入库入口没有 projectRoot 语义，所以只走 CLI——但必须登记，不能默默存在。"""
+    def test_external_manuscript_intake_is_shared_and_keeps_its_evidence_boundary(self) -> None:
+        """MCP 与 CLI 提供同一入库工具，证据副本仍不得成为可写真源。"""
         registry = json.loads((ROOT / "shared/registries/tools.json").read_text(encoding="utf-8"))
         entry = next(item for item in registry["entrypoints"]
                      if item["id"] == "external-manuscript-intake")
-        self.assertIn("transport exception", entry["notes"])
+        self.assertIn('CLI', entry['transport'])
+        self.assertIn('MCP', entry['transport'])
+        self.assertNotIn('transport exception', entry['notes'])
         for key in ("transport", "audience", "surface", "mutations"):
-            self.assertTrue(str(entry.get(key, "")).strip(), f"例外入口也必须声明 {key}")
-        # 不进 MCP tool list，也不进 dashboard 路由。
+            self.assertTrue(str(entry.get(key, "")).strip(), f"共享入口必须声明 {key}")
+        self.assertIn('writableStoryTruthEnabled=false', entry['surface'])
         from scripts.mcp_server import TOOLS
-        names = {row["name"] for row in TOOLS}
-        self.assertNotIn("import_review", names)
-        self.assertNotIn("create_external_manuscript_review", names)
+        tools = {row['name']: row for row in TOOLS}
+        self.assertIn('import_review', tools)
+        self.assertFalse(tools['import_review']['annotations']['readOnlyHint'])
+        self.assertEqual(set(tools['import_review']['inputSchema']['required']), {'source', 'targetRoot'})
         server = (ROOT / "scripts" / "dashboard_server.py").read_text(encoding="utf-8")
         self.assertNotIn("/api/import", server)
 
-    def test_project_relocate_is_a_declared_exception_not_a_shadow(self) -> None:
-        """改 projectRoot 的操作没有 projectRoot 语义，所以只走 CLI——但必须登记。"""
+    def test_project_relocate_is_shared_and_keeps_approval_and_device_boundaries(self) -> None:
+        """移动目录经共同处理器执行，两端仍须批准且拒绝跨设备移动。"""
         registry = json.loads((ROOT / "shared" / "registries" / "tools.json").read_text(encoding="utf-8"))
         entry = next(item for item in registry["entrypoints"] if item["id"] == "project-relocate")
-        self.assertIn("transport exception", entry["notes"])
+        self.assertIn('CLI', entry['transport'])
+        self.assertIn('MCP', entry['transport'])
+        self.assertNotIn('transport exception', entry['notes'])
         for key in ("transport", "audience", "surface", "mutations"):
-            self.assertTrue(str(entry.get(key, "")).strip(), f"例外入口也必须声明 {key}")
+            self.assertTrue(str(entry.get(key, "")).strip(), f"共享入口必须声明 {key}")
         self.assertIn("PROJECT_RELOCATE_CROSS_DEVICE_UNSUPPORTED", entry["mutations"])
         from scripts.mcp_server import TOOLS
-        names = {row["name"] for row in TOOLS}
-        self.assertNotIn("relocate_project", names)
+        tools = {row['name']: row for row in TOOLS}
+        self.assertIn('relocate', tools)
+        self.assertFalse(tools['relocate']['annotations']['readOnlyHint'])
+        self.assertTrue(tools['relocate']['annotations']['destructiveHint'])
+        self.assertTrue({'operationId', 'previewHash', 'approve'} <= set(tools['relocate']['inputSchema']['properties']))
         server = (ROOT / "scripts" / "dashboard_server.py").read_text(encoding="utf-8")
         self.assertNotIn("/api/relocate", server)
 

@@ -59,7 +59,12 @@ def _formal_chapter(root, source, chapter_id):
     except (TypeError, ValueError) as exc:
         raise StructureError('CHAPTER_FACTS_CONTINUITY_REQUIRED', 'continuity receipt is unreadable',
                              {'chapterId': chapter_id}) from exc
-    if record is None or record['status'] != 'complete':
+    imported_proof = None
+    if record is None:
+        from .import_history import history_entry, require_history
+        if history_entry(workflow, chapter_id) is not None:
+            imported_proof = require_history(root, source, workflow, chapter)
+    if imported_proof is None and (record is None or record['status'] != 'complete'):
         raise StructureError('CHAPTER_FACTS_CONTINUITY_REQUIRED',
             'complete this chapter continuity before previewing source facts; source commits change its pending snapshot',
             {'chapterId': chapter_id, 'nextAction': _action(
@@ -78,7 +83,9 @@ def _formal_chapter(root, source, chapter_id):
     validate_guards(root, guards, stage='chapter-facts-read')
     return ({'path': path, 'sha256': observed['sha256'],
              'bindingGeneration': chapter['proseBinding']['generation']},
-            {'batchHash': record['batchHash'], 'confirmationHash': record['confirmationHash']}, text, guards)
+            ({'batchHash': imported_proof['reviewHash'], 'confirmationHash': imported_proof['reviewHash'],
+              'importOperationId': imported_proof['operationId']} if imported_proof else
+             {'batchHash': record['batchHash'], 'confirmationHash': record['confirmationHash']}), text, guards)
 
 
 def _assemble(root, source, chapter_id, facts):

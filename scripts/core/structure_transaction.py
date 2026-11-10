@@ -30,6 +30,9 @@ def _materialization_capability(plan: dict) -> frozenset[str]:
     `plan.parameters.chapterId` 才是被授权的那一个 chapter。非建章 operation（move、
     rename、metadata、source …）的能力集为空，任何 added chapter 一律拒绝。
     """
+    from .manuscript_materialization import OPERATIONS as MANUSCRIPT_OPERATIONS
+    if plan.get('operation') in MANUSCRIPT_OPERATIONS:
+        return frozenset(row['chapterId'] for row in plan.get('manuscriptMaterialization', []))
     if plan.get('operation') not in {'insert_chapter', 'planning_candidate_materialize'}:
         return frozenset()
     parameters = plan.get('parameters')
@@ -56,7 +59,7 @@ def _plan_binding_authority(plan: dict):
     return binding_authority(transitions)
 
 
-def _enforce_transaction_boundary(plan: dict, current: dict, proposed: dict, *, root: Path) -> None:
+def _enforce_transaction_boundary(plan: dict, current: dict, proposed: dict, *, root: Path):
     """The one protected-field boundary both preview and commit run（实施轮 §15/§36）。
 
     The capability is re-derived from the plan at each side, so the two sides cannot
@@ -64,6 +67,8 @@ def _enforce_transaction_boundary(plan: dict, current: dict, proposed: dict, *, 
     精确等于 plan 声明的 chapterId），也都不信对方「已经查过」。
     """
     from .prose_binding import enforce_writer_boundary
+    from .manuscript_materialization import materialization_inputs
+    manuscript = materialization_inputs(root, current, plan)
     if plan.get('operation') == 'planning_candidate_materialize':
         parameters = plan.get('parameters', {})
         before = next((r for r in current.get('planningCandidates', []) if r['candidateId'] == parameters.get('candidateId')), None)
@@ -73,12 +78,14 @@ def _enforce_transaction_boundary(plan: dict, current: dict, proposed: dict, *, 
             raise StructureError('PLANNING_CANDIDATE_NOT_APPROVED', 'materialization must consume the selected approved candidate')
     enforce_writer_boundary(current, proposed, root=root,
                             authority=_plan_binding_authority(plan),
-                            materialization_chapter_ids=_materialization_capability(plan))
+                            materialization_chapter_ids=_materialization_capability(plan),
+                            materialization_content_digests=manuscript.content_digests if manuscript else None)
     from .source_identity import require_fresh_source_identities
     require_fresh_source_identities(root, current, proposed)
     from .author_decisions import validate_decision_transition
     validate_decision_transition(current, proposed, operation=plan['operation'],
                                  operation_id=plan['operationId'], parameters=plan.get('parameters', {}))
+    return manuscript
 
 
 def prepare_writes(root: Path, plan: dict, current: dict) -> dict:
@@ -94,7 +101,7 @@ def prepare_writes(root: Path, plan: dict, current: dict) -> dict:
     # save_structure，所以受保护字段边界必须在 preview 与 commit 两端各自执行。
     # 事务通道唯一授权的 binding 变更是新建章 materialization（密封 unbound），且只
     # 覆盖本计划自己申报的那一个 chapterId——不存在 broad「本事务可以建章」能力。
-    _enforce_transaction_boundary(plan, current, proposed, root=root)
+    manuscript = _enforce_transaction_boundary(plan, current, proposed, root=root)
     proposed['updatedAt'] = utc_now()
     proposed['lastOperation'] = {'operationId': plan['operationId'], 'operation': plan['operation'],
                                  'actor': plan['actor'], 'committedAt': proposed['updatedAt']}
@@ -108,6 +115,16 @@ def prepare_writes(root: Path, plan: dict, current: dict) -> dict:
     # 重构计划自己申报定位符移动与显示元数据写集；这里只做装配，不复制事务逻辑。
     from .refactor import prepare_refactor_writes
     prepare_refactor_writes(root, current, plan, extras)
+    if manuscript:
+        if set(extras) & set(manuscript.outputs):
+            raise StructureError('WRITE_TARGET_CONFLICT', 'multiple manuscript output producers')
+        extras.update(manuscript.outputs)
+        plan['manuscriptGuards'] = manuscript.guards
+        plan['manuscriptGuardGroups'] = manuscript.guard_groups
+    from .import_organization import organization_outputs
+    organization = organization_outputs(root, current, plan, extras)
+    if organization is not None:
+        extras, plan['organizationGuards'], plan['importOrganization'] = organization
     sources = source_files(root)
     outputs, owners = derived_outputs(root, proposed, extras=extras, current=current)
     plan['writeSet'] = inventory(root, outputs, owners=owners)
@@ -175,7 +192,8 @@ def commit(root: Path, *, operation_id: str, plan_hash: str, approved: bool, act
                               approved=approved, actor=actor)
 
 
-def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: bool, actor: str) -> dict:
+def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: bool, actor: str,
+                   privileged_approval=None) -> dict:
     """The transaction body; the caller already holds this project's lock.
 
     Split out because a caller that holds the lock has to run this without taking a
@@ -240,13 +258,26 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
     validate_inventory(root, plan['writeSet'])
     outputs = _load_outputs(root, plan)
     proposed = plan['proposedStructure']
+    if plan['operation'] == 'import_organization':
+        from .import_organization import organization_outputs
+        from .source_impact import source_impact, review_outputs
+        extras = review_outputs(root, current, proposed, source_impact(current, proposed, root=root))
+        expected_extras, organization_guards, organization_review = organization_outputs(root, current, plan, extras)
+        if (outputs != {'.govel/structure.json': json_bytes(proposed), **expected_extras}
+                or plan.get('organizationGuards') != organization_guards or plan.get('importOrganization') != organization_review):
+            raise StructureError('IMPORT_ORGANIZATION_INVALID', 'write set or review differs from the reviewed import batch')
     require_canon_proposal(current, proposed, plan)
     validate_structure(proposed)
     # Commit-time replay of the protected-field boundary: the plan hash binds the
     # proposal, but the boundary is the ownership invariant itself and re-runs
     # against the freshly loaded current state before anything is written——same exact
     # materialization capability as the preview（实施轮 §15/§36/§55）。
-    _enforce_transaction_boundary(plan, current, proposed, root=root)
+    manuscript = _enforce_transaction_boundary(plan, current, proposed, root=root)
+    if manuscript:
+        if 'manuscriptGuards' not in plan or 'manuscriptGuardGroups' not in plan:
+            raise StructureError('MANUSCRIPT_INPUT_CHANGED', 'approved manuscript guards are missing')
+        from .manuscript_materialization import validate_materialization_outputs
+        validate_materialization_outputs(root, current, plan, outputs, manuscript)
     if outputs['.govel/structure.json'] != json_bytes(proposed):
         raise StructureError('PLAN_HASH_MISMATCH', 'staged structure does not match semantic preview')
     # The historical ID inventory is copied from impact into the committed ledger.
@@ -259,7 +290,11 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
     # 不证明「独立特权通道批准了它」。这条检查排在**任何业务写入之前**，是 commit 的
     # 必要条件：计划哈希、actor 字符串、approved 布尔与 CLI flag 都不是 authority。
     from .prose_binding import require_privileged_approval
-    require_privileged_approval(plan, operation_id=operation_id)
+    if plan.get('operation') == 'accept_external_modification' and privileged_approval is not None:
+        from .external_approval import validate_external_plan
+        validate_external_plan(root, current, plan, outputs)
+    local_approval = require_privileged_approval(plan, operation_id=operation_id,
+                                                approval=privileged_approval, root=root)
     for row in plan['writeSet']:
         if row['before']['exists']:
             target = safe_project_path(root, _backup_path(backup, row['path']).relative_to(root))
@@ -279,6 +314,15 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
                'committedAt': utc_now(), 'reversible': True}
     journal['changedFiles'] = [r['path'] for r in rows if r['before'] != r['after']]
     journal['unchangedFiles'] = [r['path'] for r in rows if r['before'] == r['after']]
+    if local_approval is not None:
+        journal['authorConfirmation'] = local_approval
+    if manuscript:
+        journal['reversible'] = False
+        journal['recovery'] = {'mode': 'preserve-identities',
+            'instruction': '新章节身份和原文须保留；可归档新增章节，并按需要恢复来源章节。',
+            'newChapterIds': sorted(manuscript.content_digests)}
+    if plan['operation'] == 'import_organization':
+        journal['importOrganization'] = deepcopy(plan['importOrganization'])
     # 重构收据必须携带逐字段变更与定位符移动，名称历史以 receipt 为准。
     if plan.get('changes'):
         journal['changes'] = deepcopy(plan['changes'])
@@ -321,7 +365,7 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
     applied = apply_locator_renames(root, plan)
     try:
         fact_expected = None
-        if chapter_fact_guards:
+        if chapter_fact_guards or manuscript or plan.get('organizationGuards'):
             # A chapter-owned fact can invalidate workflow approvals. That workflow
             # is then an output, protected by the approved before-image instead of
             # a read-only guard that would reject our own legitimate write.
@@ -333,7 +377,10 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
         apply_write_set(root, outputs, operation=plan['operation'],
                         expected=fact_expected, guards=[*plan.get('maintenanceGuards', []),
                             *plan.get('externalReviewGuards', []),
-                            *(row for row in chapter_fact_guards if row['path'] not in outputs)])
+                            *(row for row in plan.get('organizationGuards', []) if row['path'] not in outputs),
+                            *(manuscript.guards if manuscript else []),
+                            *(row for row in chapter_fact_guards if row['path'] not in outputs)],
+                        guard_groups=manuscript.guard_groups if manuscript else [])
     except BaseException as failure:
         revert_locator_renames(root, applied, failure=failure)
         raise

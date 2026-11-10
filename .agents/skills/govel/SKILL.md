@@ -1,7 +1,7 @@
 ---
 name: govel
 description: >-
-  中文长篇小说结构化辅助系统。 Use when this workstation is the selected govel route.
+  使用 Govel 工具箱管理中文长篇小说；续写、读稿、进度查询、设定修改、导入与审校。 Use when this workstation is the selected govel route.
 ---
 
 # Govel Loader（Antigravity）

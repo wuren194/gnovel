@@ -93,7 +93,7 @@ class ExportProtectionTests(unittest.TestCase):
     def test_mcp_status_selection_applies_choices_to_each_item(self):
         definition = next(item for item in operations() if item.id == 'project.export')
         field = definition.input_schema['properties']['status']
-        self.assertEqual(field['items']['enum'], ['stable', 'review', 'draft'])
+        self.assertEqual(field['items']['enum'], ['stable', 'review', 'draft', 'planning_required'])
         self.assertNotIn('enum', field)
         result = self.mcp(status=['stable', 'draft'])
         self.assertFalse(result['isError'], result)

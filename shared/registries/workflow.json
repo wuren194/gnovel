@@ -34,13 +34,18 @@
   },
   "approval": {
     "defaultMode": "manual",
-    "extremeLevelAlwaysManual": true
+    "extremeLevelAlwaysManual": true,
+    "externalConfirmationTimeoutSeconds": 300,
+    "externalCapabilityTtlSeconds": 60
   },
   "maintenance": {
     "_comment": "维护类阈值的唯一真源；脚本经 scripts/core/project.py 的访问器读取，不在调用点写字面量。",
     "structureGcKeepBackups": 20,
     "structureBatchMaxSteps": 200,
     "canonProposalBatchMaxItems": 100,
+    "projectArchiveMaxFiles": 100000,
+    "projectArchiveMaxBytes": 10737418240,
+    "projectArchiveMaxMetadataBytes": 67108864,
     "stateCompaction": {
       "threshold": 500,
       "oldChapterThreshold": 50
