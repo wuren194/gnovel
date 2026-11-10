@@ -24,7 +24,7 @@ import stat
 import uuid
 from pathlib import Path
 
-from .jsonio import write_bytes, write_json
+from .jsonio import write_json
 from .paths import safe_project_path as _safe_project_path, ProjectPathError
 from .structure_store import StructureError, canonical_json
 
@@ -247,7 +247,9 @@ def _clear(root: Path, manifest: dict) -> None:
 
     An editor can still hold a descriptor to a displaced inode after our commit.
     Deleting that inode's last name would lose its later save, so neither normal
-    cleanup nor GC removes this transaction directory.
+    cleanup nor GC removes this transaction directory. Before/after images also
+    prove committed operations and external-edit baselines. snapshot_files can
+    share their physical blocks through CoW, while every image keeps its own inode.
     """
     from .file_preservation import exclusive_move
     active = safe_project_path(root, f".govel/transactions/{manifest['transactionId']}.json")
@@ -427,6 +429,7 @@ def apply_write_set(root: Path, outputs: dict[str, bytes | None], *, expected: l
                     guard_groups: list[dict] | None = None) -> list[dict]:
     from .file_preservation import observation
     from .locks import assert_lock_current
+    from .snapshot_files import write_snapshot
     root = root.resolve()
     guard_rows = list(guards or [])
     tree_guard_rows = list(tree_guards or [])
@@ -460,15 +463,24 @@ def apply_write_set(root: Path, outputs: dict[str, bytes | None], *, expected: l
         row.update({'beforeObject': before, 'publishSlot': f'publish/{number}',
                     'preservedSlot': f'displaced/forward/{number}', 'rollbackSlot': f'rollback-ready/{number}',
                     'rollbackPreservedSlot': f'displaced/rollback/{number}'})
+        before_image = directory / 'before' / relative
+        before_image_state = None
         if before['exists']:
-            write_bytes(directory / 'before' / relative, payload, mode=row['before']['mode'])
-            write_bytes(directory / row['rollbackSlot'], payload, mode=row['before']['mode'])
+            write_snapshot(before_image, payload, mode=row['before']['mode'],
+                           source=safe_project_path(root, relative), expected_source=before)
+            before_image_state = _object_state(before_image)
+            write_snapshot(directory / row['rollbackSlot'], payload, mode=row['before']['mode'],
+                           source=before_image, expected_source=before_image_state)
             row['rollbackObject'] = _object_state(directory / row['rollbackSlot'])
         else:
             row['rollbackObject'] = dict(missing)
         if outputs[relative] is not None:
-            write_bytes(directory / 'after' / relative, outputs[relative], mode=row['after']['mode'])
-            write_bytes(directory / row['publishSlot'], outputs[relative], mode=row['after']['mode'])
+            after_image = directory / 'after' / relative
+            write_snapshot(after_image, outputs[relative], mode=row['after']['mode'],
+                           source=before_image if before['exists'] else None,
+                           expected_source=before_image_state)
+            write_snapshot(directory / row['publishSlot'], outputs[relative], mode=row['after']['mode'],
+                           source=after_image, expected_source=_object_state(after_image))
             row['afterObject'] = _object_state(directory / row['publishSlot'])
         else:
             row['afterObject'] = dict(missing)
@@ -479,7 +491,7 @@ def apply_write_set(root: Path, outputs: dict[str, bytes | None], *, expected: l
                 'files': rows, 'guards': guard_rows, 'treeGuards': tree_guard_rows}
     if grouped_guards:
         manifest['guardGroups'] = grouped_guards
-    # Files have been fsynced by write_bytes; persist all directory entries for
+    # Files have been fsynced by write_snapshot; persist all directory entries for
     # immutable images and publication slots before exposing the active manifest.
     directories = [directory, *[p for p in directory.rglob('*') if p.is_dir()]]
     for folder in sorted(directories, key=lambda p: len(p.parts), reverse=True):

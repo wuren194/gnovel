@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 try:
-    from scripts.runtime_requirements import require_supported_python
+    from scripts.runtime_requirements import require_supported_platform, require_supported_python
 except ImportError:
-    from runtime_requirements import require_supported_python
+    from runtime_requirements import require_supported_platform, require_supported_python
 
 require_supported_python()
+require_supported_platform()
 
 import argparse
 import json
@@ -1118,7 +1119,7 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="显式批准执行；不构成 authority：普通调用参数，无法替代"
                                       "独立特权批准通道的 approval capability")
     accept_external.add_argument("--confirm-on-device", action="store_true",
-                                 help="在本机显示 macOS 作者确认；确认后才签发一次性采用能力")
+                                 help="在本机桌面显示作者确认（macOS / Linux zenity）；确认后才签发一次性采用能力")
     artifact_approve = workflow_sub.add_parser("artifact-approve", help="按 hash 批准已登记工件")
     artifact_approve.add_argument("--project-root", default=".")
     artifact_approve.add_argument("--chapter-id", required=True)

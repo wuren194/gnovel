@@ -1,4 +1,4 @@
-"""macOS exclusive rename and descriptor-anchored file observations.
+"""Native exclusive rename and descriptor-anchored file observations.
 
 This is a filesystem primitive, not a transaction or an authorization mechanism.
 No operation overwrites a destination, follows a symlink, or unlinks displaced
@@ -7,9 +7,11 @@ objects. write_sets owns intent persistence and recovery.
 from __future__ import annotations
 from contextlib import contextmanager
 import ctypes
+import errno
 import hashlib
 import os
 from pathlib import Path
+import platform
 import stat
 
 from .structure_store import StructureError
@@ -91,20 +93,39 @@ def observation(path: Path) -> tuple[dict, bytes | None]:
         return missing, None
 
 
-def exclusive_move(source: Path, target: Path) -> None:
-    """Atomically move the actual source object only into an empty destination."""
+def _exclusive_rename():
+    """Select the kernel primitive; a check-then-rename fallback is never safe."""
+    system = platform.system()
+    primitives = {'Darwin': ('renameatx_np', 0x00000004),  # RENAME_EXCL
+                  'Linux': ('renameat2', 0x00000001)}     # RENAME_NOREPLACE
+    if system not in primitives:
+        raise StructureError('SAFE_PUBLICATION_UNAVAILABLE',
+                             'exclusive publication requires macOS or Linux', {'system': system})
+    name, flag = primitives[system]
     libc = ctypes.CDLL(None, use_errno=True)
     try:
-        rename = libc.renameatx_np
+        rename = getattr(libc, name)
     except AttributeError as exc:
-        raise StructureError('SAFE_PUBLICATION_UNAVAILABLE', 'exclusive rename requires the supported macOS runtime') from exc
+        raise StructureError('SAFE_PUBLICATION_UNAVAILABLE',
+                             f'the C library does not provide {name}; no files were moved',
+                             {'system': system, 'primitive': name}) from exc
     rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
     rename.restype = ctypes.c_int
+    return rename, flag, name
+
+
+def exclusive_move(source: Path, target: Path) -> None:
+    """Atomically move the actual source object only into an empty destination."""
+    rename, flag, name = _exclusive_rename()
     with parent_directory(source) as source_fd, parent_directory(target, create=True) as target_fd:
         checkpoint('native-before-rename', str(target))
-        result = rename(source_fd, os.fsencode(source.name), target_fd, os.fsencode(target.name), 0x00000004)
+        result = rename(source_fd, os.fsencode(source.name), target_fd, os.fsencode(target.name), flag)
         if result:
             value = ctypes.get_errno()
+            if value in (errno.ENOSYS, errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP):
+                raise StructureError('SAFE_PUBLICATION_UNAVAILABLE',
+                                     'the kernel or filesystem does not support exclusive rename; no files were moved',
+                                     {'primitive': name, 'errno': value, 'path': str(target)})
             raise OSError(value, os.strerror(value), str(target))
         checkpoint('native-renamed', str(target))
         os.fsync(source_fd)

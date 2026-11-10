@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.core.context_preheat import preheat_fingerprint, preheat_next_chapter
+from scripts.core.context_preheat import preheat_fingerprint, preheat_metadata, preheat_next_chapter
 from scripts.core.jsonio import write_json
 from scripts.core.structure_store import StructureError, validate_structure
 from tests.test_source_plan import planning_source
@@ -180,6 +180,19 @@ class ContextPreheatContractTests(unittest.TestCase):
         self.assertNotEqual(moved['sourceContext']['preheatInputFingerprint'], expected)
         self.assertTrue(preheat_next_chapter(self.root, afterChapterId='CH-AAA',
                                              expectedInputHash=expected)['stale'])
+
+    def test_supplied_plan_must_belong_to_the_registered_successor(self):
+        from scripts.core.source_plan import chapter_plan
+        correct = chapter_plan(self.source, 'CH-BBB')
+        self.assertEqual(preheat_metadata(self.source, 'CH-AAA', _plan=correct),
+                         preheat_metadata(self.source, 'CH-AAA'))
+        self.assertEqual(preheat_fingerprint(self.source, 'CH-AAA', _plan=correct),
+                         preheat_fingerprint(self.source, 'CH-AAA'))
+        wrong = chapter_plan(self.source, 'CH-AAA')
+        for read in (preheat_metadata, preheat_fingerprint):
+            with self.subTest(reader=read.__name__):
+                with self.assertRaisesRegex(ValueError, 'another chapter'):
+                    read(self.source, 'CH-AAA', _plan=wrong)
 
     def test_preheat_never_caches_complete_station_context(self):
         result = self.preheat()

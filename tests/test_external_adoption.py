@@ -33,7 +33,7 @@ class ExternalAdoptionTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.base = Path(temp.name).resolve()
         self.root = self.base / '外改测试'
-        native = patch('scripts.core.external_approval._confirm_on_device', return_value=True)
+        native = patch('scripts.core.external_approval._confirm_on_device', return_value='macos-native-confirmation')
         self.confirm = native.start()
         self.addCleanup(native.stop)
         environment = patch.dict(os.environ, {'GOVEL_LOG_MODE': 'off'})
@@ -164,7 +164,7 @@ class ExternalAdoptionTests(unittest.TestCase):
         h3 = self.h2 + '作者继续修改。'.encode()
         def confirm(message):
             self.path.write_bytes(h3)
-            return True
+            return 'macos-native-confirmation'
         self.confirm.side_effect = confirm
         self.assert_code('PROSE_CONTENT_CHANGED', self.commit, preview)
         self.assert_metadata_unchanged()
@@ -178,7 +178,7 @@ class ExternalAdoptionTests(unittest.TestCase):
             replacement = self.base / 'replacement.md'
             replacement.write_bytes(self.h2)
             os.replace(replacement, self.path)
-            return True
+            return 'macos-native-confirmation'
         self.confirm.side_effect = confirm
         self.assert_code('TRANSACTION_GUARD_DRIFT', self.commit, preview)
         self.assert_metadata_unchanged()

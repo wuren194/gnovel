@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "govel": {
+      "command": "python3",
+      "args": [
+        "${PLUGIN_ROOT}/skills/govel-bind/scripts/bind.py",
+        "serve",
+        "--host",
+        "plugin",
+        "--engine-root",
+        "${PLUGIN_ROOT}"
+      ]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "repository": "wuren194/govel",
+  "ref": "main",
+  "handshakeTimeoutSeconds": 30,
+  "downloadTimeoutSeconds": 30,
+  "downloadMaxBytes": 67108864,
+  "archiveMaxBytes": 268435456,
+  "archiveMaxFiles": 10000,
+  "pythonMinimum": [
+    3,
+    11
+  ],
+  "projectSchemaVersion": 5
+}

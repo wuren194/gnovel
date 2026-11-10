@@ -102,7 +102,9 @@ python3 scripts/novelctl.py project context --project-root /path/to/书 --chapte
 
 `dependencyManifest` 是 Context 契约本身的一部分：`sourceHash`、`sourcePlanHash`、`chapterId`、`task`、`povCharacter`、`chapterGoalHash`、最近章节正文 hash、摘要 hash、已装载决定的 `decisionId` + 内容 `sha256`、知识资产 ID+hash、`voiceProfileHash`。
 
-**`sourceHash` 是整份 source snapshot 的身份（full-source snapshot identity），当前采用保守失效（conservative invalidation）**：任何一处 `structure.json` 改动都会改变 `sourceHash`，从而改变 `contextHash` 并让旧上下文被 health 判为 stale——**包括与本章无关、且没有进入这份上下文的改动**。Context 不声称「无关 source change 保证不失效」；这个精确依赖引擎尚未实现，本轮也不以重写 `source_impact` 来换取它。
+**`sourceHash` 是整份 source snapshot 的身份（full-source snapshot identity），当前采用保守失效（conservative invalidation）**：源数据改动会改变 `sourceHash`，从而改变 `contextHash` 并让旧上下文被 health 判为 stale，**包括与本章无关、且没有进入这份上下文的改动**。它按解析后的源数据计算，纯 JSON 排版变化不改变该 hash；prepare/read batch 另有文件依赖绑定。Context 尚不保证无关 source change 不失效。
+
+上下文快照过期不等于全书审查结果清空。`source_impact` 按已登记的章节依赖、计划输入与语义审查输入判断失效，未变的审查及批准仍保留；隐式、未登记依赖不在这个保证内。
 
 因此读这些字段的粒度不要混为一谈：
 
@@ -115,6 +117,8 @@ python3 scripts/novelctl.py project context --project-root /path/to/书 --chapte
 `contextHash = sha256_json(context)`（排除 `contextHash` 自身）。同输入同 hash；下列任何变化都会改变 hash 或让旧快照被 health 判 stale：Canon 事实、Canon 语义契约（字段定义）、Source Plan、适用的 active 决定、知识资产内容、Voice Profile、POV、`chapterGoal`、最近稳定章正文、摘要内容，以及**任何一处 source 快照改动**（保守失效，见上）。
 
 Preheat 与 Builder 有正式契约：Builder 为目标章写入 `sourceContext.preheatInputFingerprint`，等于「紧邻前驱章之后的 preheat 输入指纹」。Planner 可在前章稳定后 preheat，执行任务时用同一函数重新校验依赖，然后构建**全新**上下文——preheat 从不缓存未来上下文。
+
+一次 Builder 调用共用一个 `ReviewInputs`、源索引和目标章节计划；规则检查、源摘要与预热指纹复用该次计算，避免重复构建依赖图。复用范围只在当前调用内，不跨源版本缓存健康状态，不减少原有失效检查。
 
 ## Author Decision 的适用性
 

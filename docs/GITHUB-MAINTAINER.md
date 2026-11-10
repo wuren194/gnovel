@@ -7,6 +7,7 @@
 | 检查 | 做什么 | 权限与数据 |
 | --- | --- | --- |
 | `macos-ci` | 在 `macos-15`、Python 3.11 上执行公开发布范围检查、贡献流程回归和完整 `local_ci.py` | 只读仓库权限，不使用个人 Provider、审核词表或凭据；报告在 runner 临时目录 |
+| `linux-ci` | 在 `ubuntu-24.04`、Python 3.11 上执行公开发布范围检查和完整 `local_ci.py` | 同一公共检查口径；验证 Linux 内核与文件系统上的实际行为 |
 | `license/cla` | 核对当前 PR 的签署结果，再把结果写到该提交 | 独立签署工作流；只检出可信的基准分支提交，不执行外部 PR 代码 |
 | 维护者审查 | 核对来源、实际作者、核心语义、公开内容与法律材料 | 不能由自动检查替代 |
 
@@ -29,11 +30,11 @@ CLA 工作流首次出现在主分支前，首次安装 PR 可能没有 `license
 3. 开启 **Require a pull request before merging**。
 4. 开启 **Require approvals**，至少 1 人；开启 **Require review from Code Owners**。本仓库的 `.github/CODEOWNERS` 指向 `@wuren194`。
 5. 开启 **Dismiss stale pull request approvals when new commits are pushed** 和 **Require conversation resolution before merging**。
-6. 开启 **Require status checks to pass before merging**，添加 **`macos-ci`** 和 **`license/cla`**。如果可以选择来源，限定为 **GitHub Actions**。
+6. 开启 **Require status checks to pass before merging**，添加 **`macos-ci`**、**`linux-ci`** 和 **`license/cla`**。如果可以选择来源，限定为 **GitHub Actions**。
 7. 开启 **Require branches to be up to date before merging**。这样主分支或协议更新后，旧 PR 需要更新并重新检查。
 8. 保持 **Allow force pushes**、**Allow deletions** 关闭，保存规则。
 
-**只有你一位维护者时需要决定一件事：**GitHub 不允许给自己的 PR 做批准审查。外部贡献可以由你审查；你自己的 PR 要么由另一位可信维护者审查，要么通过明确配置的管理员例外处理。不要为了方便外部投稿而关闭全仓库的审查要求。如果有第二位维护者，再考虑启用 **Do not allow bypassing the above settings**；如果保留管理员例外，自有 PR 也应人工核对两项检查后再合并。
+**只有你一位维护者时需要决定一件事：**GitHub 不允许给自己的 PR 做批准审查。外部贡献可以由你审查；你自己的 PR 要么由另一位可信维护者审查，要么通过明确配置的管理员例外处理。不要为了方便外部投稿而关闭全仓库的审查要求。如果有第二位维护者，再考虑启用 **Do not allow bypassing the above settings**；如果保留管理员例外，自有 PR 也应人工核对全部检查后再合并。
 
 不要把 `cla-signatures` 分支纳入必须走 PR 的 `main` 规则；签署 Action 需要直接追加记录。能写这条分支的人可以改变签署账本，因此不要向未经信任的人授予仓库写权限。若以后启用“所有分支”规则，应为签署自动化单独配置最小例外，不要开放给普通贡献者。
 
@@ -69,11 +70,11 @@ CLA 工作流首次出现在主分支前，首次安装 PR 可能没有 `license
 
 本项目补充了协议内容摘要、固定文档链接和 `license/cla` 状态发布。只有签署 Action 成功且明确输出 `cla_passed=true`，并再次确认 PR 提交和基准提交未变化，才发布成功。API 错误、未签署或旧提交结果不能通过。签署过程中发生推送或主分支更新时，等待新检查或评论 `recheck`。首次创建一个版本的空记录后，如果已有签署尚未登记，也可评论 `recheck`。
 
-这是 GitHub API 上的检查流程，不是跨多个 API 的原子事务；维护者仍要看最终 PR、实际贡献者和两个检查结果。并发队列可能替换尚未开始的旧任务，遇到未刷新时重新评论即可。
+这是 GitHub API 上的检查流程，不是跨多个 API 的原子事务；维护者仍要看最终 PR、实际贡献者、工程检查和 CLA 状态。并发队列可能替换尚未开始的旧任务，遇到未刷新时重新评论即可。
 
 ## 6. 发布前检查和律师审阅
 
-公开 CI 不接触本地审核词表。维护者在 macOS 跑完整本地门禁，并用自己的仓库外词表检查候选源码、发行包与要推送的历史。以下为命令格式，示例路径需替换成自己的仓库外文件：
+公开 CI 不接触本地审核词表。维护者在实际运行平台（macOS 或 Linux）跑完整本地门禁，并用自己的仓库外词表检查候选源码、发行包与要推送的历史。以下为命令格式，示例路径需替换成自己的仓库外文件：
 
 ```bash
 python3 scripts/release_audit.py --terms /path/outside/review-terms.json

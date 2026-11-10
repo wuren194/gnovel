@@ -640,13 +640,16 @@ def build_station_context(
     from .source_plan import chapter_plan
     from .source_rules import evaluate_rules
     from .structure_store import load_structure
-    from .source_model import SourceIndex, snapshot_hash
+    from .source_impact import ReviewInputs
     from .context_preheat import preheat_fingerprint
     source = load_structure(root)
-    plan = chapter_plan(source, chapter_id)
-    source_index = SourceIndex.build(source)
+    # These consumers share this request's source snapshot and dependency graph.
+    # No inputs or plan survive the build; later source changes still invalidate it.
+    inputs = ReviewInputs(source)
+    plan = chapter_plan(source, chapter_id, _inputs=inputs)
+    source_index = inputs.index
     action = {"planner": "prepare", "writer": "draft", "editor": "review"}.get(task_type, "prepare")
-    rules = evaluate_rules(source, chapter_id, action, root=root)
+    rules = evaluate_rules(source, chapter_id, action, root=root, _inputs=inputs, _plan=plan)
     if not rules["ready"]:
         ctx["readiness"]["ready"] = False
         ctx["readiness"]["reasons"].append("SOURCE_RULES_BLOCKED")
@@ -676,7 +679,8 @@ def build_station_context(
     preheat_hash = None
     if position:  # position > 0: there is a predecessor to preheat from
         try:
-            preheat_hash = preheat_fingerprint(source, chapters_in_order[position - 1]["chapterId"])
+            preheat_hash = preheat_fingerprint(source, chapters_in_order[position - 1]["chapterId"],
+                                                _plan=plan)
         except Exception:  # noqa: BLE001 - preheat is advisory; never block the build
             preheat_hash = None
     ctx["sourceContext"] = {
@@ -720,7 +724,7 @@ def build_station_context(
         ctx['readiness']['reasons'].append('AUTHOR_DECISIONS_REQUIRE_REVIEW')
         ctx['readiness']['unavailableMandatoryCount'] += len(unavailable)
     ctx['dependencyManifest'].update({
-        'sourceHash': snapshot_hash(source),
+        'sourceHash': inputs.source_hash,
         'sourcePlanHash': plan['sourcePlanHash'],
         'decisions': [{'decisionId': row['decisionId'], 'sha256': sha256_json(by_decision[row['decisionId']])}
                       for row in ctx['authorDecisions']]})

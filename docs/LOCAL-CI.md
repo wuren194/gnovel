@@ -1,18 +1,21 @@
 # 本地 CI 与支持策略（LOCAL-CI）
 
-Govel 的权威验收环境是本地 macOS 与本机 Python。本文件说明工程门禁的执行口径，测试结果由每次实际运行产生。
+Govel 的完整工程门禁可在 macOS 或 Linux 上执行。本文件说明验收口径；对应平台是否通过，以该环境实际生成的完整报告为准。
 
 ## 支持策略
 
 | 维度 | 定位 |
 | --- | --- |
-| 主平台 | macOS |
+| 运行平台 | macOS / Linux |
 | Python | 使用当前本机运行时，并在报告中记录路径与版本 |
-| Linux / Windows | 未作为支持目标验证 |
+| Linux 文件系统 | 需要 `renameat2(RENAME_NOREPLACE)`；内核或文件系统不支持时拒绝发布 |
+| 原生 Windows | 暂不支持；启动时在导入 POSIX 模块前给出说明 |
 | GitHub | 源码托管与评审 |
 | 外部 CI | 可补充工程证据，不替代本地门禁 |
 
 平台范围不改变稳定身份、事务保全、只读边界、证据绑定和数据完整性要求。更新 Python 或运行环境后，用新环境执行完整门禁，再据实际结果更新支持说明。
+
+Linux 分派的模拟测试不能替代 Linux 内核运行证据。WSL2 属于 Linux 运行环境，也需在实际项目使用的文件系统上验证；原生 Windows 的文件锁、目录句柄和发布协议尚未实现。外改确认窗口需桌面会话，工程测试模拟确认结果，不能证明真人已完成弹窗确认。
 
 ## 运行时记录
 
@@ -140,16 +143,17 @@ untracked 归属变化都判 `repositoryMutatedByCI=true` 并逐项报出 before
 运行开始打印 `LOCAL CI ENVIRONMENT`（平台、架构、python 可执行文件与版本、repo 根、HEAD、分支、
 工作树状态、`SUPPORTED PLATFORM CHECK`）。
 
-- 非 macOS **不**自动让测试失败；报 `SUPPORTED PLATFORM CHECK: UNSUPPORTED / UNVERIFIED`。
-- 权威 `LOCAL MERGE GATE PASS` 只在 `platform == Darwin` 且全部门通过时产生。
+- macOS 与 Linux 使用同一套完整测试、检查器、工作树及 Git 身份门，不能只通过平台检查就取得 PASS。
+- 权威 `LOCAL MERGE GATE PASS` 只在 `platform.system()` 属于运行时支持集合且全部门通过时产生。
+- 其他原生平台在入口提前退出，stderr 说明运行要求，exit 2，不加载依赖 POSIX 的业务模块。报告判定函数仍保留 `UNVERIFIED`，防止嵌入调用把不受支持的平台标成 PASS。
 
 退出码契约：
 
 | 结果 | 含义 | exit |
 | --- | --- | --- |
-| PASS | macOS 且全部门通过（权威） | 0 |
+| PASS | macOS 或 Linux 且全部门通过（权威） | 0 |
 | FAIL | 任一门失败 | 1（非零） |
-| UNVERIFIED | 门通过但平台非 macOS（不构成权威 PASS） | 2（非零） |
+| UNVERIFIED / 不支持运行时 | 平台不在支持集合，或入口拒绝启动（不构成权威 PASS） | 2（非零） |
 
 终端写 FAIL 而进程 exit 0 的情况不会出现。
 
@@ -164,7 +168,7 @@ untracked 归属变化都判 `repositoryMutatedByCI=true` 并逐项报出 before
 ```json
 {
   "kind": "local_ci_report",
-  "platformPolicy": "macos-local-authoritative",
+  "platformPolicy": "macos-linux-local-authoritative",
   "environment": {}, "git": {},
   "fullTests": {
     "exitCode": 0, "processSuccess": true, "evidenceValid": true, "pass": true,
@@ -192,14 +196,6 @@ untracked 归属变化都判 `repositoryMutatedByCI=true` 并逐项报出 before
 
 ## 外部 CI
 
-GitHub Actions 的 `macos-ci` 在 `macos-15`、Python 3.11 上执行 `python3 scripts/local_ci.py`，并额外运行公开发布内容检查与贡献流程脚本回归。它使用只读仓库权限，不加载个人 Provider 或审核词表；报告写入 runner 的仓库外临时目录，不作为源码或附件提交。
+GitHub Actions 的 `macos-ci` 在 `macos-15`、`linux-ci` 在 `ubuntu-24.04` 上使用 Python 3.11 执行 `python3 scripts/local_ci.py`，两者均运行公开发布内容检查；macOS 作业另运行贡献流程脚本回归。工作流使用只读仓库权限，不加载个人 Provider 或审核词表；报告写入 runner 的仓库外临时目录，不作为源码或附件提交。新增作业配置本身不代表远程运行已通过。
 
 外部 CI 补充公开干净环境的证据，不替代本机门禁。基础设施不可用与代码测试失败分别报告，远程通过不等于作者本机已验证。签署流程与工程 CI 分开，GitHub 分支保护的配置见 [维护清单](GITHUB-MAINTAINER.md)。
-
-## 长期工程原则
-
-- 真实用户环境 > 假想可移植性。
-- macOS 本地正确性 > 不受支持的 Linux 兼容。
-- 一个可重复的本地 gate > 五个不用的 Python 运行时。
-- 专项安全 + 完整回归 > 远程 CI badge。
-- GitHub 存储并审计代码；作者的 Mac 是权威执行环境。

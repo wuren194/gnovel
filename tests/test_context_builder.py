@@ -113,6 +113,35 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertEqual(first['dependencyManifest'], second['dependencyManifest'])
         self.assertEqual(first, second)
 
+    def test_one_dependency_graph_preserves_plan_rules_and_preheat_results(self):
+        from scripts.core.context_preheat import preheat_fingerprint
+        from scripts.core.source_impact import dependency_edges
+        from scripts.core.source_plan import chapter_plan
+        from scripts.core.source_rules import evaluate_rules
+
+        self.source['entities'].append({
+            'entityId': 'RU-CONTEXT', 'entityType': 'rule', 'name': '守门安排需审阅',
+            'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
+                         'scopeIds': [self.source['projectId']], 'actions': ['prepare'],
+                         'inputIds': ['C-ALPHA']}})
+        self.save()
+        for chapter_id in ('CH-AAA', 'CH-BBB'):
+            with self.subTest(chapter=chapter_id):
+                plan = chapter_plan(self.source, chapter_id)
+                rules = evaluate_rules(self.source, chapter_id, 'prepare', root=self.root)
+                preheat = None if chapter_id == 'CH-AAA' else preheat_fingerprint(self.source, 'CH-AAA')
+                with patch('scripts.core.source_impact.dependency_edges', wraps=dependency_edges) as graph:
+                    context = build(self.root, chapter=chapter_id)
+                self.assertEqual(graph.call_count, 1, 'one build must share one source dependency graph')
+                self.assertEqual(context['dependencyManifest']['sourceHash'], plan['snapshot']['sourceHash'])
+                self.assertEqual(context['sourceContext']['sourcePlanHash'], plan['sourcePlanHash'])
+                self.assertEqual(context['sourceContext']['preheatInputFingerprint'], preheat)
+                self.assertEqual(context['sourceContext']['ruleSummary'], {
+                    'ready': rules['ready'], 'count': len(rules['items']),
+                    'blockingRuleIds': [row['ruleId'] for row in rules['items'] if row['blocking']]})
+                self.assertFalse(context['readiness']['ready'])
+                self.assertIn('SOURCE_RULES_BLOCKED', context['readiness']['reasons'])
+
     def test_pov_change_changes_context_hash(self):
         plain = build(self.root)['contextHash']
         alpha = build(self.root, pov_character='C-ALPHA')['contextHash']

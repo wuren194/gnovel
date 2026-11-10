@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "govel",
+  "version": "0.7.0",
+  "description": "使用 Govel 工具箱管理中文长篇小说；续写、读稿、进度查询、设定修改、导入与审校。",
+  "author": {
+    "name": "wuren194",
+    "url": "https://github.com/wuren194/govel"
+  },
+  "homepage": "https://github.com/wuren194/govel",
+  "repository": "https://github.com/wuren194/govel",
+  "license": "AGPL-3.0-only",
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/govel-bind/SKILL.md",
+      "requires_local_executor": true,
+      "interface": {
+        "displayName": "Govel",
+        "shortDescription": "通过 AI 对话管理小说、证据与受控写入"
+      }
+    }
+  }
+}

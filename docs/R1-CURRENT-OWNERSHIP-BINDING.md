@@ -32,7 +32,7 @@
 
 unresolved 不允许普通 move、rename 或 finalize。纯大小写和 Unicode 规范化形式改名仍按现有路径限制阻断，不通过中间文件名绕过。
 
-外部修改的接受是单独的高风险流转：普通调用只允许 preview；commit 需要独立特权批准能力。CLI 与 MCP 的外改采用入口均可请求 macOS 本机确认；确认显示准确计划后签发一次性能力，在提交锁内消费。普通 `approve=true`、actor 字符串或重算 planHash 均不是该能力，缺失时返回 `APPROVAL_CAPABILITY_REQUIRED`。Explicit Adopt、Rebind 与 Binding Repair 不能由普通保存或候选登记模拟。
+外部修改的接受是单独的高风险流转：普通调用只允许 preview；commit 需要独立特权批准能力。CLI 与 MCP 的外改采用入口均可请求本机桌面确认（macOS 系统窗口或 Linux zenity）；确认显示准确计划后签发一次性能力，在提交锁内消费，并记录实际确认后端。无可用桌面时保留原计划并返回重试指引。普通 `approve=true`、actor 字符串或重算 planHash 均不是该能力，缺失时返回 `APPROVAL_CAPABILITY_REQUIRED`。Explicit Adopt、Rebind 与 Binding Repair 不能由普通保存或候选登记模拟。
 
 预览保存原请求身份及准确 H1/H2 材料：H1 只从有本章、代次和 locator 关联的登记工件或原提交镜像找回，缺失时明确 unavailable；H2 保存独立字节副本、对象观测和差异。材料准备不证明语义审查完成，也不签发独立能力。原请求只延长期限时仍核验全部原材料，H3、同字节换 inode 或附件变动都不能续用。能力绑定本机确认展示的项目、章节、代次、planHash 与对象观测，有有效期且 nonce 原子消费；取消或输入变化均拒绝采用。全部原文与材料 guards 必须完整，不能通过删除保护记录取消末次检查。本机确认是用户在场分离，不是针对同权限恶意原生代码的系统沙箱。
 
@@ -67,6 +67,8 @@ binding generation 随正式变更的提交 revision 前进，不是正文内容
 只读 file guards 与目录成员 guards 不能成为恢复写入目标。被校验的正文状态直接作为写集 before-image；提交期间出现外部修改时否决本次发布并保留外部对象，不能把新出现的文件认领为自己的旧字节。
 
 最后窗口的保护依赖实际对象保全及 exclusive 发布，不依赖“再 hash 一次”。保全路径中的 displaced inode 与不可变镜像分开，成功后仍保留可能被旧 fd 迟写的对象。恢复同样先保全被置换对象，不直接 unlink 预检时的路径；无法安全完成时保持可定位 pending。原 journal 不改写，完成 manifest 留在原 TX 目录。稳定锁 anchor 不删除，实际拥有者与占用由内核锁和线程所有权共同判断。
+
+快照构造可使用 macOS `fclonefileat` 或 Linux `FICLONE` 共享物理数据块，每份 before、after、publish、rollback-ready 仍持有独立 inode，不与 live 或 displaced 使用硬链接。克隆源必须匹配原盘上观测，克隆结果与最终输出均核对完整内容；after 从 before 的独立副本只写变化块。不支持克隆时回退完整复制，权限、空间、I/O 错误及源漂移不作为回退理由。文件及目录持久化完成后才发布活动 manifest，恢复协议不变。已完成事务的 before/after 也用于外改基线、候选转换及操作提交证明，因此仍保留。
 
 ## 客户端回执
 

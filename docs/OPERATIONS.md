@@ -32,7 +32,7 @@ MCP 对应 `get_tool_help`，支持 `query`、`operation` 或 `commandGroup` 三
 
 `continue` 没有可继续的已授权任务、遇到冲突或需先完成批准时，错误保持原状态，`recovery.readActions` 提供项目概览和诊断。查询可能再次报告真实缺项；按领域入口补齐或交作者决定，不将错误改成就绪，也不读取／修改内部 JSON 绕过。`readAction` 与 `nextAction` 只是下一步参数，仍核对动作的效果及已有授权。
 
-初始 Skill、AGENTS、宿主工具说明可用于了解使用约定；进入项目任务后，材料、正文和运行证据沿工具的读取与分页入口交付。作者的圆桌编辑、外部原始输入和明确请求的开发／故障排查不受日常项目查询路径限制。
+初始 Skill、AGENTS、宿主工具说明可用于了解使用约定；进入项目任务后，材料、正文和运行证据通过工具的读取和分页能力交付。作者的圆桌编辑、外部原始输入和明确请求的开发／故障排查不受日常项目查询路径限制。
 
 ## 不写临时脚本的章节交接
 
@@ -93,7 +93,9 @@ python3 scripts/novelctl.py project workflow submit --project-root /path/to/书 
 
 `workflow.external-preview` 返回原 requestId、冻结 H1/H2、对象观测与差异。找不到准确 H1 时明确材料不足；不会用摘要还原稿件。`workflow.external-read` 按 `part=H1/H2/diff` 分页读取准确原文。原请求可续办或仅延长期限；输入变为 H3、对象更换或附件变化都拒绝续用。
 
-预览的 `execution.executable=false` 表示本机确认尚未完成。作者已明确认可后，沿 `approvalAction` 调用 `workflow.external-commit`，同时传 `approve=true` 与 `confirmOnDevice=true`。macOS 确认窗口显示作品、章节、文件位置、旧新摘要与冻结计划；作者确认后，服务端签发不进入传输载荷的一次性能力，在提交锁内消费。普通 `source.commit` 或单独 `--approve` 仍不能完成外改采用。取消、超时或无桌面环境都不会采用正文。
+预览的 `execution.executable=false` 表示本机确认尚未完成。作者已明确认可后，沿 `approvalAction` 调用 `workflow.external-commit`，同时传 `approve=true` 与 `confirmOnDevice=true`。本机桌面确认窗口显示作品、章节、文件位置、旧新摘要与冻结计划；作者确认后，服务端签发不进入传输载荷的一次性能力，在提交锁内消费。普通 `source.commit` 或单独 `--approve` 仍不能完成外改采用。取消、超时或无桌面环境都不会采用正文。
+
+macOS 在打开窗口前检查当前用户是否已登录控制台、桌面是否锁定。SSH 连接可以请求同一用户已解锁桌面上的确认；只有 SSH 而没有可用桌面时，先返回 `APPROVAL_CHANNEL_UNAVAILABLE`。Linux 使用 `/usr/bin/zenity`，需要已设置的图形会话及已安装的 `zenity`。无法显示或等待超时的错误带 `retryable`、原 `operationId`、`planHash` 与恢复指引；登录或解锁桌面后重试，计划或正文已变化时重新预览。预览和读取冻结稿不依赖图形会话。
 
 采用只推进正文归属并标记本章 `stale`，保留原文和历史连续性，失效依赖旧正文的工件；不证明语义审查、定稿或新事实批准。确认期间和写入末次仍核对原文、全部冻结材料及文件对象，H3 不沿用 H2 的确认。原 CLI `workflow accept-external` 也支持 `--confirm-on-device`，与 MCP 共用处理器。
 
@@ -805,7 +807,7 @@ python3 scripts/novelctl.py project import commit --project-root ~/govel-books/�
 python3 scripts/novelctl.py project export --project-root ~/govel-books/山城旧事 --status planning_required --output ~/govel-backups/山城旧事-导入阅读稿.txt
 ```
 
-预览保存在目标父目录的 `.govel-import-…` 中，包含私人原文，应随个人资料管理，不放入公开源码。提交在其中准备完整项目，再以 macOS 独占目录改名发布；已有目标不会被接管或覆盖。普通失败清理本次暂存项目，进程中断可能留下计划目录内的 `build-…`，原计划可重新执行。发布后丢失响应，同计划重试读取原导入回执，不覆盖当前项目；该历史回执不证明项目此刻未被后续编辑。项目及来源证据确认保存后，用户可自行删除对应预览目录。
+预览保存在目标父目录的 `.govel-import-…` 中，包含私人原文，应随个人资料管理，不放入公开源码。提交在其中准备完整项目，再以平台的内核独占目录改名发布；已有目标不会被接管或覆盖。macOS 使用 `renameatx_np(RENAME_EXCL)`，Linux 使用 `renameat2(RENAME_NOREPLACE)`；能力不可用时报 `SAFE_PUBLICATION_UNAVAILABLE`。普通失败清理本次暂存项目，进程中断可能留下计划目录内的 `build-…`，原计划可重新执行。发布后丢失响应，同计划重试读取原导入回执，不覆盖当前项目；该历史回执不证明项目此刻未被后续编辑。项目及来源证据确认保存后，用户可自行删除对应预览目录。
 
 `IMPORT_SOURCE_CHANGED` 表示原稿字节、文件对象或文件集合已变化；`IMPORT_PLAN_STALE` 表示计划摘要、目标或引擎／Provider 不匹配。两种情况均重新预览并核对。`IMPORT_SNAPSHOT_DAMAGED` 表示冻结副本损坏。`IMPORT_TARGET_EXISTS` 保留目标中的全部内容，须选择其他新目录。
 
@@ -899,6 +901,8 @@ python3 scripts/novelctl.py project restore-preview --archive ~/govel-backups/�
 ```
 
 备份包含项目内全部普通文件、空目录、权限位、正式正文、结构、候选、批准和事务证据；项目外 Provider 与个人资料须另行备份。输出为项目外的新 ZIP，已有目标不覆盖。不可读目录、符号链接、必需文件缺失、未恢复事务或扫描期间输入变化均报错，不能报告完整备份。
+
+`project.backup` 不清理原项目。事务目录保存恢复镜像、已提交证明及可能仍被外部编辑器持有的旧文件对象，普通 GC 不删除这些内容。APFS 或支持 reflink 的 Linux 文件系统上，新事务用写时复制共享未变数据块，并只写入发生变化的块；各镜像仍是独立文件，后续修改互不影响。不支持写时复制时保存普通完整副本。历史文件数和逻辑大小仍随事务增长，物理节省取决于文件系统及内容变化；ZIP 恢复不会保留原来的共享块布局。不要把备份完成或一次“未发现打开的文件描述符”当作删除事务证据的依据。
 
 恢复预览逐文件核验清单、摘要、路径和当前项目格式，返回 `commitAction`。批准后在新目录发布，保留原项目身份及已有证据；它不是新作品分叉，也不替旧格式做迁移。原宿主的活跃交接会停止，原交接索引和定位元数据另存 `.govel/restore-history/`，回执列出实际调整。新目录发布前失败不改变现有项目；原计划在成功但响应丢失后可重试。备份仍须保存，当前格式的阅读导出不能代替它。
 
