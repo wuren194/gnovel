@@ -1,20 +1,49 @@
 # Govel
-中文长篇小说结构化辅助系统
 
-提供设定与规划管理、时间和关系约束、章节工作流、证据定位、受控写入与事务恢复。
+供 AI Agent 调用的中文长篇小说创作工具箱。
 
-本仓库仅包含通用引擎、扩展规范及少量原创演示样例，不附带内置创作参考数据集。用户可根据自身创作需求，在本地目录自行填充特定题材的参考资料，并通过本地数据提供器接入。
+Govel 本身不提供独立的图形写作界面，而是作为一组本地工具接入你的 AI 对话环境。长篇创作过程中，你与 AI 沟通；设定维护、时间线跟踪、推演规划以及文件写入，由 AI 调用 Govel 协同处理。
 
-> **English summary.** Govel is a structured engine for long-form Chinese fiction, exposed as an MCP server and a CLI. It keeps a single source of truth for settings, plans, timeline and chapters, binds prose ownership to approved content, and records every write as a recoverable transaction. The chat model does the ideation, drafting and semantic review; Govel supplies state, constraints, evidence and controlled writes. It ships no model and no reference corpus. Runtime: Python 3.11+, standard library only. License: AGPL-3.0-only.
+你负责确立基调、把控节奏与拍板定稿；AI 负责构思情节、试写正文与语义排查；Govel 负责保存项目状态、校验已登记的结构与时间约束，并提供受控写入与事务恢复机制。
 
-## 适合解决什么问题
+本工具不内置任何模型，需搭配支持本地工具调用的 AI 客户端使用。
 
-- 写到几十章后设定漂移：人物年龄、关系、道具、时间线前后矛盾。
-- 模型改稿覆盖了已确认的正文，或多个会话同时改同一本书。
-- 写作中断后难以恢复上下文：上一章写到哪、哪些伏笔未回收、哪些决定已经确认。
-- 需要可追溯的审校证据，而不是一句“检查通过”。
+## 推荐使用方式
 
-## 开始使用
+**推荐在 Codex 桌面端、Antigravity 或 Claude Desktop 中接入 Govel。** 配置完成后，日常创作以对话为主，无需逐条手动执行底层指令，直接在对话框中说明创作意图：
+
+> 读取当前项目，整理目前的写作进度与待确认事项。
+
+> 根据已确认的设定推演下一章细纲，梳理核心冲突与走位，先提供给我审阅。
+
+> 检查本章的人物认知边界与时间线，附带具体的原文证据列出疑点。
+
+### 推荐实践：Antigravity + Gemini 3.8 Flash / 4argon + 移动端远程控制
+
+若使用 Antigravity，维护者推荐选用 **Gemini 3.8 Flash** 或 **4argon** 作为长篇创作的主力模型，并开启 Remote Control。这是使用推荐，Govel 不绑定特定客户端或模型；可选模型以客户端当前显示为准。
+
+电脑端保持运行、联网且未进入睡眠，用于托管项目文件、执行本地工具与状态校验；移动端通过浏览器连接远程控制页面，便于与 AI 讨论剧情、审阅推演方案并确认改动。
+
+- 开启路径：`Settings → Application → Remote Control → Enable Remote Control`。
+- 开启后，扫描设置页中的二维码或使用提供的链接，进入远程控制页面。
+- 在这一配置下，移动端用于交互输入与审阅，Govel 的文件读写与事务校验在电脑本地执行。
+
+详细步骤见 [Antigravity Remote Control 官方说明](https://antigravity.google/docs/remote-control)。
+
+## 核心特性
+
+- **设定管理与一致性校验**：统一管理人物状态、时间节点与关系约束，由引擎执行可计算的检查，并为 AI 的因果审查提供依据，减少长篇创作中的前后矛盾。
+- **进度记录与上下文接续**：保存已登记的决策与未决事项，中断后可依据项目状态继续创作，减少手动补充背景的负担。
+- **循证排查**：为规则核验与语义审校提供证据定位，便于回到对应的设定和原文核对疑点。
+- **事务化写入保护**：正式设定变更经预览与明确批准后提交；正文定稿绑定已批准的内容，相关事务提供恢复与受约束的撤销入口，降低误覆盖风险。
+
+> 自动化规则检查帮助发现可计算的约束冲突，不能替代语义审查。作品的文学质感、情绪流动与最终取舍，仍由作者审校与裁断；检查通过不等于作者批准。
+
+本仓库仅包含通用引擎核心、扩展规范与基础中性示例，不预置大模型或第三方语料。个人设定、写作风格库与私有参考材料可在本地自行配置。
+
+> **English summary.** Govel is a local toolkit for AI agents writing long-form Chinese fiction, exposed through MCP and a CLI. Authors work through conversation in an AI client, such as the Codex desktop app, Antigravity or Claude Desktop, and retain creative decisions and approval. The model handles ideation, drafting and semantic review; Govel maintains project state, checks registered constraints, and provides evidence, controlled writes and transaction recovery. It has no standalone writing GUI, bundled model or reference corpus. Runtime: Python 3.11+, standard library only. License: AGPL-3.0-only.
+
+## 安装与接入
 
 本地运行环境为 macOS、Python 3.11 或更新版本。运行时只使用 Python 标准库。
 
@@ -26,7 +55,7 @@ python3 scripts/novelctl.py project doctor --project-root /tmp/govel-example
 
 项目目录必须为空。当前项目格式由 `toolbox.manifest.json` 声明；不自动转换其他格式，也不继承外部稿件的批准记录。
 
-本发行版以 CLI、MCP 和本地 JSON 接口为入口，不附带模型、参考文库或完整图形工作台。模型负责构思、写作与语义审查；工具提供机械检查与可追溯的执行证据。检查通过不等于作者批准。
+本发行版提供 CLI、MCP 和本地 JSON 接口。日常对话优先通过 MCP 接入；具备本地命令执行能力的客户端也可由 AI 调用 CLI。
 
 ## 接入 MCP 客户端
 
@@ -69,7 +98,7 @@ python3 scripts/check_mcp_registration.py
 
 ## 五分钟体验
 
-1. 按上节注册 MCP。新建项目目前只提供 CLI 入口，先在终端创建一本书：
+1. 按上节注册 MCP。新建项目目前只提供 CLI 入口；可让具备本地命令执行能力的 AI 客户端运行以下命令，或在终端执行：
 
    ```bash
    python3 scripts/novelctl.py project quick-init --project-root ~/govel-books/山城旧事 --book-name 山城旧事
@@ -77,9 +106,9 @@ python3 scripts/check_mcp_registration.py
 
 2. 在客户端对话中说明：“用 Govel 打开 `~/govel-books/山城旧事`，运行诊断。”
 3. 继续用对话补充主角、地点和第一章的构想，让模型通过工具登记设定并生成章节推演。
-4. 每个正式写入都会先返回预览，确认后才提交。随时可要求“运行 doctor”查看项目状态，或“导出全部设定”生成阅读快照。
+4. 审阅设定变更预览和章节候选，在对应阶段明确批准后提交或定稿。随时可要求“运行 doctor”查看项目状态，或“导出全部设定”生成阅读快照。
 
-不使用 MCP 时，同样的流程可直接用 CLI 完成，命令见上文“开始使用”，完整操作见 [docs/OPERATIONS.md](docs/OPERATIONS.md)。
+不使用 MCP 时，同样的流程可由具备本地命令执行能力的 AI 客户端通过 CLI 完成，也可手动执行。命令见上文“安装与接入”，完整操作见 [docs/OPERATIONS.md](docs/OPERATIONS.md)。
 
 ## 接入本地资料
 
