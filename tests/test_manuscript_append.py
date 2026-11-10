@@ -162,8 +162,15 @@ class ManuscriptAppendTests(unittest.TestCase):
             with self.subTest(replace=replace):
                 preview = self.preview(requestId=f'append-{replace}')
                 if replace:
-                    self.source.unlink()
-                    self.source.write_bytes(self.raw)
+                    before = self.source.stat()
+                    payload = self.source.read_bytes()
+                    # Allocate while the original exists so its inode cannot be recycled.
+                    replacement = self.source.with_name(self.source.name + '.replacement')
+                    replacement.write_bytes(payload)
+                    os.replace(replacement, self.source)
+                    after = self.source.stat()
+                    self.assertNotEqual((before.st_dev, before.st_ino), (after.st_dev, after.st_ino))
+                    self.assertEqual(self.source.read_bytes(), payload)
                 else:
                     self.source.write_bytes(self.raw + '补充。'.encode())
                 self.assert_code('IMPORT_SOURCE_CHANGED', self.commit, preview)
