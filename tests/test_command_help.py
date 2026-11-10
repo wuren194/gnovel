@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+from copy import deepcopy
 import io
 import json
 import os
@@ -13,7 +14,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts.core.command_help import command_help
+from scripts.core.command_help import command_help, _present_help
 from scripts.core.operations import operations, validate_arguments, call_operation
 from scripts.core.project import query_policy, TOOLBOX_ROOT
 from scripts.core.structure_store import StructureError
@@ -28,7 +29,7 @@ class CommandHelpTests(unittest.TestCase):
             with patch('scripts.core.data_provider.binding', side_effect=AssertionError('provider read')):
                 report = command_help()
                 self.assertEqual(report['start']['arguments'], {'task': 'continue', 'view': 'model'})
-                self.assertTrue(Path(report['help']['cliScript']).is_file())
+                self.assertTrue(Path(command_help(view='full')['help']['cliScript']).is_file())
                 self.assertIn('workflow', [row['group'] for row in report['groups']])
                 self.assertEqual(command_help(query='续写这个')['operations'][0]['id'], 'task.prepare')
 
@@ -58,7 +59,7 @@ class CommandHelpTests(unittest.TestCase):
     def test_cli_examples_in_help_are_parseable_and_keep_actual_parameters(self):
         parser = build_parser()
         for spec in operations():
-            report = command_help(operation=spec.id)
+            report = command_help(operation=spec.id, view='full')
             for example, command in zip(spec.examples, report['cliExamples']):
                 with self.subTest(operation=spec.id, example=example):
                     validate_arguments(spec.input_schema, example)
@@ -89,7 +90,8 @@ class CommandHelpTests(unittest.TestCase):
 
     def test_help_rejects_conflicting_filters_and_invalid_pages(self):
         for args in ({'operation': 'task.prepare', 'query': '续写'}, {'commandGroup': 'not-a-group'},
-                     {'commandGroup': 'task', 'offset': -1}, {'commandGroup': 'task', 'limit': 0}, {'commandGroup': 'task', 'offset': 100000}):
+                     {'commandGroup': 'task', 'offset': -1}, {'commandGroup': 'task', 'limit': 0},
+                     {'commandGroup': 'task', 'offset': 100000}, {'view': 'audit'}, {'view': None}):
             with self.subTest(args=args), self.assertRaises(StructureError):
                 command_help(**args)
         with self.assertRaises(StructureError) as caught:
@@ -117,6 +119,75 @@ class CommandHelpTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'CLI_EXPLICIT_FALSE_UNSUPPORTED')
         self.assertIs(caught.exception.details['mcpAction']['arguments']['prepareNext'], False)
         self.assertFalse(caught.exception.details['executionPerformed'])
+
+    def test_model_help_reduces_delivery_and_full_action_restores_exact_contract(self):
+        for operation in ('task.prepare', 'workflow.artifact-pack', 'capabilities.validate'):
+            with self.subTest(operation=operation):
+                model = command_help(operation=operation)
+                full = command_help(**model['fullHelpAction']['arguments'])
+                self.assertEqual(full['view'], 'full')
+                self.assertEqual(model['operations'][0]['inputSchema'], full['operations'][0]['inputSchema'])
+                self.assertEqual(model['operations'][0]['effects'], full['operations'][0]['effects'])
+                self.assertEqual(model['operations'][0]['invocation'], full['operations'][0]['invocation'])
+                self.assertEqual(model['authorization'], full['authorization'])
+                self.assertIn('cliExamples', full)
+                self.assertNotIn('cliExamples', model)
+                self.assertNotIn('capabilities', model)
+                encoded = [json.dumps(r, ensure_ascii=False, separators=(',', ':')) for r in (model, full)]
+                self.assertLess(len(encoded[0]), len(encoded[1]))
+                self.assertLess(len(encoded[0].encode()), len(encoded[1].encode()))
+        schema = command_help(operation='workflow.artifact-pack')['operations'][0]['inputSchema']
+        self.assertEqual(schema['oneOf'], [{'required': ['input']}, {'required': ['text']}, {'required': ['payload']}])
+
+    def test_help_view_and_filters_survive_full_expansion_and_pagination(self):
+        model = command_help(commandGroup='workflow', offset=2, limit=2)
+        self.assertEqual(model['fullHelpAction']['arguments'], {
+            'commandGroup': 'workflow', 'offset': 2, 'limit': 2, 'view': 'full'})
+        full = command_help(**model['fullHelpAction']['arguments'])
+        following = command_help(**full['readAction']['arguments'])
+        self.assertEqual(following['view'], 'full')
+        self.assertEqual(following['operations'][0]['id'],
+                         command_help(commandGroup='workflow', offset=4, limit=2)['operations'][0]['id'])
+        self.assertIn('command', following['operations'][0])
+        self.assertEqual(full['operations'][0]['helpAction']['arguments']['view'], 'full')
+        queried = command_help(query='续写这个')
+        self.assertEqual(queried['fullHelpAction']['arguments'], {'query': '续写这个', 'view': 'full'})
+        arguments = {'projectRoot': '/tmp/书 with space', 'view': 'model'}
+        rendered = command_help(operation='project.doctor', arguments=arguments)
+        expanded = command_help(**rendered['fullHelpAction']['arguments'])
+        self.assertEqual(expanded['cliArgv'], rendered['cliArgv'])
+        self.assertEqual(expanded['cliCommand'], rendered['cliCommand'])
+        self.assertFalse(expanded['executionPerformed'])
+
+    def test_projection_keeps_unknown_fields_and_nonduplicated_routes(self):
+        original = {'code': 'OPERATION_DEFINITION', 'futureMeaning': {'required': True},
+                    'capabilities': [{'future': 'keep'}], 'scripts': [],
+                    'help': {'instructions': ['guide'], 'futureGuide': 'keep'},
+                    'operations': [{'id': 'future', 'name': 'future_tool', 'mcp': None,
+                        'cli': ['project', 'future'], 'required': ['different'],
+                        'inputSchema': {'type': 'object', 'required': ['actual'],
+                            'anyOf': [{'required': ['one']}, {'required': ['two']}]},
+                        'futureState': None}]}
+        untouched = deepcopy(original)
+        model = _present_help(original, view='model', arguments={'operation': 'future'})
+        self.assertEqual(original, untouched)
+        self.assertEqual(model['futureMeaning'], original['futureMeaning'])
+        self.assertEqual(model['capabilities'], original['capabilities'])
+        self.assertEqual(model['help'], {'futureGuide': 'keep'})
+        self.assertEqual(model['operations'], original['operations'])
+
+    def test_cli_and_mcp_offer_both_help_views_without_executing_target(self):
+        for view in ('model', 'full'):
+            with self.subTest(view=view):
+                arguments = {'operation': 'workflow.artifact-pack', 'view': view}
+                packet = handle({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+                    'params': {'name': 'get_tool_help', 'arguments': arguments}})['result']
+                self.assertFalse(packet['isError'])
+                result = subprocess.run([sys.executable, str(TOOLBOX_ROOT / 'scripts/novelctl.py'),
+                    'project', 'tools', 'help', '--operation', arguments['operation'], '--view', view],
+                    text=True, capture_output=True, env={**os.environ, 'GOVEL_LOG_MODE': 'off'})
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(json.loads(result.stdout), packet['structuredContent'])
 
     def test_handshake_and_default_tool_list_expose_help(self):
         response = handle({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'})['result']

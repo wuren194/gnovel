@@ -33,7 +33,7 @@ def run_mcp(tool: str, arguments: dict, *, process=False) -> dict:
         from scripts.mcp_server import handle
         clear_runtime_caches()
         try:
-            return json.loads(handle(request)['result']['content'][0]['text'])
+            return handle(request)['result']['structuredContent']
         finally:
             clear_runtime_caches()
     proc = subprocess.run([sys.executable, str(ROOT / 'scripts/mcp_server.py')],
@@ -41,7 +41,7 @@ def run_mcp(tool: str, arguments: dict, *, process=False) -> dict:
     if proc.returncode:
         raise AssertionError(proc.stderr)
     payload = json.loads(proc.stdout.splitlines()[-1])
-    return json.loads(payload['result']['content'][0]['text'])
+    return payload['result']['structuredContent']
 
 
 class ContextTransportTests(unittest.TestCase):

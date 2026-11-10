@@ -11,10 +11,12 @@ try:
     from scripts.core.call_logging import call_scope, exception_details, observe_payload, response_outcome
     from scripts.core.model_response import (presentation_target, project_response,
                                             response_view as requested_response_view)
+    from scripts.core.model_text import render_model_text
 except ImportError:
     from core.call_logging import call_scope, exception_details, observe_payload, response_outcome
     from core.model_response import (presentation_target, project_response,
                                      response_view as requested_response_view)
+    from core.model_text import render_model_text
 
 try:
     from scripts.core.commands import chapter_prose, get_entity, list_entities, list_foreshadowing, project_overview, story_timeline, structure_graph
@@ -106,7 +108,13 @@ def _content(payload: dict, *, is_error: bool = False, name: str = '', view: str
         payload = task_model_response(payload)
     if operation is not None:
         payload = project_response(root or '.', operation, payload, view=response_view)
-    result = {"content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False, separators=(',', ':'))}], "isError": is_error, "structuredContent": payload}
+    try:
+        text = render_model_text(operation, payload, view=response_view or view)
+    except Exception:
+        # Presentation must not report a completed write as failed or invite a
+        # retry. The completed structured result is still the call contract.
+        text = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+    result = {"content": [{"type": "text", "text": text}], "isError": is_error, "structuredContent": payload}
     if proof is not None:
         if root is not None:
             try:
@@ -245,7 +253,7 @@ def _handle(request: dict) -> dict | None:
         except (StructureError, KeyError, TypeError, ValueError, OSError) as exc:
             payload = {"ok": False, "code": getattr(exc, "code", "TOOL_ERROR"), "error": str(exc), "details": getattr(exc, "details", {})}
             observe_payload("businessResult", payload)
-            result = _content(payload, is_error=True,
+            result = _content(payload, is_error=True, name=render_name, view=view,
                               root=arguments.get('projectRoot') if isinstance(arguments, dict) else None,
                               operation=operation, response_view=presentation)
         return {"jsonrpc": "2.0", "id": request_id, "result": result}

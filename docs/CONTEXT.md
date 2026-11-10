@@ -66,7 +66,7 @@ Builder 输出显式的 `layers` 数组，按固定顺序给出每个角色的 `
 
 `MEM-*` / `DEC-*` / `KN-*` / `PROSE-*` / `READ-*` 是同一上下文内按固定顺序生成的 handle。机器旁路保留 handle → 原位置、身份、hash 的对应关系；去重记忆的一条 handle 可以对应多个原位置，但只对应一个 field+value 身份。旁路不再复制记忆 value／参考 excerpt／决定 statement／声纹正文，而保留它们的 hash 与位置。遇到问题可通过同一份 station 快照取回原值。未知顶层扩展暂时进入 `unclassifiedContext`，不得为减少长度删除。
 
-- MCP `read_continuation_context` 与 `prepare_task` 默认及 `view=model` 的 `content`、`structuredContent` 都只有模型表示；Context 证明置于 `_meta.contextProof`（客户端旁路，不能再拼进模型输入）。显式 `view=station` 返回兼容机器对象，用于代码／operator／debug。
+- MCP `read_continuation_context` 与 `prepare_task` 默认及 `view=model` 的 `content` 是同一模型结果的精简文字呈现（无减量时为 JSON），`structuredContent` 是其完整结构表示。程序读取后者；宿主决定哪些内容进入模型输入。Context 证明通过 `_meta.contextProofRef` 引用客户端旁路快照，不再拼进模型输入；无项目根的内部调用才内联 `_meta.contextProof`。显式 `view=station` 返回完整机器对象，用于代码／operator／debug。详见[模型交付](MODEL-OUTPUT.md)。
 - CLI 保留原默认值，供已有调用方继续消费。工位薄包装改用 `project prepare --view model`；`project task context --view model` 和 `project context --view model` 也返回模型表示。旧 station/full 接口保持可用。
 - 准备报告中的 `modelContext` 与 `modelProof` 是同一次 Builder 结果的投影，知识只检索一次。模型准备表示不再次输出 knowledgePack／authorDecisions；readList 若与最近正文路径重合，改为引用其 contextHandle。契约读取仍由 PromptPlan 提供：仅去掉读取范围的 hash，保留路径与行范围、审查计划及工具动作；没有改变工位工作流。
 - 模型响应（含 JSON 封装）仍受已有 station 字符预算限制，超限阻塞；不新增注册表数值、不截断事实、不增加第二套 relevance engine。原机器包的预算与驱逐次序不变。

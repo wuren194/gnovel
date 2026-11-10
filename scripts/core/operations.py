@@ -636,8 +636,10 @@ def _new_operations() -> list[OperationSpec]:
     from .command_help import command_help
     result.extend([
         OperationSpec('capabilities.help', 'get_tool_help',
-                      '工具箱 help：不读项目数据即可查看命令分组、查意图或查完整参数与 CLI 示例。operation 接受操作 ID、MCP 名或 project 命令路径；已了解命令时无需重复查帮助。',
+                      '工具箱 help：不读项目即可查命令、意图与完整参数；默认精简，view=full 展开 CLI 示例。operation 接受操作 ID、MCP 名或 project 命令路径；已了解命令时无需重复查帮助。',
                       _schema({'operation': STRING, 'query': STRING, 'commandGroup': STRING, 'offset': INTEGER, 'limit': INTEGER,
+                               'view': {'type': 'string', 'enum': ['model', 'full'],
+                                        'description': '默认 model 保留调用契约；full 另含通用说明与 CLI 示例。'},
                                'arguments': {'type': 'object', 'description': '可选：原样传入动作 arguments，与 operation 一起生成正确 CLI；只校验格式，不执行。'}}),
                       'read', lambda root, a: command_help(**a), ('tools', 'help'), discover=True,
                       examples=({}, {'query': '续写这个'}, {'operation': 'task.prepare'}, {'commandGroup': 'workflow'})),

@@ -98,7 +98,7 @@ python3 scripts/check_mcp_registration.py
 
 ## 查帮助，再调用工具
 
-CLI 和 MCP 提供相同的公开项目操作。模型可查询帮助来了解参数，不需要读取工具箱源码或内部 JSON 推测操作。CLI 命令从工具箱目录执行；在小说目录中使用 `novelctl.py` 的绝对路径（MCP help 也会返回该路径）。
+CLI 和 MCP 提供相同的公开项目操作。模型可查询帮助来了解参数，不需要读取工具箱源码或内部 JSON 推测操作。CLI 命令从工具箱目录执行；在小说目录中使用 `novelctl.py` 的绝对路径（MCP help 的 `view=full` 会返回该路径）。常用 MCP 结果默认尝试精简中文呈现，程序读取 `structuredContent`；CLI 保持 JSON，详见[模型交付](docs/MODEL-OUTPUT.md)。
 
 ```bash
 python3 scripts/novelctl.py --help

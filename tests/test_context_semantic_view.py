@@ -172,16 +172,18 @@ class SemanticViewTests(unittest.TestCase):
                        'params': {'name': 'read_continuation_context', 'arguments': args}}
             result = handle(request)['result']
             self.assertFalse(result['isError'])
-            text = json.loads(result['content'][0]['text'])
-            self.assertEqual(text, result['structuredContent'])
-            self.assertEqual(text['view'], 'model')
+            model = result['structuredContent']
+            text = result['content'][0]['text']
+            self.assertEqual(model['view'], 'model')
             self.assertNotIn('dependencyManifest', text)
+            self.assertNotIn('dependencyManifest', model)
+            self.assertIn('CONTEXT_MODEL', text)
             from scripts.core.transport_cache import get
             proof = get(self.root, result['_meta']['contextProofRef'], kind='context-proof')
             self.assertTrue(proof['dependencyManifest']['sourceHash'])
             ctx = builder.build_station_context(self.root, chapter, task_type=task, chapter_goal=goal,
                                                 pov_character='C-ALPHA', view='station', read_only=True)
-            assert_semantics(self, ctx, text['modelContext'])
+            assert_semantics(self, ctx, model['modelContext'])
             request['params']['arguments']['view'] = 'station'
             debug = handle(request)['result']
             self.assertEqual(debug['structuredContent']['contextHash'], ctx['contextHash'])

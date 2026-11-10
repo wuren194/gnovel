@@ -18,7 +18,7 @@ python3 scripts/novelctl.py project tools help --command-group workflow --offset
 python3 scripts/novelctl.py project task prepare --help
 ```
 
-MCP 对应 `get_tool_help`，支持 `query`、`operation` 或 `commandGroup` 三选一。`operation` 接受操作 ID、MCP 工具名和 CLI 命令路径；分组按 `readAction` 翻页。help 不要求项目存在，也不读取小说；它返回当前 CLI 路径、参数、示例和调用方式。意图没有匹配只说明该说法未命中，按命令分组继续查，不自行编写脚本代替现有操作。
+MCP 对应 `get_tool_help`，支持 `query`、`operation` 或 `commandGroup` 三选一。`operation` 接受操作 ID、MCP 工具名和 CLI 命令路径；分组按 `readAction` 翻页。help 不要求项目存在，也不读取小说；默认返回完整参数与调用方式，沿 `fullHelpAction` 或传 `view=full`（CLI 为 `--view full`）展开 CLI 路径、示例和通用说明。意图没有匹配只说明该说法未命中，按命令分组继续查，不自行编写脚本代替现有操作。
 
 | 作者意图 | 起始操作 | 后续依据 |
 | --- | --- | --- |

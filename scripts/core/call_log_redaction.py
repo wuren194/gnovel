@@ -52,6 +52,20 @@ def json_bytes(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
+def _labeled_json(line: str):
+    """Recognize a whole JSON value after one label, not arbitrary prose spans."""
+    prefix, separator, body = line.partition(':')
+    if (not separator or not prefix.strip() or any(char in prefix for char in '\"{}[]')
+            or any(char.isspace() for char in prefix.strip())
+            or not body.lstrip().startswith(('{', '['))):
+        return None
+    try:
+        parsed = json.loads(body)
+    except (ValueError, RecursionError):
+        return None
+    return (prefix, body, parsed) if isinstance(parsed, (dict, list)) else None
+
+
 class _Sanitizer:
     def __init__(self, policy: dict, known_values=()) -> None:
         self.max_depth = policy["maxDepth"]
@@ -116,6 +130,42 @@ class _Sanitizer:
                 # A header regex over the serialized container could consume
                 # its closing quotes and unrelated fields on the same line.
                 return value
+        # Model reports also embed whole JSON values after a short label.
+        # Keep their field types and public-value exceptions meaningful; a
+        # credential-looking key inside one is not a plain HTTP header.
+        segments, plain = [], []
+        for line in value.splitlines(keepends=True):
+            fragment = _labeled_json(line) if depth < self.max_depth else None
+            if fragment is None:
+                plain.append(line)
+                continue
+            prefix, body, parsed = fragment
+            segments.append(self._plain_text(''.join(plain), use_known=use_known))
+            plain.clear()
+            before = self.redactions, set(self.issues)
+            if self.value_exception(prefix, parsed):
+                cleaned = parsed
+            elif _field_name(prefix) in self.fields:
+                cleaned = REDACTED
+                self.redactions += 1
+            else:
+                cleaned = self.walk(parsed, depth + 1)
+            if before != (self.redactions, self.issues):
+                ending = body[len(body.rstrip('\r\n')):]
+                body = json_bytes(cleaned).decode('utf-8') + ending
+            segments.append(self._plain_text(prefix + ':', use_known=use_known) + body)
+        segments.append(self._plain_text(''.join(plain), use_known=use_known))
+        return ''.join(segments)
+
+    def _plain_text(self, value: str, *, use_known: bool = True) -> str:
+        # Columnar model text separates field names from values. Replace the
+        # values already identified in this call before assignment/header
+        # patterns can split a JSON container or swallow unrelated row cells.
+        for pattern in self.known_values if use_known else ():
+            def replace_known(match: re.Match) -> str:
+                self.redactions += 1
+                return REDACTED
+            value = pattern.sub(replace_known, value)
         for pattern, replacement in self.patterns:
             def replace(match: re.Match, template: str = replacement) -> str:
                 assignment = self.assignment.match(match.group(0)) if self.assignment else None
@@ -142,11 +192,6 @@ class _Sanitizer:
                     self.redactions += 1
                 return match.group("prefix") + replacement
             value = self.assignment.sub(replace_assignment, value)
-        for pattern in self.known_values if use_known else ():
-            def replace_known(match: re.Match) -> str:
-                self.redactions += 1
-                return REDACTED
-            value = pattern.sub(replace_known, value)
         return value
 
     def walk(self, value: Any, depth: int = 0) -> Any:
@@ -210,6 +255,14 @@ class _Sanitizer:
             self.ancestors.remove(identity)
 
 
+def requires_credential_labels(rows: list[dict], policy: dict) -> bool:
+    """Keep non-string credentials keyed; global number/bool replacement is unsafe."""
+    rules = _Sanitizer(policy)
+    return any(isinstance(key, str) and not isinstance(value, str) and _field_name(key) in rules.fields
+               and not rules.value_exception(key, value)
+               for row in rows for key, value in row.items())
+
+
 def credential_values(value: Any, policy: dict) -> set[str]:
     """Identify explicit credential values in memory for this call's errors.
 
@@ -220,10 +273,34 @@ def credential_values(value: Any, policy: dict) -> set[str]:
     rules = _Sanitizer(policy)
     found, ancestors = set(), set()
 
-    def add(field, item):
-        if (isinstance(item, str) and item and item != REDACTED
-                and not rules.value_exception(field, item)):
+    def secret_parts(item, depth, *, container=True):
+        if depth > rules.max_depth:
+            return
+        if isinstance(item, str) and item and item != REDACTED:
             found.add(item)
+            # A rendered JSON cell keeps escapes, unlike its structured twin.
+            found.add(json.dumps(item, ensure_ascii=False)[1:-1])
+            return
+        if not isinstance(item, (dict, list, tuple)) or id(item) in ancestors:
+            return
+        if container and item:
+            try:
+                found.add(json_bytes(item).decode('utf-8'))
+            except (TypeError, ValueError, RecursionError, UnicodeError, OverflowError):
+                pass
+        ancestors.add(id(item))
+        try:
+            children = item.values() if isinstance(item, dict) else item
+            for child in children:
+                # A number/bool alone is not a global secret. The exact outer
+                # container covers these cells without changing prose counts.
+                secret_parts(child, depth + 1, container=False)
+        finally:
+            ancestors.remove(id(item))
+
+    def add(field, item, depth):
+        if not rules.value_exception(field, item):
+            secret_parts(item, depth)
 
     def visit(item, depth):
         if depth > rules.max_depth:
@@ -237,9 +314,18 @@ def credential_values(value: Any, policy: dict) -> set[str]:
                 if isinstance(parsed, (dict, list)):
                     visit(parsed, depth + 1)
                     return
+            spans, offset = [], 0
+            for line in item.splitlines(keepends=True):
+                fragment = _labeled_json(line) if depth < rules.max_depth else None
+                if fragment is not None:
+                    prefix, _, parsed = fragment
+                    visit({prefix: parsed} if _field_name(prefix) in rules.all_fields else parsed, depth + 1)
+                    spans.append((offset, offset + len(line)))
+                offset += len(line)
             if rules.assignment:
                 for match in rules.assignment.finditer(item):
-                    add(match.group("field"), _assignment_value(match.group("value")))
+                    if not any(start <= match.start() < end for start, end in spans):
+                        add(match.group("field"), _assignment_value(match.group("value")), depth)
             return
         if not isinstance(item, (dict, list, tuple)) or id(item) in ancestors:
             return
@@ -249,15 +335,16 @@ def credential_values(value: Any, policy: dict) -> set[str]:
                 for key, child in item.items():
                     if isinstance(key, str) and rules.value_exception(key, child):
                         continue
-                    if isinstance(key, str) and _field_name(key) in rules.all_fields and isinstance(child, str):
-                        add(key, child)
+                    if (isinstance(key, str) and (_field_name(key) in rules.fields
+                            or (_field_name(key) in rules.string_fields and isinstance(child, str)))):
+                        add(key, child, depth + 1)
                     else:
                         visit(child, depth + 1)
             else:
                 previous = None
                 for child in item:
                     if isinstance(previous, str) and previous.startswith("--") and "=" not in previous and _field_name(previous[2:]) in rules.all_fields:
-                        add(previous[2:], child)
+                        add(previous[2:], child, depth + 1)
                     visit(child, depth + 1)
                     previous = child
         finally:

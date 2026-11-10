@@ -264,6 +264,112 @@ class CallLoggingEntrypointTests(unittest.TestCase):
         self.assertNotIn("error-password-unique", self._log_text())
         self.assertNotIn("error-bearer-unique", self._log_text())
 
+    def test_mcp_columnar_model_text_redacts_string_and_container_credentials(self):
+        prose = '他记得第7页写着“密码”，没有改动那段普通文字。'
+        escaped = 'escaped-secret-unique "双引号" \\路径\n下一行'
+        credentials = [
+            'multi word password-unique',
+            {'opaque': 'object-password-unique', 'nested': [7, 'nested-password-unique']},
+            [7, {'opaque': 'array-password-unique'}],
+            {'numbers': [7, 8], 'enabled': True},
+        ]
+        public_schema = {'type': 'string', 'enum': ['read', 'candidate']}
+        payload = {'ok': True, 'code': 'OPERATION_DEFINITION', 'authorization': 'read',
+                   'operations': [{'id': f'OP-{index}', 'description': prose,
+                       'password': f'string-password-unique-{index}', 'accessToken': escaped,
+                       'authorization': 'read', 'ordinaryCount': 7, 'publicSchema': public_schema}
+                       for index, credential in enumerate(credentials)],
+                   'artifacts': [{'artifactType': f'ART-{index}', 'description': prose,
+                       'clientSecret': credential, 'ordinaryCount': 7}
+                       for index, credential in enumerate(credentials)],
+                   'futureCredentials': {'password': 'unknown-password-unique'},
+                   'unknownExtension': {'secret': {'storyMeaning': prose}, 'count': 7,
+                       'authorization': public_schema}}
+        original = deepcopy(payload)
+        request = self._request('get_tool_help', {})
+        request_before = deepcopy(request)
+        with patch.object(mcp_server, 'call_tool', return_value=payload):
+            response = mcp_server.handle(request)
+        actual = response['result']
+        self.assertEqual(actual['structuredContent'], original)
+        self.assertEqual(payload, original)
+        self.assertEqual(request, request_before)
+        self.assertTrue(actual['content'][0]['text'].startswith('调用成功。'))
+        self.assertEqual(actual['content'][0]['text'].count('列['), 1)
+        path, _, _ = self._single()
+        shown = self._show(path.name)
+        recorded = shown['finish']['payloads']['response']['value']['result']
+        recorded_text = recorded['content'][0]['text']
+        disk = self._log_text()
+        for marker in ('password-unique', 'escaped-secret-unique'):
+            self.assertNotIn(marker, disk)
+            self.assertNotIn(marker, recorded_text)
+        numeric_container = json.dumps(credentials[-1], ensure_ascii=False, separators=(',', ':'))
+        self.assertIn(numeric_container, actual['content'][0]['text'])
+        self.assertNotIn(numeric_container, recorded_text)
+        for row in recorded['structuredContent']['operations']:
+            self.assertEqual(row['password'], '[REDACTED]')
+            self.assertEqual(row['accessToken'], '[REDACTED]')
+            self.assertEqual(row['authorization'], 'read')
+            self.assertEqual(row['ordinaryCount'], 7)
+        self.assertEqual(recorded['structuredContent']['unknownExtension'], original['unknownExtension'])
+        self.assertEqual(recorded['structuredContent']['futureCredentials'], {'password': '[REDACTED]'})
+        other = json.loads(next(line.partition(':')[2] for line in recorded_text.splitlines()
+                                if line.startswith('其他:')))
+        self.assertEqual(other['unknownExtension'], original['unknownExtension'])
+        self.assertIn(prose, recorded_text)
+        self.assertEqual(recorded_text.count(json.dumps(public_schema, separators=(',', ':'))), 4)
+
+    def test_known_model_credentials_are_removed_before_header_patterns_consume_row_text(self):
+        prose = '这是紧接在凭据后面的普通文学文字，应当完整保留。'
+        credential = {'authorization': 'Bearer header-secret-unique',
+                      'remaining': ['tail-secret-unique', 7]}
+        payload = {'ok': True, 'code': 'OPERATION_DEFINITION', 'operations': [
+            {'id': f'OP-{index}', 'password': credential,
+             'accessToken': 'Authorization: Bearer whole-header-secret-unique',
+             'literaryText': prose} for index in range(3)],
+            'artifacts': [{'artifactType': f'ART-{index}',
+                'accessToken': 'Authorization: Bearer whole-header-secret-unique',
+                'literaryText': prose} for index in range(3)]}
+        with patch.object(mcp_server, 'call_tool', return_value=payload):
+            response = mcp_server.handle(self._request('get_tool_help', {}))
+        self.assertEqual(response['result']['structuredContent'], payload)
+        self.assertIn('列[', response['result']['content'][0]['text'])
+        path, _, _ = self._single()
+        recorded = self._show(path.name)['finish']['payloads']['response']['value']['result']
+        text = recorded['content'][0]['text']
+        self.assertEqual(text.count(prose), 6)
+        for marker in ('header-secret-unique', 'tail-secret-unique'):
+            self.assertNotIn(marker, self._log_text())
+            self.assertNotIn(marker, text)
+
+    def test_non_string_credentials_keep_labels_and_do_not_redact_equal_ordinary_values(self):
+        values = (735291, True, None)
+        payload = {'ok': True, 'code': 'OPERATION_DEFINITION',
+            'operations': [{'id': f'OP-{index}', 'password': value, 'ordinaryValue': value}
+                           for index, value in enumerate(values)],
+            'artifacts': [{'artifactType': f'ART-{index}', 'accessToken': value, 'ordinaryValue': value}
+                          for index, value in enumerate(values)],
+            'chapters': [{'chapterId': f'CH-{index}', 'chapterTitle': '应当保留的普通章节标题',
+                          'ordinaryChapterCount': 735291} for index in range(5)]}
+        original = deepcopy(payload)
+        with patch.object(mcp_server, 'call_tool', return_value=payload):
+            response = mcp_server.handle(self._request('get_tool_help', {}))
+        self.assertEqual(response['result']['structuredContent'], original)
+        self.assertEqual(payload, original)
+        path, _, _ = self._single()
+        recorded = self._show(path.name)['finish']['payloads']['response']['value']['result']
+        text = recorded['content'][0]['text']
+        self.assertIn('列[', text)
+        for label, key, credential in (('操作', 'operations', 'password'), ('工件', 'artifacts', 'accessToken')):
+            text_rows = json.loads(next(line.partition(':')[2] for line in text.splitlines()
+                                       if line.startswith(label + ':')))
+            for index, row in enumerate(text_rows):
+                self.assertEqual(row[credential], '[REDACTED]')
+                self.assertIs(type(row['ordinaryValue']), type(values[index]))
+                self.assertEqual(row['ordinaryValue'], values[index])
+            self.assertEqual(recorded['structuredContent'][key], text_rows)
+
     def test_mcp_business_failure_is_not_counted_as_successful_only_because_rpc_returned(self):
         payload = {"ok": False, "code": "SUBMISSION_INCOMPLETE", "completedStages": ["candidate"],
                    "error": {"code": "REVIEW_REQUIRED", "message": "审校工件尚未就绪"}}
