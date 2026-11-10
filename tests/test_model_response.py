@@ -154,6 +154,58 @@ class ModelResponseTests(unittest.TestCase):
         with patch.object(transport_cache, 'put', side_effect=OSError('cache unavailable')):
             self.assertIs(project_response(self.root, 'workflow.closeout', original), original)
 
+    def test_text_failure_preserves_completed_write_without_reexecution(self):
+        completed = {'ok': True, 'code': 'CHAPTER_CLOSED', 'requestId': 'completed-request',
+                     'chapterId': 'CH-EXAMPLE', 'bindingGeneration': 8}
+        with patch.object(mcp_server, 'call_tool', return_value=completed) as execute, \
+                patch.object(mcp_server, 'render_model_text', side_effect=ValueError('presentation failed')):
+            response = mcp_server.handle({'id': 1, 'method': 'tools/call', 'params': {
+                'name': 'closeout_chapter', 'arguments': {'projectRoot': str(self.root),
+                                                       'requestId': 'completed-request'}}})['result']
+        self.assertEqual(execute.call_count, 1)
+        self.assertFalse(response['isError'])
+        self.assertEqual(response['structuredContent'], completed)
+        self.assertEqual(json.loads(response['content'][0]['text']), completed)
+
+    def test_real_mcp_preparation_reduces_packet_and_keeps_executable_read_parameters(self):
+        from tests.fixtures_workflow import review_ready_project
+        chapter = review_ready_project(self.root, chapter_count=1)['chapterIds'][0]
+        packet = mcp_server.handle({'id': 1, 'method': 'tools/call', 'params': {
+            'name': 'prepare_task', 'arguments': {'projectRoot': str(self.root), 'chapterId': chapter,
+                                                'task': 'editor', 'view': 'model'}}})['result']
+        self.assertFalse(packet['isError'])
+        report = packet['structuredContent']
+        text = packet['content'][0]['text']
+        self.assertIn('调用成功。', text)
+        self.assertIn(report['code'], text)
+        original = deepcopy(packet)
+        original['content'][0]['text'] = json.dumps(report, ensure_ascii=False, separators=(',', ':'))
+        encode = lambda value: json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode()
+        self.assertLess(len(encode(packet)), len(encode(original)))
+        read_id = report['contractReads'][0]['readIds'][0]
+        self.assertIn(read_id, text)
+        self.assertIn(report['reading']['credential'], text)
+        page = call_operation('task.read-batch', self.root, {
+            'credential': report['reading']['credential'], 'readIds': [read_id]})
+        self.assertTrue(page['ok'], page)
+        self.assertTrue(page['items'])
+
+    def test_explicit_full_and_station_errors_remain_json_in_direct_and_discovered_calls(self):
+        error = StructureError('EXPECTED_BLOCK', '当前输入仍需处理', {'missing': ['current approval']})
+        for tool, arguments in (
+            ('closeout_chapter', {'requestId': 'request-1', 'responseView': 'full'}),
+            ('prepare_task', {'task': 'editor', 'view': 'station'}),
+            ('get_tool_help', {'operation': 'task.prepare', 'view': 'full'}),
+            ('read_discovered_operation', {'operation': 'capabilities.help',
+                                           'arguments': {'operation': 'task.prepare', 'view': 'full'}}),
+        ):
+            with self.subTest(tool=tool), patch.object(mcp_server, 'call_tool', side_effect=error):
+                response = mcp_server.handle({'id': 1, 'method': 'tools/call', 'params': {
+                    'name': tool, 'arguments': {'projectRoot': str(self.root), **arguments}}})['result']
+                self.assertTrue(response['isError'])
+                self.assertEqual(json.loads(response['content'][0]['text']), response['structuredContent'])
+                self.assertEqual(response['structuredContent']['code'], 'EXPECTED_BLOCK')
+
     def test_same_call_details_are_pageable_project_scoped_and_never_rebound(self):
         original = receipt_sample()
         model = project_response(self.root, 'workflow.closeout-prepare', original)
@@ -213,9 +265,15 @@ class ModelResponseTests(unittest.TestCase):
                     response = mcp_server.handle(request)['result']
                 self.assertEqual(execute.call_count, 1)
                 self.assertEqual(json.loads(output.getvalue()), response['structuredContent'])
-                self.assertEqual(json.loads(response['content'][0]['text']), response['structuredContent'])
-                if view == 'full':self.assertEqual(response['structuredContent'], original)
-                else:self.assertIn('fullDetails', response['structuredContent'])
+                text = response['content'][0]['text']
+                if view == 'full':
+                    self.assertEqual(json.loads(text), original)
+                    self.assertEqual(response['structuredContent'], original)
+                else:
+                    self.assertIn('fullDetails', response['structuredContent'])
+                    self.assertIn(original['code'], text)
+                    self.assertIn(original['blockers'][0]['message'], text)
+                    self.assertIn('original-ref', text)
 
     def test_public_dispatchers_strip_display_option_but_keep_unknown_operations_strict(self):
         from tests.fixtures_current import create_schema5_project
@@ -364,7 +422,10 @@ class ModelResponseTests(unittest.TestCase):
                                 'name': 'run_mechanical_diagnostics', 'arguments': arguments}})['result']
                             self.assertFalse(packet['isError'], packet)
                             displayed = packet['structuredContent']
-                            self.assertEqual(json.loads(packet['content'][0]['text']), displayed)
+                            if view == 'full':
+                                self.assertEqual(json.loads(packet['content'][0]['text']), displayed)
+                            else:
+                                self.assertIn(displayed['code'], packet['content'][0]['text'])
                         rows = call_logging.list_call_logs()
                         detail = call_logging.show_call_log(rows['calls'][0]['callId'])
                     payloads = detail['finish']['payloads']
@@ -416,7 +477,7 @@ class ModelResponseTests(unittest.TestCase):
                         'projectRoot': str(case.root), 'chapterId': 'CH001', 'view': 'model'}}})['result']
                 self.assertFalse(packet['isError'])
                 responses = [json.loads(output.getvalue()), packet['structuredContent']]
-                self.assertEqual(json.loads(packet['content'][0]['text']), packet['structuredContent'])
+                self.assertIn(packet['structuredContent']['code'], packet['content'][0]['text'])
                 for shown in responses:
                     self.assertLessEqual(_size(shown), query_policy()['maxBytes']['detail'])
                     self.assertEqual(shown['factInventory'], original['factInventory'])

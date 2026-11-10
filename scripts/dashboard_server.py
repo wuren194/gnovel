@@ -22,6 +22,13 @@ CLI/MCP/宿主工位执行。
 
 from __future__ import annotations
 
+try:
+    from scripts.runtime_requirements import require_supported_python
+except ImportError:
+    from runtime_requirements import require_supported_python
+
+require_supported_python()
+
 import argparse
 import json
 import secrets

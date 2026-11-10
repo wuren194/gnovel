@@ -135,4 +135,5 @@ class PrepareDeltaDeliveryTests(unittest.TestCase):
                                 input=json.dumps(request) + '\n', capture_output=True, text=True)
         payload = json.loads(result.stdout)['result']
         self.assertEqual(payload['structuredContent'], expected)
-        self.assertEqual(json.loads(payload['content'][0]['text']), expected)
+        self.assertIn(expected['prepareRef'], payload['content'][0]['text'])
+        self.assertIn(expected['delivery']['baseRef'], payload['content'][0]['text'])

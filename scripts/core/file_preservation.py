@@ -21,9 +21,27 @@ def checkpoint(stage: str, path: str) -> None:
 
 @contextmanager
 def parent_directory(path: Path, *, create: bool = False):
-    fd = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY)
+    # macOS can reject symlinks across the entire path without opening each
+    # ancestor for reading; sandbox grants may cover only the project subtree.
+    nofollow_any = getattr(os, 'O_NOFOLLOW_ANY', 0)
+    if nofollow_any and path.is_absolute():
+        ancestor = path.parent
+        remaining = []
+        while True:
+            try:
+                fd = os.open(ancestor, os.O_RDONLY | os.O_DIRECTORY | nofollow_any)
+                break
+            except FileNotFoundError:
+                if not create or ancestor == ancestor.parent:
+                    raise
+                remaining.append(ancestor.name)
+                ancestor = ancestor.parent
+        parts = reversed(remaining)
+    else:
+        fd = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY)
+        parts = path.parent.parts[1:]
     try:
-        for part in path.parent.parts[1:]:
+        for part in parts:
             try:
                 child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
             except FileNotFoundError:

@@ -89,7 +89,8 @@ class QuickEntrypointTests(unittest.TestCase):
         self.repo = ScratchRepo()
         self.addCleanup(self.repo.dispose)
         self.repo.git('init', '-q')
-        for path in ('scripts/local_ci.py', 'scripts/core/local_ci_quick.py', 'scripts/core/local_test_runner.py'):
+        for path in ('scripts/local_ci.py', 'scripts/runtime_requirements.py',
+                     'scripts/core/local_ci_quick.py', 'scripts/core/local_test_runner.py'):
             destination = self.repo.root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(local_ci.ROOT / path, destination)

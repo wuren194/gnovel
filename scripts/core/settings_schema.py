@@ -1,4 +1,6 @@
 """Entity type display metadata. Authored fields live in source fieldDefinitions."""
+from __future__ import annotations
+
 from collections.abc import Collection
 from .project import TOOLBOX_ROOT, toolbox_manifest
 

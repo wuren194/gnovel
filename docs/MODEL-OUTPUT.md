@@ -2,9 +2,15 @@
 
 检查与章节收尾默认先交付结论、当前问题和下一步；明确通过的机械明细可计数省略，同次完整结果按引用读取。所有检查、工件绑定和批准条件保持原语义，未知与未检查不算通过。
 
+MCP 的任务准备、续写上下文、进度、命令帮助和下表入口默认尝试用短中文呈现：先说明调用结果、就绪状态、缺项和下一步，再列必要材料与精确参数。表达由程序确定性生成，不调用模型总结。均匀列表共用一行列名，每行保留相应的 JSON 值；原文、引用、未知字段、空列表和 null 均保留，不把未知当作通过。
+
+只有文字在字符数、UTF-8 字节数及 MCP 字符串转义后都确实更短时才采用；小结果和没有收益的结果继续用紧凑 JSON。`structuredContent` 保留同一精简结果的完整结构，程序消费者应读取它，不再假定 `content[0].text` 一定是 JSON。CLI 继续输出 JSON。显式 full／station／audit 及未支持文字呈现的操作保持 JSON；呈现失败也回退 JSON，不把已经完成的写入报告成失败。
+
 本页说明模型收到什么，以及如何取回详情。真实输入、领域结果与最终响应由默认开启的[本地日志](OPERATIONS.md#本地调用诊断)分别保存；日志不是作品真源或作者批准。
 
 `task.prepare` 的 model 视图将 `readingTools` 表示为 operation ID 到 tool 名的映射，保留全部可用操作，省去每行重复的字段名。参数定义按 `readingToolsGuide` 查询；原准备快照仍保存完整 schema，材料、席位、未知项与授权说明保持可读。
+
+`get_tool_help`／`capabilities.help` 默认 `view=model`：保留完整参数 schema、调用入口、效果与授权说明；重复的 CLI 表示和通用指引按需展开。沿 `fullHelpAction` 或传 `view=full` 读取同一筛选、分页的完整帮助和 CLI 示例。显式提供 `operation + arguments` 时，两种视图都返回准确的 CLI 命令；帮助始终不执行操作。
 
 ## 查看问题与完整证据
 
@@ -61,4 +67,6 @@ workflow.closeout-prepare 在可独立核对的范围内汇总缺项，区分：
 
 表单回归覆盖实际 A/B 提交、跨项目与过期引用、禁止改机械字段、缺席位拒绝、分页视图、原请求恢复和缓存丢失，见 [test_review_form_edits.py](../tests/test_review_form_edits.py)。收尾回归覆盖独立问题并存、定向批准提示、未知目标保护与请求续办，见 [test_closeout_guidance.py](../tests/test_closeout_guidance.py)。返回投影与同次完整快照由 [test_model_response.py](../tests/test_model_response.py) 核对，公开 CLI/MCP 流程见 [test_review_guidance_replay.py](../tests/test_review_guidance_replay.py)。
 
-效率记录应统计完成同一任务的输入与输出总量，包含必要的详情读取、失败和重试。本地 tokenizer 数值只说明相同样本的编码长度，不是客户端账单或文学效果；把问题放在第一行本身不会减少全文 token。
+短文本的原文、状态、精确动作与回退由 [test_model_text.py](../tests/test_model_text.py) 验证；帮助两种视图、schema、分页和公开入口由 [test_command_help.py](../tests/test_command_help.py) 验证。
+
+效率记录应统计完成同一任务的输入与输出总量，包含必要的详情读取、失败和重试。传输比较同时统计文本与包含 `content`、`structuredContent` 的整包大小，不能假定宿主只把其中一份送给模型。本地 tokenizer 数值只说明相同样本的编码长度，不是客户端账单或文学效果；把问题放在第一行本身不会减少全文 token。
