@@ -1205,13 +1205,13 @@ class Schema5ParityTests(TempRootCase):
 class TransportBoundaryTests(unittest.TestCase):
     """高风险所有权流转的能力分离在传输层也成立（契约 §10.1）。"""
 
-    def test_accept_external_is_classified_but_not_mcp_exposed(self) -> None:
-        from scripts.core.operations import MCP_ALLOWLIST, WRITE_COMMANDS, operations
+    def test_accept_external_shares_capability_gate_in_cli_and_mcp(self) -> None:
+        from scripts.core.operations import WRITE_COMMANDS, operations
         self.assertEqual(WRITE_COMMANDS[("workflow", "accept-external")], "protected-write")
-        # MCP 是低能力/无特权通道：只预览不够，这个 leaf 同时能提交，因此整体不暴露。
-        self.assertNotIn(("workflow", "accept-external"), MCP_ALLOWLIST)
-        classified = {spec.id for spec in operations()}
-        self.assertTrue(classified)  # 分类器整体仍然可走通（新 leaf 不会让它抛错）
+        classified = {spec.id: spec for spec in operations()}
+        self.assertTrue(classified['project.workflow.accept-external'].mcp)
+        self.assertIn('confirmOnDevice', classified['project.workflow.accept-external'].input_schema['properties'])
+        self.assertIn('confirmOnDevice', classified['workflow.external-commit'].input_schema['required'])
 
 
 if __name__ == "__main__":

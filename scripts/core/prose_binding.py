@@ -497,8 +497,8 @@ def _reject(code: str, message: str, **details) -> None:
 
 
 def _check_materialized_chapter(proposed: dict, chapter: dict, *, root: Path | None,
-                                require_disk_absent: bool) -> None:
-    """A sanctioned materialization is a valid sealed `unbound` binding at the commit revision."""
+                                require_disk_absent: bool, content_digest: str | None = None) -> None:
+    """Seal a new empty chapter, or the exact manuscript validated by its intake transaction."""
     chapter_id = chapter.get("chapterId")
     errors = validate_binding(proposed, chapter)
     if errors:
@@ -510,9 +510,12 @@ def _check_materialized_chapter(proposed: dict, chapter: dict, *, root: Path | N
         _reject("OWNERSHIP_BINDING_INVALID",
                 "materialization generation must equal the committed structure revision",
                 chapterId=chapter_id, generation=binding.get("generation"), revision=revision)
-    if binding.get("state") != "unbound" or binding.get("expectedContentDigest") is not None:
+    expected_state = 'managed' if content_digest is not None else 'unbound'
+    if content_digest is not None:
+        _require_content_digest(content_digest, field='materializationContentDigest', chapter_id=chapter_id)
+    if binding.get("state") != expected_state or binding.get("expectedContentDigest") != content_digest:
         _reject("OWNERSHIP_BINDING_INVALID",
-                "materialization must seal an unbound binding with a null content digest",
+                "materialization must seal the state and exact content authorized by its creation operation",
                 chapterId=chapter_id)
     if require_disk_absent:
         if root is None:
@@ -529,7 +532,8 @@ def _check_materialized_chapter(proposed: dict, chapter: dict, *, root: Path | N
 def enforce_writer_boundary(current: dict | None, proposed: dict, *,
                             authority: _BindingAuthority | None = None,
                             root: Path | None = None,
-                            materialization_chapter_ids: frozenset[str] | set[str] | None = None) -> None:
+                            materialization_chapter_ids: frozenset[str] | set[str] | None = None,
+                            materialization_content_digests: dict[str, str] | None = None) -> None:
     """Option B boundary: generic writers may never mutate protected ownership fields.
 
     Runs whenever either side of a save is ownership-aware. Allowed protected-field
@@ -647,9 +651,14 @@ def enforce_writer_boundary(current: dict | None, proposed: dict, *,
                 "new chapters on an existing ownership-aware project require an exact "
                 "materialization capability bound to the operation's declared chapterId",
                 added=sorted(actual), authorized=sorted(allowed))
+    content = materialization_content_digests or {}
+    if content and set(content) != actual:
+        _reject('OWNERSHIP_UNAUTHORIZED_MUTATION',
+                'manuscript content authority must exactly cover the new chapters',
+                added=sorted(actual), authorized=sorted(content))
     for chapter_id in sorted(actual):
         _check_materialized_chapter(proposed, _chapter_by_id(proposed, chapter_id),
-                                    root=root, require_disk_absent=True)
+                                    root=root, require_disk_absent=True, content_digest=content.get(chapter_id))
 
 
 # ---------------------------------------------------------------------------
@@ -1133,14 +1142,14 @@ def require_plan_transitions_current(root: Path, current: dict, plan: dict) -> N
 # Privileged approval boundary（契约 §10.1，Phase 2 返修）
 # ---------------------------------------------------------------------------
 
-def require_privileged_approval(plan: dict, *, operation_id: str | None = None) -> None:
+def require_privileged_approval(plan: dict, *, operation_id: str | None = None,
+                               approval=None, root: Path | None = None) -> dict | None:
     """Refuse a high-risk ownership commit that carries no verified privileged authority.
 
     `approved=True`、CLI `--approve`、`actor` 字符串、`planHash` 回传与 `_BindingAuthority`
     能证明的只是「提交的就是被预览的 exact plan」或「这条流转在 ownership 模型上合法」；
-    它们**不能**证明「独立特权通道批准了这个动作」（契约 §10.1/§39）。本构建没有这样的
-    通道，所以 accept_external 的提交一律以稳定错误码拒绝——这是新增的 authority 门槛，
-    不是 current-state 校验的替代；两者缺一不可（契约 §63）。
+    它们**不能**证明「独立特权通道批准了这个动作」（契约 §10.1/§39）。外改采用入口的
+    本机确认能力在提交锁内一次消费，仍须通过 current-state 校验；两者缺一不可。
 
     判定同时看 operation 名与声明的 transition kind：改掉 operation 字符串、只留
     `accept_external` 流转的伪造计划同样 fail closed（计划哈希不是 authority，operation
@@ -1151,11 +1160,13 @@ def require_privileged_approval(plan: dict, *, operation_id: str | None = None) 
     if plan.get("operation") not in PRIVILEGED_APPROVAL_OPERATIONS and not (
             kinds & PRIVILEGED_APPROVAL_TRANSITIONS):
         return
+    if approval is not None:
+        from .external_approval import consume_local_approval
+        return consume_local_approval(plan, approval, root=root)
     _reject("APPROVAL_CAPABILITY_REQUIRED",
             "接受外部修改（accept external modification）是高风险所有权流转，需要独立特权批准"
             "通道签发的 approval capability；--approve、approved=True、actor 字符串与 planHash "
-            "都是普通调用参数，不构成 authority。本构建没有该通道，提交一律 fail closed —— "
-            "再补一个 --approve 也不会通过。",
+            "都是普通调用参数，不构成 authority。请通过外改采用入口在本机完成确认。",
             operation=plan.get("operation"), operationId=operation_id,
             transitionKinds=sorted(kinds), requiredCapability="verified_privileged_approval")
 

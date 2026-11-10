@@ -92,6 +92,9 @@ def finalization_evidence(root: Path, structure: dict, workflow: dict, chapter: 
     observation = require_observation(root, structure, chapter, (OWNED_CLEAN,),
                                       action='verify historical finalization')
     record = validated_continuity_record(workflow, chapter_id)
+    from .import_history import history_entry, require_history
+    if record is None and history_entry(workflow, chapter_id) is not None:
+        return require_history(root, structure, workflow, chapter)
 
     def missing(reason: str, **details):
         raise ContinuityError('STABLE_CHAPTER_APPROVAL_MISSING',
@@ -144,7 +147,7 @@ def _ordered(structure: dict) -> list[dict]:
                   key=lambda row: (row.get("displayOrdinal", 0), str(row.get("chapterId", ""))))
 
 
-def pending_continuity(structure: dict, workflow: dict, *, before_ordinal: int | None = None) -> list[dict]:
+def pending_continuity(structure: dict, workflow: dict, *, before_ordinal: int | None = None, root=None) -> list[dict]:
     records = _records(workflow)
     pending = []
     for chapter in _ordered(structure):
@@ -155,6 +158,12 @@ def pending_continuity(structure: dict, workflow: dict, *, before_ordinal: int |
         if not chapter_id:
             continue
         record = records.get(chapter_id)
+        from .import_history import history_entry
+        if record is None and history_entry(workflow, chapter_id) is not None:
+            from .import_history import history_status
+            if root is None or not history_status(root, structure, workflow, chapter)['complete']:
+                pending.append({'chapterId': chapter_id, 'displayOrdinal': chapter['displayOrdinal'], 'status': 'import_review_required'})
+            continue
         if record is not None:
             if record["status"] != "complete":
                 pending.append({"chapterId": chapter_id, "displayOrdinal": chapter.get("displayOrdinal"), "status": "pending"})
@@ -174,7 +183,7 @@ def require_predecessors_ready(structure: dict, workflow: dict, chapter: dict, *
     unstable = [row["chapterId"] for row in previous if row.get("status") != "stable"]
     if unstable:
         raise ContinuityError("PREDECESSOR_UNSTABLE", "earlier chapters are not committed", {"chapterIds": unstable})
-    pending = pending_continuity(structure, workflow, before_ordinal=ordinal)
+    pending = pending_continuity(structure, workflow, before_ordinal=ordinal, root=root)
     if pending:
         raise ContinuityError("CONTINUITY_REQUIRED", "complete earlier continuity before starting this chapter", {"pending": pending})
     if root is not None:
@@ -205,6 +214,9 @@ def new_continuity_record(root: Path, chapter: dict, sync: dict, state_artifact_
 
 def continuity_status(root: Path, structure: dict, workflow: dict, chapter: dict) -> dict:
     record = _records(workflow).get(chapter["chapterId"])
+    from .import_history import history_entry, history_status
+    if record is None and history_entry(workflow, chapter['chapterId']) is not None:
+        return history_status(root, structure, workflow, chapter)
     if chapter.get("status") != "stable":
         return {"status": "not_committed", "readyForContinuation": False}
     if record is None:

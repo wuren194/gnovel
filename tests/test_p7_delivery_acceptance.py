@@ -4,7 +4,7 @@ Complements ``test_end_to_end_delivery.py`` (which drives CLI/MCP/HTTP parity an
 Doctor attribution). This module covers the boundaries that only exist at the
 edges of the toolbox:
 
-* External Manuscript intake — the registered transport exception
+* External Manuscript intake — shared CLI/MCP entry with its evidence-only boundary
 * Installer — idempotent, recoverable, Unicode-safe, never a half-install
 * Local package — auditable manifest, private/credential exclusion, tamper detection
 * Canon → Impact → stale Context with current source bindings
@@ -82,19 +82,32 @@ class ExternalManuscriptIntakeTests(unittest.TestCase):
         self.assertTrue((self.target / "evidence").is_dir())
         self.assertEqual(payload["inventoryHash"], inventory["inventoryHash"])
 
-    def test_intake_is_the_registered_transport_exception_not_a_shadow_entry(self):
+    def test_intake_is_registered_in_both_transports_without_a_dashboard_route(self):
         registry = json.loads((ROOT / "shared" / "registries" / "tools.json").read_text(encoding="utf-8"))
         entry = next((row for row in registry["entrypoints"]
                       if row["id"] == "external-manuscript-intake"), None)
         self.assertIsNotNone(entry, "外部稿件入库必须是已登记入口，不是影子")
         self.assertIn("import review", entry["transport"])
-        self.assertIn("transport exception", entry["notes"])
+        self.assertIn('CLI', entry['transport'])
+        self.assertIn('MCP', entry['transport'])
+        self.assertNotIn('transport exception', entry['notes'])
         self.assertIn("writableStoryTruthEnabled", entry["surface"])
-        # 已申报的例外：不进 MCP tool list，也不进 dashboard 路由。
+        # 共享工具仍只产生证据副本，没有新增 dashboard 路由。
         from scripts.mcp_server import TOOLS
         names = {row["name"] for row in TOOLS}
-        self.assertNotIn("create_external_manuscript_review", names)
-        self.assertNotIn("import_review", names)
+        self.assertIn('import_review', names)
+        mcp_target = self.base / 'MCP证据副本'
+        request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {
+            'name': 'import_review', 'arguments': {'source': str(self.source), 'targetRoot': str(mcp_target)}}}
+        env = {**os.environ, 'GOVEL_LOG_DIR': str(self.base / 'logs'), 'GOVEL_LOG_MODE': 'off'}
+        proc = subprocess.run([sys.executable, str(ROOT / 'scripts/mcp_server.py')],
+                              input=json.dumps(request) + '\n', cwd=ROOT, text=True, capture_output=True, env=env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        response = json.loads(proc.stdout)['result']
+        self.assertFalse(response['isError'], response)
+        self.assertFalse(response['structuredContent']['writableStoryTruthEnabled'])
+        self.assertFalse(response['structuredContent']['sourceFilesModified'])
+        self.assertFalse((mcp_target / '.govel/structure.json').exists())
         server = (ROOT / "scripts" / "dashboard_server.py").read_text(encoding="utf-8")
         self.assertNotIn("/api/import", server)
 

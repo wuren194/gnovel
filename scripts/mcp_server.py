@@ -207,7 +207,7 @@ def _handle(request: dict) -> dict | None:
     if request_id is None or (isinstance(method, str) and method.startswith("notifications/")):
         return None
     if method == "initialize":
-        return {"jsonrpc": "2.0", "id": request_id, "result": {"protocolVersion": request.get("params", {}).get("protocolVersion", "2025-11-25"), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO, "instructions": "使用稳定 ID 和领域工具管理小说。读取默认返回摘要；任何结构写入先 preview，再由用户明确批准 commit。"}}
+        return {"jsonrpc": "2.0", "id": request_id, "result": {"protocolVersion": request.get("params", {}).get("protocolVersion", "2025-11-25"), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO, "instructions": "不熟悉命令先调用 get_tool_help；了解后直接使用公开工具。续写先 prepare_task(projectRoot, task=continue, view=model)，进度用 project.overview；不要直接解析项目内部 JSON 代替状态判断。按返回动作读取材料与分页、处理缺项。MCP 与 CLI 均可使用。任何结构写入先 preview，再由用户明确批准 commit；帮助与查询不授予批准。"}}
     if method == "tools/list":
         try:
             try:

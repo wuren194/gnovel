@@ -363,7 +363,7 @@ def _load_structure_or_none(root: Path) -> dict:
 # Accept External Modification（契约 §35–§38 / §95）
 # ---------------------------------------------------------------------------
 
-def accept_external_workflow(workflow: dict[str, Any], chapter_id: str) -> dict[str, Any]:
+def accept_external_workflow(workflow: dict[str, Any], chapter_id: str, *, updated_at: str | None = None) -> dict[str, Any]:
     """Apply the workflow half of the external-modification invalidation matrix（§10.3）。
 
     Prose-dependent evidence is voided:机械门报告、Editor 终审、设定回写候选、候选正文
@@ -386,7 +386,7 @@ def accept_external_workflow(workflow: dict[str, Any], chapter_id: str) -> dict[
     state = states.get(chapter_id)
     if isinstance(state, dict):
         state["status"] = "stale"
-        state["updatedAt"] = utc_now()
+        state["updatedAt"] = updated_at or utc_now()
         state.pop("sourceArtifactSha256", None)
     after["nextAction"] = {"chapterId": chapter_id, "action": "planner",
                            "reason": "prose changed outside finalization; re-review is required",
@@ -414,9 +414,8 @@ def _preview_accept_external_locked(root: Path, *, chapter_id: str, actor: str, 
     transition that will be committed, and the commit re-observes all of it under the lock
     （契约 §36/§63）。Preview is open to every channel; the commit is not: plan integrity
     （返回的 planHash + 锁内重验）只证明「提交的还是被预览的那一份、盘上 H2 没变」，它**不能**
-    证明「独立特权批准通道授权了这个动作」。本构建没有这样的通道，因此 accept_external 的
-    commit 在锁内、任何写入之前一律以 `APPROVAL_CAPABILITY_REQUIRED` fail closed
-    （契约 §10.1/§39）——preview 语义与全部 ownership token 保持不变。
+    证明「独立特权批准通道授权了这个动作」。采用入口在本机确认后签发一次性能力；普通
+    commit 缺少该能力时仍以 `APPROVAL_CAPABILITY_REQUIRED` 拒绝。
     """
     from .prose_binding import (OWNED_MODIFIED_EXTERNALLY, apply_binding_transitions,
                                 enforce_writer_boundary, require_observation)
@@ -512,7 +511,7 @@ def derive_next_action(structure: dict, workflow: dict, *, root=None) -> dict | 
                       if row["chapterId"] in approved and row.get("status") not in {"stable", "archived"}),
                      key=lambda row: row["displayOrdinal"])
     selected = pending[0] if pending else None
-    continuity = pending_continuity(structure, workflow, before_ordinal=selected["displayOrdinal"] if selected else None)
+    continuity = pending_continuity(structure, workflow, before_ordinal=selected["displayOrdinal"] if selected else None, root=root)
     if continuity:
         return {"chapterId": continuity[0]["chapterId"], "action": "continuity",
                 "reason": "continuity confirmation is pending", "needsApproval": True}

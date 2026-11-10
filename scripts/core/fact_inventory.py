@@ -148,6 +148,11 @@ def _request_binding_evidence(report, chapter, identity, required, text):
 
 
 def inventory_status(root, source, workflow, chapter_id):
+    from .import_history import history_entry, history_status
+    if history_entry(workflow, chapter_id) is not None and chapter_id not in workflow.get('continuity', {}):
+        chapter = next((row for row in source['chapters'] if row['chapterId'] == chapter_id), None)
+        if chapter is not None:
+            return history_status(root, source, workflow, chapter)
     from .repair_history import read_versions
     from .prose_binding import OWNED_CLEAN, require_observation
     from .write_sets import safe_project_path

@@ -43,6 +43,7 @@ class OperationSpec:
     tasks: tuple[str, ...] = ()
     discover: bool = False
     examples: tuple[dict, ...] = ()
+    cli_positionals: tuple[str, ...] = ()
 
     def tool(self) -> dict:
         return {'name': self.name, 'description': self.description, 'inputSchema': self.input_schema,
@@ -86,7 +87,8 @@ def _new_operations() -> list[OperationSpec]:
                                _schema({'chapterId': STRING, 'view': {'type': 'string', 'enum': ['list', 'detail']},
                                         'limit': INTEGER, 'maxBytes': INTEGER, 'cursor': STRING}, ['chapterId']),
                                'read', lambda root, a: query_chapter_plan(root, **a), ('source', 'chapter-plan'), category='author',
-                               audiences=station_audiences, tasks=station_tasks))
+                               audiences=station_audiences, tasks=station_tasks,
+                               examples=({'chapterId': 'CH001', 'view': 'detail'},)))
     from .planning_candidates import preview_candidate_change, query_planning_candidates
     candidate_statuses = source_model_policy()['planningCandidates']['statuses']
     result.extend([
@@ -587,7 +589,7 @@ def _new_operations() -> list[OperationSpec]:
         # 总健康是兼容投影；真正的不健康信号是「有 blocking 域」。这里把它变成同一个
         # 错误码，CLI 与 MCP 因此拿到一致的 code 与 effects 分类。
         if not report['healthy']:
-            raise StructureError('DOCTOR_UNHEALTHY', 'project doctor reported blocking errors', report)
+            raise StructureError('DOCTOR_UNHEALTHY', report.get('message') or 'project doctor reported blocking errors', report)
         return report
     def station_cards(root, a):
         from .tool_cards import apply_station_cards, check_station_cards
@@ -631,7 +633,14 @@ def _new_operations() -> list[OperationSpec]:
     from .writing_checks import rules_card, check_paragraph, chapter_check
     diagnostic_inputs = {**DIAGNOSTICS['properties'], 'register': BOOLEAN, 'advanceLifecycle': BOOLEAN}
     from .argument_validation import preflight_arguments
+    from .command_help import command_help
     result.extend([
+        OperationSpec('capabilities.help', 'get_tool_help',
+                      '工具箱 help：不读项目数据即可查看命令分组、查意图或查完整参数与 CLI 示例。operation 接受操作 ID、MCP 名或 project 命令路径；已了解命令时无需重复查帮助。',
+                      _schema({'operation': STRING, 'query': STRING, 'commandGroup': STRING, 'offset': INTEGER, 'limit': INTEGER,
+                               'arguments': {'type': 'object', 'description': '可选：原样传入动作 arguments，与 operation 一起生成正确 CLI；只校验格式，不执行。'}}),
+                      'read', lambda root, a: command_help(**a), ('tools', 'help'), discover=True,
+                      examples=({}, {'query': '续写这个'}, {'operation': 'task.prepare'}, {'commandGroup': 'workflow'})),
         OperationSpec('workflow.candidate-batch', 'prepare_candidate_batch',
                       '冻结既有授权范围内明确的整批候选委托；不批准正文、不改变正式槽。原requestId可查询原范围。',
                       _schema({'requestId': STRING, 'chapterIds': STRINGS}, ['requestId']),
@@ -749,11 +758,14 @@ def _new_operations() -> list[OperationSpec]:
                       'candidate-write', execute, ('tools', 'execute'), audiences=station_audiences, tasks=station_tasks,
                       examples=({'task': 'editor', 'chapterId': 'CH-EXAMPLE', 'authorization': 'read'},)),
         OperationSpec('task.prepare', 'prepare_task', '只读任务准备清单：必读材料、就绪判断、缺项与工具动作计划。继续或写下一章用 task=continue，按当前状态路由，不自动建章或批准。',
-                      _schema({**task_schema, 'knowledgeMode': knowledge_mode_schema, 'batchRef': {'type': 'object'},
+                      _schema({**task_schema,
+                               'task': {**STRING, 'description': '续写／接着写用 continue，由当前状态决定工位；明确设计用 design，按计划执笔用 write，修改／润色用 revise。'},
+                               'knowledgeMode': knowledge_mode_schema, 'batchRef': {'type': 'object'},
                                'heldPrepareRef': {**STRING, 'description': '仅在仍持有该准备报告时回传；model 视图只交付变化部分，换窗或压缩后不传。'},
                                'view': {'type': 'string', 'enum': ['station', 'model']}}, ['task']),
                       'read', prepare, ('task', 'prepare'),
-                      examples=({'task': 'continue', 'view': 'model'}, {'task': 'write', 'chapterId': 'CH-EXAMPLE', 'view': 'model'})),
+                      examples=({'task': 'continue', 'view': 'model'}, {'task': 'write', 'chapterId': 'CH-EXAMPLE', 'view': 'model'},
+                                {'task': 'revise', 'chapterId': 'CH001', 'view': 'model'})),
         OperationSpec('context.read', 'read_continuation_context', '只读续写上下文：不重建缓存、不修复项目。',
                       _schema({'chapterId': STRING, 'povCharacter': STRING, 'chapterGoal': STRING, 'taskType': STRING, 'knowledgeMode': knowledge_mode_schema,
                                'view': {'type': 'string', 'enum': ['station', 'model']}}, ['chapterId']),
@@ -822,7 +834,7 @@ def _new_operations() -> list[OperationSpec]:
     from .refactor import operation_contract, refactor_reference_candidates
     result.extend([
         OperationSpec('refactor.contract', 'query_refactor_contract',
-                      '读取作者重构契约：支持的操作、各自的身份不变量、延期的 split/merge/fork 规则。',
+                      '读取作者重构契约：身份不变量、已有章节拆合入口及尚未实现的项目分叉规则。',
                       _schema({}), 'read', lambda root, a: operation_contract(),
                       ('structure', 'refactor-contract'), category='author'),
         OperationSpec('refactor.reference-candidates', 'query_refactor_reference_candidates',
@@ -946,7 +958,7 @@ def _new_operations() -> list[OperationSpec]:
                       _schema({'chapterId': STRING}, ['chapterId']),
                       'read',
                       lambda root, a: review_report_view(root, a['chapterId']),
-                      ('review', 'report-view'), category='author'),
+                      ('review', 'report-view'), category='author', examples=({'chapterId': 'CH001'},)),
         OperationSpec('review.note-issue', 'note_review_issue',
                       '记录审校问题工作状态（已处理/待复核）；这是工作笔记，不是通过判定。',
                       _schema({'chapterId': STRING, 'reportSha256': STRING, 'findingIndex': INTEGER,
@@ -963,6 +975,16 @@ def _new_operations() -> list[OperationSpec]:
     result.extend(authoring_operations())
     from .call_log_operations import call_log_operations
     result.extend(call_log_operations())
+    from .import_operations import import_operations
+    result.extend(import_operations())
+    from .append_operations import append_operations
+    result.extend(append_operations())
+    from .chapter_reshape_operations import chapter_reshape_operations
+    result.extend(chapter_reshape_operations())
+    from .project_lifecycle_operations import project_lifecycle_operations
+    result.extend(project_lifecycle_operations())
+    from .external_edit_operations import external_edit_operations
+    result.extend(external_edit_operations())
     return result
 
 
@@ -1033,31 +1055,18 @@ WRITE_COMMANDS = {
     ('import', 'scan'): 'candidate-write', ('import', 'review'): 'candidate-write',
     ('import', 'create'): 'protected-write',
     ('summary', 'commit'): 'candidate-write', ('structure', 'gc'): 'maintenance', ('structure', 'commit'): 'protected-write', ('structure', 'undo'): 'undo',
-    # 项目文件夹迁移与迁移重绑：三类 divergence 各自 preview → commit，都不进 MCP。
+    # Project relocation uses the same preview/commit handler in both transports.
     ('relocate',): 'protected-write', ('state', 'rebuild'): 'derived-write',
-    # 所有权模型切刀：preview 落一份经审查的迁移计划，commit/rollback-commit 都是项目级原子
-    # 权威切换；和 source migration 同一先例，不进 MCP 白名单——无特权通道只能看预览与验证。
     ('workflow', 'artifact-template'): 'candidate-write', ('workflow', 'artifact-register'): 'candidate-write',
     ('workflow', 'approve-chapters'): 'approval', ('workflow', 'artifact-approve'): 'approval',
     ('workflow', 'continuity-complete'): 'approval', ('workflow', 'advance'): 'protected-write',
     ('workflow', 'finalize-chapter'): 'protected-write', ('workflow', 'repair-round'): 'candidate-write',
-    # 接受外部修改是高风险所有权流转：preview 与 commit 同在一个 leaf，因此整体按
-    # protected-write 分类，且**不进 MCP 白名单**——无特权通道只能看预览（契约 §10.1）。
+    # External adoption shares its native user-presence gate across transports.
     ('workflow', 'accept-external'): 'protected-write',
     ('workflow', 'set-next'): 'candidate-write', ('workflow', 'recover'): 'undo', ('workflow', 'reconcile'): 'candidate-write',
 }
-# MCP 只暴露创作任务链所需能力，不逐个包装维护脚本（见报告一的 MCP 通道定位）。
-# `doctor` 不在此列：它是 new_operations() 里的 project.doctor，schema 单一真源。
-MCP_ALLOWLIST = {
-    ('overview',), ('entity',), ('prose',), ('export',),
-    ('settings', 'show'), ('settings', 'check'),
-    ('structure', 'show'), ('structure', 'graph'), ('structure', 'timeline'), ('structure', 'plans'), ('structure', 'operations'),
-    ('structure', 'refactor-contract'), ('structure', 'refactor-references'),
-    ('workflow', 'show'), ('workflow', 'chapter-receipt'), ('workflow', 'state-preview'),
-    ('workflow', 'continuity-preview'), ('workflow', 'continuity-complete'), ('workflow', 'artifact-template'),
-    ('workflow', 'artifact-register'), ('workflow', 'artifact-approve'), ('workflow', 'approve-chapters'),
-    ('workflow', 'advance'), ('workflow', 'finalize-chapter'), ('workflow', 'repair-round'), ('workflow', 'set-next'),
-}
+# Every public project CLI operation is also an MCP capability. Effect labels,
+# schema validation and domain approval gates remain shared by both routes.
 
 
 def operations() -> list[OperationSpec]:
@@ -1082,7 +1091,7 @@ def _operations() -> list[OperationSpec]:
         elif command in WRITE_COMMANDS: effect = WRITE_COMMANDS[command]
         elif len(command) == 2 and command[0] == 'structure' and command[1].endswith('-preview'): effect = 'plan-write'
         else: raise StructureError('OPERATION_UNCLASSIFIED', 'CLI leaf lacks an effect classification', {'command': list(command)})
-        props, required, mapping, initial = {}, [], {}, dict(defaults)
+        props, required, mapping, initial, positionals = {}, [], {}, dict(defaults), []
         for action in node._actions:
             if action.dest == 'help': continue
             key = ''.join([action.dest.split('_')[0], *[s.title() for s in action.dest.split('_')[1:]]])
@@ -1095,6 +1104,7 @@ def _operations() -> list[OperationSpec]:
             if isinstance(action, argparse._AppendAction): field = {'type': 'array', 'items': field}
             if action.help and action.help != argparse.SUPPRESS: field['description'] = action.help
             props[key] = field; mapping[key] = action.dest; initial[action.dest] = action.default
+            if not action.option_strings: positionals.append(key)
             if action.required or (not action.option_strings and action.nargs not in ('?', '*')): required.append(key)
         def invoke(root, args, initial=initial, mapping=mapping):
             values = dict(initial)
@@ -1114,8 +1124,8 @@ def _operations() -> list[OperationSpec]:
         schema = {'type': 'object', 'properties': props, 'required': required, 'additionalProperties': False}
         maintenance = command[0] in {'import', 'state'} or command in {('structure', 'gc')}
         result.append(OperationSpec(operation_id, name, node.description or node.prog + '（兼容入口）', schema, effect, invoke, command,
-                                    mcp=command in MCP_ALLOWLIST, category='project-maintenance' if maintenance else 'station',
-                                    examples=tuple(node.get_default('operation_examples') or ())))
+                                    category='project-maintenance' if maintenance else 'station',
+                                    examples=tuple(node.get_default('operation_examples') or ()), cli_positionals=tuple(positionals)))
     walk(parser)
     return result
 

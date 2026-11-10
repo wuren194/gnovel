@@ -55,8 +55,9 @@ class RefactorIdentityContractTests(unittest.TestCase):
                          ['alias', 'archive', 'relocate', 'rename', 'reorder', 'reparent', 'restore'])
         for rule in contract['supported'].values():
             self.assertIn('Stable ID unchanged', rule)
-        # split/merge/fork are declared but deliberately not implemented here.
-        self.assertEqual(sorted(contract['deferred']), ['fork', 'merge', 'split'])
+        self.assertEqual(sorted(contract['deferred']), ['fork'])
+        self.assertEqual(contract['identityCreating']['split']['operation'], 'chapter.split-preview')
+        self.assertEqual(contract['identityCreating']['merge']['operation'], 'chapter.merge-preview')
         self.assertEqual(contract['identityInvariants'],
                          ['projectId', 'volumeId', 'arcId', 'unitId', 'chapterId', 'entityId',
                           'relationId', 'candidateId', 'decisionId'])

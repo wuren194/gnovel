@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -189,68 +190,16 @@ def _write_workflow(root: Path, data: dict) -> dict:
 
 def _initialize(root: Path, *, project_id: str, book_name: str, idempotency_key: str,
                 approval_mode: str) -> tuple[dict, bool, list[str]]:
-    """Create a current single-source project; no format-selection switches."""
-    root = root.expanduser().resolve()
-    if not book_name.strip():
-        raise NovelError("INVALID_BOOK_NAME", "book name must not be empty")
-    if approval_mode not in {"manual", "auto"}:
-        raise NovelError("INVALID_REQUEST", "approval mode must be manual or auto")
+    """The existing CLI names share the same project creation implementation."""
     try:
-        from scripts.core.data_provider import binding as provider_binding
+        from scripts.core.project_lifecycle import initialize_project
     except ImportError:
-        from core.data_provider import binding as provider_binding
-    selected_provider = provider_binding()
-    marker_path = root / ".govel" / "project.json"
-    if marker_path.is_file():
-        existing = _project_json(root)
-        if existing.get("initIdempotencyKey") == idempotency_key and existing.get("projectId") == project_id and existing.get("bookName") == book_name.strip():
-            load_structure(root)
-            return existing, False, []
-        raise NovelError("PROJECT_ALREADY_INITIALIZED", "project already exists", {"projectId": existing.get("projectId")})
-    ignored = {".DS_Store", ".gitkeep"}
-    if root.exists():
-        unexpected = sorted(entry.name for entry in os.scandir(root) if entry.name not in ignored)
-        if unexpected:
-            raise NovelError("PROJECT_NOT_EMPTY", "target directory must be empty", {"entries": unexpected})
-    for rel in REQUIRED_PROJECT_DIRS:
-        if rel == ".govel":
-            continue  # marker 写入时自动建父目录；与 import 路径共用同一份目录清单
-        (root / rel).mkdir(parents=True, exist_ok=True)
-    marker = {
-        "schemaVersion": PROJECT_SCHEMA_VERSION,
-        "workflowVersion": WORKFLOW_VERSION,
-        "projectId": project_id,
-        "bookName": book_name.strip(),
-        "projectRevision": 0,
-        "initIdempotencyKey": idempotency_key,
-        "createdAt": utc_now(),
-        "approvalMode": approval_mode,
-    }
-    if selected_provider['providerId'] is not None:
-        marker['dataProvider'] = {'providerId': selected_provider['providerId']}
-    write_json(marker_path, marker)
-    # 空项目没有章节，所以这里不伪造任何 binding：greenfield 只落一个 schema 4/5 的空结构，
-    # 第一个正式章由 Phase 1 冻结的受制裁材料化通道建立（密封 unbound，generation 取该次提交的 revision）。
-    # `save_structure` 的 Option A 回止仍然生效——它要求的正是下面这枚 capability，而不是一个
-    # 「我是 initializer」的布尔声明。
+        from core.project_lifecycle import initialize_project
     try:
-        from scripts.core.prose_binding import initializer_authority
-    except ImportError:
-        from core.prose_binding import initializer_authority
-    structure = empty_structure(project_id, book_name.strip())
-    save_structure(root, structure, _initializer=initializer_authority('project_initialize'))
-    _write_workflow(root, _workflow_default())
-    copied_templates = []
-    try:
-        from scripts.core.derived_views import derived_outputs
-        from scripts.core.write_sets import apply_write_set
-    except ImportError:
-        from core.derived_views import derived_outputs
-        from core.write_sets import apply_write_set
-    with project_lock(root):
-        outputs, _ = derived_outputs(root, load_structure(root))
-        apply_write_set(root, outputs, operation="initialize_views")
-    return marker, True, copied_templates
+        return initialize_project(root, project_id=project_id, book_name=book_name,
+                                  idempotency_key=idempotency_key, approval_mode=approval_mode)
+    except StructureError as exc:
+        raise NovelError(exc.code, str(exc), exc.details) from exc
 
 
 def _approval_scope(structure: dict, chapter_ids: list[str], *, allow_gaps: bool, reason: str) -> dict:
@@ -752,12 +701,8 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
             except (WorkflowError, StructureError, ValueError, OSError) as exc:
                 raise NovelError(getattr(exc, "code", "CHAPTER_FINALIZE_FAILED"), str(exc), getattr(exc, "details", {})) from exc
         if args.workflow_action == "accept-external":
-            # 显式接受外部修改：预览（返回完整 ownership token）对任何通道开放；执行**不是**。
-            # `--approve` / `--operation-id` / `--plan-hash` 只是普通调用参数与计划完整性证明，
-            # 不是 authority：真正的 authority 必须来自独立特权批准通道签发的 capability。
-            # 本构建没有这样的通道，所以 commit 走核心事务路径并在锁内、任何写入之前以
-            # `APPROVAL_CAPABILITY_REQUIRED` fail closed（契约 §10.1/§39/§36）。这一分支不在
-            # CLI 层自行放行也不自行伪造 capability。
+            # Both transports request the same native confirmation. A bare
+            # --approve remains insufficient for the protected core commit.
             try:
                 if args.operation_id:
                     if not args.approve or not args.plan_hash:
@@ -765,6 +710,11 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
                             "APPROVAL_REQUIRED",
                             "执行接受外部修改必须同时给出 --operation-id、--plan-hash 与 --approve；"
                             "注意这三者本身都不构成 authority（见 APPROVAL_CAPABILITY_REQUIRED）")
+                    if getattr(args, 'confirm_on_device', False):
+                        from importlib import import_module
+                        module = import_module('scripts.core.external_edit_operations' if __package__ else 'core.external_edit_operations')
+                        return module.commit_external_edit(root, operationId=args.operation_id,
+                            planHash=args.plan_hash, approve=True, confirmOnDevice=True)
                     return commit_refactor(root, operation_id=args.operation_id,
                                            plan_hash=args.plan_hash, approved=True, actor="human_ui")
                 return preview_accept_external_modification(root, chapter_id=args.chapter_id, request_id=args.request_id)
@@ -831,16 +781,31 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
 
 class MachineArgumentParser(argparse.ArgumentParser):
     def error(self, message):
+        options = set()
+        def collect(parser):
+            options.update(parser._option_string_actions)
+            for action in parser._actions:
+                if isinstance(action, argparse._SubParsersAction):
+                    for child in action.choices.values(): collect(child)
+        collect(self)
+        suggestions = {}
+        for flag in re.findall(r'--[A-Za-z][A-Za-z0-9-]*', message):
+            converted = '--' + snake_case(flag[2:]).replace('_', '-')
+            if converted != flag and converted in options:
+                suggestions[flag] = converted
         self.print_usage(sys.stderr)
         _emit({'ok': False, 'code': 'ARGUMENTS_INVALID', 'error': message,
-               'details': {'command': self.prog}}, ensure_ascii=False)
+               'details': {'command': self.prog, 'flagSuggestions': suggestions,
+                           'guidance': '动作 arguments 是 JSON 参数；CLI 使用 --project-root 等旗标。用 project tools help --operation <operation> --arguments <JSON> 生成命令。'}}, ensure_ascii=False)
         self.exit(2)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = MachineArgumentParser(prog="novelctl", description="govel schema-5 project service CLI")
+    guide = ('命令帮助：project tools help；按意图查找：project tools help --query "续写这个"；'
+             '查看具体参数：project task prepare --help。查询、准备、修改和提交均走公开命令；帮助不执行操作。')
+    parser = MachineArgumentParser(prog="novelctl", description="Govel 当前格式项目工具箱", epilog=guide)
     groups = parser.add_subparsers(dest="group", required=True)
-    project = groups.add_parser("project")
+    project = groups.add_parser("project", epilog=guide)
     sub = project.add_subparsers(dest="action", required=True)
     for name in ("quick-init", "init"):
         cmd = sub.add_parser(name, description="在空目录新建小说项目；不迁移或覆盖已有项目")
@@ -867,7 +832,8 @@ def build_parser() -> argparse.ArgumentParser:
     validate = imp_sub.add_parser("validate", help="校验 candidate JSON，不落盘")
     validate.add_argument("--project-root", default=".")
     validate.add_argument("--candidate", required=True)
-    relocate = sub.add_parser("relocate", help="把项目文件夹改名或移动到同一文件系统内的新位置（top-level 文件系统操作，只走 CLI）")
+    relocate = sub.add_parser("relocate", help="把项目文件夹改名或移动到同一文件系统内的新位置，CLI/MCP 共用预览和批准入口")
+    relocate.set_defaults(operation_examples=({'projectRoot': '/path/to/书', 'target': '/path/to/新位置'},))
     relocate.add_argument("--project-root", default=".")
     relocate.add_argument("--target", help="预览用：新的项目文件夹绝对路径，必须尚不存在且与当前文件夹同一文件系统。执行时用计划里已批准的 target，不再收参数")
     relocate.add_argument("--operation-id", help="执行用：预览返回的 operationId；缺它就没有可绑定的批准")
@@ -888,6 +854,8 @@ def build_parser() -> argparse.ArgumentParser:
     settings_show.add_argument("--field", action="append", default=[], help="只返回这些字段，可重复")
     settings_show.add_argument("--strict", action="store_true", help="没有匹配卡片时以非零退出")
     overview = sub.add_parser("overview")
+    overview.description = "查询项目概览、章节状态和待办；不需要直接读取内部结构文件。"
+    overview.set_defaults(operation_examples=({},))
     overview.add_argument("--project-root", default=".")
     prompt_plan = sub.add_parser("prompt-plan", help="解析工位实际契约装载计划")
     prompt_plan.add_argument("--project-root", default=".")
@@ -925,6 +893,12 @@ def build_parser() -> argparse.ArgumentParser:
     structure_sub = structure.add_subparsers(dest="structure_action", required=True)
     for spec in CATALOG_OPERATIONS:
         cmd = structure_sub.add_parser(spec["cli"], help=spec["description"])
+        if spec['cli'] in {'book-rename-preview', 'chapter-rename-preview', 'entity-create-preview'}:
+            cmd.set_defaults(operation_examples=({
+                'book-rename-preview': {'newName': '山城旧事'},
+                'chapter-rename-preview': {'chapterId': 'CH001', 'newTitle': '交班'},
+                'entity-create-preview': {'entityType': 'character', 'name': '林舟'},
+            }[spec['cli']],))
         cmd.add_argument("--project-root", default=".")
         schema = spec["inputSchema"]
         for key, field in schema["properties"].items():
@@ -997,6 +971,8 @@ def build_parser() -> argparse.ArgumentParser:
     plans = structure_sub.add_parser("plans", help="列出未提交的预览计划")
     plans.add_argument("--project-root", default=".")
     operations = structure_sub.add_parser("operations", help="操作审计日志（含可撤销标记）")
+    operations.description = "读取修改历史、可撤销操作与必要绑定；撤销前先核对目标，不从日志文件手工回滚。"
+    operations.set_defaults(operation_examples=({},))
     operations.add_argument("--project-root", default=".")
     gc = structure_sub.add_parser("gc", help="清理过期计划与多余备份")
     gc.add_argument("--project-root", default=".")
@@ -1019,6 +995,8 @@ def build_parser() -> argparse.ArgumentParser:
     entity.add_argument("--project-root", default=".")
     entity.add_argument("--selector", "--entity-id", dest="selector", required=True, help="稳定实体 ID、名称或唯一别名；--entity-id 是同一选择器的别名")
     prose = sub.add_parser("prose", help="只读读取章节正文")
+    prose.description = "按章节 ID 或显示编号读取当前正文；使用登记的正文位置，无须打开内部结构文件找路径。"
+    prose.set_defaults(operation_examples=({'chapterId': 'CH001'},))
     prose.add_argument("--project-root", default=".")
     prose.add_argument("--chapter-id", required=True)
     export = sub.add_parser(
@@ -1132,6 +1110,8 @@ def build_parser() -> argparse.ArgumentParser:
     accept_external.add_argument("--approve", action="store_true",
                                  help="显式批准执行；不构成 authority：普通调用参数，无法替代"
                                       "独立特权批准通道的 approval capability")
+    accept_external.add_argument("--confirm-on-device", action="store_true",
+                                 help="在本机显示 macOS 作者确认；确认后才签发一次性采用能力")
     artifact_approve = workflow_sub.add_parser("artifact-approve", help="按 hash 批准已登记工件")
     artifact_approve.add_argument("--project-root", default=".")
     artifact_approve.add_argument("--chapter-id", required=True)
@@ -1173,10 +1153,13 @@ def build_parser() -> argparse.ArgumentParser:
         "doctor",
         help="分域聚合项目健康（project/migration/planning/writer/canon/context/knowledge/workflow/tooling）")
     add_arguments(doctor, next(spec for spec in new_operations() if spec.id == "project.doctor"))
-    new_groups = {"structure": structure_sub, "workflow": workflow_sub}
+    new_groups = {"structure": structure_sub, "workflow": workflow_sub, "import": imp_sub}
     for spec in new_operations():
         if spec.id == "project.doctor":
             continue  # doctor 已单独挂在 project 下；它的 cli 只有一段，不是 group/leaf
+        if len(spec.cli) == 1:
+            add_arguments(sub.add_parser(spec.cli[0], help=spec.description), spec)
+            continue
         group, leaf = spec.cli
         if group not in new_groups:
             new_groups[group] = sub.add_parser(group).add_subparsers(dest=group + "_action", required=True)

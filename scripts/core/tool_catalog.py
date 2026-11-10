@@ -67,7 +67,7 @@ def _definition(spec):
     bridge = ('capabilities.read' if spec.effects == 'read' else
               'capabilities.export' if spec.effects == 'export-write' else None)
     entry = (next((row for row in operations() if row.id == bridge), None)
-             if bridge and spec.mcp and spec.id not in {'capabilities.list', 'capabilities.read', 'capabilities.export'} else None)
+             if bridge and spec.mcp and spec.id not in {'capabilities.help', 'capabilities.list', 'capabilities.read', 'capabilities.export'} else None)
     return {'id': spec.id, 'name': spec.name, 'description': spec.description,
             'cli': ['project', *spec.cli], 'mcp': spec.name if spec.mcp else None,
             'effects': spec.effects, 'category': spec.category,
@@ -132,7 +132,7 @@ def invoke_discovered(root, *, operation, arguments, effects):
     from .operations import call_operation
     spec = next((row for row in operations() if row.id == operation), None)
     if (spec is None or not spec.mcp or spec.effects != effects
-            or spec.id in {'capabilities.list', 'capabilities.read', 'capabilities.export'}):
+            or spec.id in {'capabilities.help', 'capabilities.list', 'capabilities.read', 'capabilities.export'}):
         raise StructureError('OPERATION_NOT_ALLOWED', 'this bridge only calls registered operations of its declared effect')
     if not isinstance(arguments, dict) or 'projectRoot' in arguments:
         raise StructureError('ARGUMENTS_INVALID', 'arguments must omit projectRoot; select the root at the bridge boundary',

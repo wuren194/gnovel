@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from scripts import mcp_server
 from scripts.core import static_cache
@@ -49,10 +49,19 @@ class DefinitionReuseTests(unittest.TestCase):
         self.assertIn('newProof', json.dumps(response['structuredContent']))
 
     def test_non_mcp_spec_does_not_become_callable_by_reuse(self):
-        spec = next(spec for spec in operations_module.operations() if not spec.mcp)
-        response = self.request(spec.name)
+        # All public CLI operations are exposed. An explicit private fixture
+        # still verifies that request-local reuse cannot grant MCP access.
+        specs = operations_module.operations()
+        handler = Mock()
+        spec = replace(specs[0], id='test.private', name='private_test_tool',
+                       cli=('internal', 'private'), mcp=False, handler=handler)
+        private_catalog = [*specs, spec]
+        with patch.object(mcp_server, 'operations', return_value=private_catalog), \
+                patch.object(operations_module, 'operations', return_value=private_catalog):
+            response = self.request(spec.name)
         self.assertTrue(response['isError'])
         self.assertEqual(response['structuredContent']['code'], 'TOOL_NOT_FOUND')
+        handler.assert_not_called()
 
     def test_next_request_rebuilds_for_changed_bytes_restored_mtime_and_new_inode(self):
         with patch.object(operations_module, '_operations', wraps=operations_module._operations) as factory:

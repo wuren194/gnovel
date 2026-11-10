@@ -321,6 +321,11 @@ def refactor_path_issues(root: Path, structure: dict) -> list[dict]:
     for chapter in structure.get('chapters', []):
         if chapter.get('status') in {'planning_required', 'archived'}:
             continue
+        # Imported retrospective synopses are facts about written prose, not
+        # pre-writing plans. Their acceptance proof is checked in workflowHealth.
+        from .import_history import history_entry
+        if chapter.get('status') == 'stable' and history_entry(_read_workflow(root), chapter['chapterId']) is not None:
+            continue
         if not chapter_plan(structure, chapter['chapterId'])['ready']:
             issues.append(_issue(
                 code='SOURCE_CHAPTER_PLAN_MISSING', domain='project', severity='blocking',
@@ -1202,11 +1207,18 @@ def assess_project(root: Path, *, strict: bool = False, chapter_id: str | None =
     suggested_actions = _suggested_actions(root, structure, workflow, target)
 
     blocking = [row for row in issues if row['severity'] == 'blocking']
+    integrity_issues = [row for row in issues if row['status'] == 'mechanical_error']
+    authoring_issues = [row for row in blocking if row['status'] != 'mechanical_error']
     actionable = [row for row in issues if row['severity'] != 'informational']
     report = {
         'ok': True,
         'code': 'DOCTOR_OK' if not blocking else 'DOCTOR_ERRORS',
         'healthy': not blocking,
+        'dataIntegrity': {'healthy': not integrity_issues, 'issueCount': len(integrity_issues)},
+        'authoringReadiness': {'ready': not blocking, 'pendingCount': len(authoring_issues)},
+        'assessment': ('data_error' if integrity_issues else 'authoring_pending' if blocking else 'ready'),
+        'message': ('数据或工程完整性需要处理。' if integrity_issues else
+                    '项目数据检查通过；仍有创作准备或作者决定待完成，不能据此判为导入失败。' if blocking else '当前检查通过。'),
         # Legacy projection: warnings and blockers only, so `problems` stays a
         # list of things the author might act on. Purely informational rows
         # ("this domain does not apply to a Markdown project") live in `issues`.
@@ -1231,6 +1243,13 @@ def assess_project(root: Path, *, strict: bool = False, chapter_id: str | None =
         'strict': bool(strict),
     }
     report.update(sections)
+    if structure is not None and (root / '.govel/import-receipt.json').exists():
+        from .import_status import status_from_source
+        try:
+            report['importFollowup'] = status_from_source(root, structure, workflow)
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            report['importFollowup'] = {'ok': False, 'code': getattr(exc, 'code', 'IMPORT_FOLLOWUP_UNAVAILABLE'),
+                                       'message': str(exc)}
     return report
 
 

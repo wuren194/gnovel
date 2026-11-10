@@ -24,6 +24,9 @@ class DoctorDeliveryTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve(); self.source = source_fixture(self.root)
         self.report = {'ok': True, 'code': 'DOCTOR_ERRORS', 'healthy': False, 'strict': True,
+                       'dataIntegrity': {'healthy': True, 'issueCount': 0},
+                       'authoringReadiness': {'ready': False, 'pendingCount': 1},
+                       'assessment': 'authoring_pending', 'message': '数据健康，语义审阅待完成。',
                        'structureRevision': 3, 'scopedChapterId': None, 'project': {'projectId': self.source['projectId']},
                        'issueCounts': {'total': 1, 'blocking': 1, 'warning': 0, 'informational': 0},
                        'domains': {'canon': {'status': 'semantic_review_required', 'issueCount': 1, 'details': 'large' * 10000}},

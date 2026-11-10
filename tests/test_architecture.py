@@ -31,7 +31,7 @@ class VersionSourceTests(unittest.TestCase):
         from scripts.core.structure_store import WORKFLOW_VERSION
         self.assertEqual(WORKFLOW_VERSION, manifest["workflowVersion"])
         self.assertEqual(manifest['name'], 'govel')
-        latest = re.search(r"^## (\S+) · 机制 \d+$", (ROOT/'docs/CHANGELOG.md').read_text(), re.M)
+        latest = re.search(r"^## (\d+\.\d+\.\d+) · .+$", (ROOT/'docs/CHANGELOG.md').read_text(), re.M)
         self.assertIsNotNone(latest, "CHANGELOG 缺少当前发行条目")
         self.assertEqual(latest.group(1), manifest['version'])
         self.assertNotIn("Editor 当前机制版本 v15", (ROOT / "SKILL.md").read_text(encoding="utf-8"))

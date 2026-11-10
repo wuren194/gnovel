@@ -99,7 +99,7 @@ def _chapter_rows(root, source, chapters, selection):
                                  'detailsOperation': 'source.rules'} for row in checks if row['status'] != 'passed')
             rows.extend({'kind': 'continuity', 'chapterId': cid, 'status': row.get('status', 'pending'),
                          'detailsOperation': 'project.workflow.continuity-preview'}
-                        for row in pending_continuity(source, workflow) if row['chapterId'] == cid)
+                        for row in pending_continuity(source, workflow, root=root) if row['chapterId'] == cid)
         local = rows[start:]
         groups.append({'chapterId': cid, 'stage': chapter.get('status'), 'itemCount': len(local),
                        'byKind': dict(sorted(Counter(row['kind'] for row in local).items())),

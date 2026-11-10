@@ -50,12 +50,14 @@ def _page(root, saved, reference, *, against_ref, limit, budget, cursor):
         comparison = {'requested': True, 'comparable': False, 'reason': unavailable}
     report = saved['report']
     envelope = {key: report[key] for key in ('ok', 'code', 'healthy', 'strict', 'structureRevision',
-                                            'scopedChapterId', 'issueCounts')}
+                                            'scopedChapterId', 'issueCounts', 'dataIntegrity', 'authoringReadiness', 'assessment', 'message')}
     domains = {key: {'status': value['status'], 'issueCount': value['issueCount']}
                for key, value in report['domains'].items()}
     envelope.update(view='model', doctorRef=reference, comparison=comparison, domains=domains,
                     detailsAction={'operation': 'task.snapshot', 'arguments': {'reference': reference}},
                     coverage={'checks': 'complete doctor assessment', 'semanticConsistencyProven': False})
+    if 'importFollowup' in report:
+        envelope['importFollowupAction'] = {'operation': 'import.organization-status', 'arguments': {'projectRoot': str(root)}}
     rows = ([{'id': row['issueId'], 'text': canonical_json(row)} for row in changes]
             if comparison['comparable'] else
             [{'id': identity, 'text': canonical_json({'issueId': identity, 'current': issues})}
