@@ -12,7 +12,7 @@ from scripts.core.structure_store import StructureError, load_structure
 from scripts.core.source_model import content_defaults
 from scripts.core.project import source_model_policy
 from scripts.core.structure_store import save_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class PlanningCandidatesTests(unittest.TestCase):
@@ -20,7 +20,7 @@ class PlanningCandidatesTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name) / 'book'
-        create_schema5_project(self.root, chapter_count=1)
+        create_current_project(self.root, chapter_count=1)
 
     def commit(self, preview):
         return commit_plan(self.root, operation_id=preview['operationId'], plan_hash=preview['planHash'], approved=True)
@@ -73,7 +73,7 @@ class PlanningCandidatesTests(unittest.TestCase):
             preview_candidate_change(self.root, action='create', expectedRevision=source['revision'] - 1,
                                      reason='旧输入', record=self.placement())
         self.assertEqual(caught.exception.code, 'REVISION_CONFLICT')
-        wrong = {**self.placement(), 'beforeChapterId': 'CH-NOT-FOUND'}
+        wrong = {**self.placement(), 'beforeChapterId': 'chapter-NOT-FOUND'}
         with self.assertRaises(StructureError) as caught:
             preview_candidate_change(self.root, action='create', expectedRevision=source['revision'],
                                      reason='错误锚点', record=wrong)
@@ -152,10 +152,10 @@ class PlanningCandidatesTests(unittest.TestCase):
 
     def test_lineage_cycle_is_rejected_at_structure_boundary(self):
         source = load_structure(self.root)
-        first = {**self.placement(), 'candidateId': 'PC-CYCLE-A', 'status': 'withdrawn',
-                 'sourceCandidateIds': ['PC-CYCLE-B'], 'replacedByCandidateIds': ['PC-CYCLE-B']}
-        second = {**self.placement(), 'candidateId': 'PC-CYCLE-B', 'status': 'withdrawn',
-                  'sourceCandidateIds': ['PC-CYCLE-A'], 'replacedByCandidateIds': ['PC-CYCLE-A']}
+        first = {**self.placement(), 'candidateId': 'candidate-CYCLE-A', 'status': 'withdrawn',
+                 'sourceCandidateIds': ['candidate-CYCLE-B'], 'replacedByCandidateIds': ['candidate-CYCLE-B']}
+        second = {**self.placement(), 'candidateId': 'candidate-CYCLE-B', 'status': 'withdrawn',
+                  'sourceCandidateIds': ['candidate-CYCLE-A'], 'replacedByCandidateIds': ['candidate-CYCLE-A']}
         source['planningCandidates'] = [first, second]
         self.assertIn('PLANNING_CANDIDATE_LINEAGE_CYCLE',
                       {row['code'] for row in validate_candidates(source)})
@@ -222,7 +222,7 @@ class SchemaThreePlanningTests(PlanningCandidatesTests):
         source = load_structure(self.root)
         placement = ({'scope': 'volume', 'volumeId': source['volumes'][0]['volumeId']}
                      if scope == 'volume' else {'scope': 'project'})
-        source['units'] = [{'unitId': 'UN-HOLDER', 'title': '第八日', 'ordinal': 1, 'status': 'active',
+        source['units'] = [{'unitId': 'unit-HOLDER', 'title': '第八日', 'ordinal': 1, 'status': 'active',
                             'placement': placement,
                             'members': [{'memberType': 'planning_candidate', 'memberId': cid, 'order': 3}]}]
         save_structure(self.root, source)

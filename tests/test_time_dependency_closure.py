@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 from copy import deepcopy
 from pathlib import Path
 import tempfile
@@ -25,9 +27,9 @@ def add_plan(source, chapter_id, dependencies):
     source['chapters'].append(chapter)
     source['chapterArcLinks'].append({'chapterId': chapter_id,
         'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-    attribute_id, fragment_id = 'AT-' + chapter_id, 'SF-' + chapter_id
+    attribute_id, fragment_id = 'attribute-' + chapter_id, 'plan-' + chapter_id
     source['attributes'].append({'attributeId': attribute_id, 'ownerId': chapter_id,
-                                'fieldId': 'FD-PLAN', 'values': []})
+                                'fieldId': 'field-PLAN', 'values': []})
     fragment = {'fragmentId': fragment_id, 'ownerId': chapter_id,
                 'text': '按登记的事件时间安排本章。', 'order': 1, 'contentRole': 'plan',
                 'contentBindings': [attribute_id], 'dependsOn': dependencies,
@@ -40,13 +42,13 @@ def add_plan(source, chapter_id, dependencies):
 def time_plan_source():
     """Current-schema version of the frozen F1 reproduction, with an unrelated plan."""
     source = source_fixture()
-    source['fieldDefinitions'] = [{'fieldId': 'FD-PLAN', 'key': 'plot.plan',
+    source['fieldDefinitions'] = [{'fieldId': 'field-PLAN', 'key': 'plot.plan',
         'label': '计划', 'valueType': 'topic', 'appliesTo': ['chapter']}]
     source['attributes'], source['fragments'] = [], []
-    source['entities'].append({'entityId': 'E-REL', 'entityType': 'event', 'name': '三日后事件',
-        'timeSpec': {'kind': 'relative', 'anchorId': 'TA-START', 'offset': 3}})
-    add_plan(source, 'CH-TIME', ['E-REL'])
-    add_plan(source, 'CH-OTHER', ['C-BETA'])
+    source['entities'].append({'entityId': 'event-REL', 'entityType': 'event', 'name': '三日后事件',
+        'timeSpec': {'kind': 'relative', 'anchorId': 'time-START', 'offset': 3}})
+    add_plan(source, 'chapter-TIME', ['event-REL'])
+    add_plan(source, 'chapter-OTHER', ['character-BETA'])
     validate_structure(source)
     return source
 
@@ -67,19 +69,19 @@ class TimeDependencyClosureTests(unittest.TestCase):
         from scripts.core.author_decisions import _scope_hashes
         before = time_plan_source()
         first, later = before['chapters']
-        first.update(storyTimeStartId='TA-START', storyTimeEndId='TA-START', status='stable')
-        later.update(storyTimeStartId='TA-START', storyTimeEndId='TA-LATER')
+        first.update(storyTimeStartId='time-START', storyTimeEndId='time-START', status='stable')
+        later.update(storyTimeStartId='time-START', storyTimeEndId='time-LATER')
         validate_structure(before)
         for field, value in [('title', '后来重新选择的标题'), ('filePath', '正文/moved.md'), ('status', 'draft')]:
             after = deepcopy(before); after['chapters'][1][field] = value
             with self.subTest(field=field):
                 self.assertEqual(chapter_plan(before, first['chapterId'])['sourcePlanHash'],
                                  chapter_plan(after, first['chapterId'])['sourcePlanHash'])
-                self.assertEqual(review_input_hash(before, 'SF-CH-TIME'), review_input_hash(after, 'SF-CH-TIME'))
+                self.assertEqual(review_input_hash(before, 'plan-chapter-TIME'), review_input_hash(after, 'plan-chapter-TIME'))
                 self.assertEqual(_scope_hashes(before, [first['chapterId']]), _scope_hashes(after, [first['chapterId']]))
                 self.assertNotIn(first['chapterId'], source_impact(before, after)['approvalInvalidations'])
         changed = deepcopy(before)
-        changed['chapters'][1]['storyTimeEndId'] = 'E-REL'
+        changed['chapters'][1]['storyTimeEndId'] = 'event-REL'
         self.assertNotEqual(chapter_plan(before, first['chapterId'])['sourcePlanHash'],
                             chapter_plan(changed, first['chapterId'])['sourcePlanHash'])
         self.assertIn(first['chapterId'], source_impact(before, changed)['approvalInvalidations'])
@@ -106,69 +108,69 @@ class TimeDependencyClosureTests(unittest.TestCase):
 
     def test_frozen_relative_repro_changes_time_plan_and_review_binding(self):
         before = time_plan_source()
-        after = move_anchor(before, 'TA-START', 2)
-        self.assertEqual(before['schemaVersion'], 5)
-        self.assertEqual(story_time_states(before)['E-REL']['lower'], 3)
-        self.assertEqual(story_time_states(after)['E-REL']['lower'], 5)
-        self.assertIn(('TA-START', 'E-REL', 'time_spec'), dependency_edges(before))
-        self.assertIn('TA-START', {row['id'] for row in chapter_plan(before, 'CH-TIME')['records']})
-        impact = self.assert_plan_changes(before, after, {'CH-TIME'})
+        after = move_anchor(before, 'time-START', 2)
+        self.assertEqual(before['schemaVersion'], current_schema_version())
+        self.assertEqual(story_time_states(before)['event-REL']['lower'], 3)
+        self.assertEqual(story_time_states(after)['event-REL']['lower'], 5)
+        self.assertIn(('time-START', 'event-REL', 'time_spec'), dependency_edges(before))
+        self.assertIn('time-START', {row['id'] for row in chapter_plan(before, 'chapter-TIME')['records']})
+        impact = self.assert_plan_changes(before, after, {'chapter-TIME'})
         dependents = {row['recordId']: row for row in impact['registeredDependents']}
-        self.assertEqual(dependents['E-REL']['via'],
-                         {'fromId': 'TA-START', 'toId': 'E-REL', 'kind': 'time_spec'})
-        self.assertEqual(dependents['SF-CH-TIME']['causeId'], 'TA-START')
-        self.assertEqual(impact['reviewFragmentIds'], ['SF-CH-TIME'])
-        self.assertNotEqual(review_input_hash(before, 'SF-CH-TIME'),
-                            review_input_hash(after, 'SF-CH-TIME'))
-        self.assertEqual(review_input_hash(before, 'SF-CH-OTHER'),
-                         review_input_hash(after, 'SF-CH-OTHER'))
+        self.assertEqual(dependents['event-REL']['via'],
+                         {'fromId': 'time-START', 'toId': 'event-REL', 'kind': 'time_spec'})
+        self.assertEqual(dependents['plan-chapter-TIME']['causeId'], 'time-START')
+        self.assertEqual(impact['reviewFragmentIds'], ['plan-chapter-TIME'])
+        self.assertNotEqual(review_input_hash(before, 'plan-chapter-TIME'),
+                            review_input_hash(after, 'plan-chapter-TIME'))
+        self.assertEqual(review_input_hash(before, 'plan-chapter-OTHER'),
+                         review_input_hash(after, 'plan-chapter-OTHER'))
 
     def test_range_both_endpoints_and_open_bounds_change_dependent_plan(self):
         cases = [
-            ({'afterId': 'TA-START', 'beforeId': 'TA-LATER'}, 'TA-START', 2, (2, 10)),
-            ({'afterId': 'TA-START', 'beforeId': 'TA-LATER'}, 'TA-LATER', 12, (0, 12)),
-            ({'afterId': 'TA-START', 'beforeId': None}, 'TA-START', 2, (2, None)),
-            ({'beforeId': 'TA-LATER'}, 'TA-LATER', 12, (None, 12)),
+            ({'afterId': 'time-START', 'beforeId': 'time-LATER'}, 'time-START', 2, (2, 10)),
+            ({'afterId': 'time-START', 'beforeId': 'time-LATER'}, 'time-LATER', 12, (0, 12)),
+            ({'afterId': 'time-START', 'beforeId': None}, 'time-START', 2, (2, None)),
+            ({'beforeId': 'time-LATER'}, 'time-LATER', 12, (None, 12)),
         ]
         for bounds, anchor_id, ordinal, expected in cases:
             with self.subTest(bounds=bounds, anchor=anchor_id):
                 before = time_plan_source()
-                entity(before, 'E-REL')['timeSpec'] = {'kind': 'range', **bounds}
+                entity(before, 'event-REL')['timeSpec'] = {'kind': 'range', **bounds}
                 validate_structure(before)
                 after = move_anchor(before, anchor_id, ordinal)
-                state = story_time_states(after)['E-REL']
+                state = story_time_states(after)['event-REL']
                 self.assertEqual((state['lower'], state['upper']), expected)
-                self.assertIn((anchor_id, 'E-REL', 'time_spec'), dependency_edges(before))
-                impact = self.assert_plan_changes(before, after, {'CH-TIME'})
-                self.assertEqual(impact['reviewFragmentIds'], ['SF-CH-TIME'])
-                self.assertNotEqual(review_input_hash(before, 'SF-CH-TIME'),
-                                    review_input_hash(after, 'SF-CH-TIME'))
+                self.assertIn((anchor_id, 'event-REL', 'time_spec'), dependency_edges(before))
+                impact = self.assert_plan_changes(before, after, {'chapter-TIME'})
+                self.assertEqual(impact['reviewFragmentIds'], ['plan-chapter-TIME'])
+                self.assertNotEqual(review_input_hash(before, 'plan-chapter-TIME'),
+                                    review_input_hash(after, 'plan-chapter-TIME'))
 
     def test_chain_through_relative_time_anchor_range_and_event(self):
         before = time_plan_source()
         before['entities'].extend([
-            {'entityId': 'TA-REL', 'entityType': 'time_anchor', 'name': '次日',
-             'timeSpec': {'kind': 'relative', 'anchorId': 'TA-START', 'offset': 1}},
-            {'entityId': 'E-RANGE', 'entityType': 'event', 'name': '区间事件',
-             'timeSpec': {'kind': 'range', 'afterId': 'TA-REL', 'beforeId': 'TA-LATER'}},
+            {'entityId': 'time-REL', 'entityType': 'time_anchor', 'name': '次日',
+             'timeSpec': {'kind': 'relative', 'anchorId': 'time-START', 'offset': 1}},
+            {'entityId': 'event-RANGE', 'entityType': 'event', 'name': '区间事件',
+             'timeSpec': {'kind': 'range', 'afterId': 'time-REL', 'beforeId': 'time-LATER'}},
         ])
-        entity(before, 'E-REL')['timeSpec']['anchorId'] = 'E-RANGE'
-        add_plan(before, 'CH-ANCHOR', ['TA-REL'])
-        add_plan(before, 'CH-RANGE', ['E-RANGE'])
+        entity(before, 'event-REL')['timeSpec']['anchorId'] = 'event-RANGE'
+        add_plan(before, 'chapter-ANCHOR', ['time-REL'])
+        add_plan(before, 'chapter-RANGE', ['event-RANGE'])
         validate_structure(before)
-        after = move_anchor(before, 'TA-START', 2)
-        old_time, new_time = story_time_states(before)['E-REL'], story_time_states(after)['E-REL']
+        after = move_anchor(before, 'time-START', 2)
+        old_time, new_time = story_time_states(before)['event-REL'], story_time_states(after)['event-REL']
         self.assertEqual((old_time['lower'], old_time['upper']), (4, 13))
         self.assertEqual((new_time['lower'], new_time['upper']), (6, 13))
-        impact = self.assert_plan_changes(before, after, {'CH-TIME', 'CH-ANCHOR', 'CH-RANGE'})
+        impact = self.assert_plan_changes(before, after, {'chapter-TIME', 'chapter-ANCHOR', 'chapter-RANGE'})
         dependents = {row['recordId']: row for row in impact['registeredDependents']}
-        for origin, target in [('TA-START', 'TA-REL'), ('TA-REL', 'E-RANGE'), ('E-RANGE', 'E-REL')]:
+        for origin, target in [('time-START', 'time-REL'), ('time-REL', 'event-RANGE'), ('event-RANGE', 'event-REL')]:
             self.assertEqual(dependents[target]['via'],
                              {'fromId': origin, 'toId': target, 'kind': 'time_spec'})
-            self.assertEqual(dependents[target]['causeId'], 'TA-START')
-        self.assertEqual(impact['reviewFragmentIds'], ['SF-CH-ANCHOR', 'SF-CH-RANGE', 'SF-CH-TIME'])
-        records = {row['id'] for row in chapter_plan(before, 'CH-TIME')['records']}
-        self.assertTrue({'TA-START', 'TA-REL', 'TA-LATER', 'E-RANGE', 'E-REL'} <= records)
+            self.assertEqual(dependents[target]['causeId'], 'time-START')
+        self.assertEqual(impact['reviewFragmentIds'], ['plan-chapter-ANCHOR', 'plan-chapter-RANGE', 'plan-chapter-TIME'])
+        records = {row['id'] for row in chapter_plan(before, 'chapter-TIME')['records']}
+        self.assertTrue({'time-START', 'time-REL', 'time-LATER', 'event-RANGE', 'event-REL'} <= records)
 
     def test_time_edges_compose_with_existing_dependency_kinds(self):
         for route in ('reference_value', 'valid_during', 'storyTimeStartId', 'storyTimeEndId',
@@ -178,66 +180,66 @@ class TimeDependencyClosureTests(unittest.TestCase):
                 chapter, fragment = before['chapters'][0], before['fragments'][0]
                 fragment['dependsOn'] = []
                 if route == 'reference_value':
-                    before['fieldDefinitions'].append({'fieldId': 'FD-EVENT', 'key': 'plot.event',
+                    before['fieldDefinitions'].append({'fieldId': 'field-EVENT', 'key': 'plot.event',
                         'label': '关联事件', 'valueType': 'reference', 'appliesTo': ['chapter']})
-                    before['attributes'].append({'attributeId': 'AT-EVENT', 'ownerId': 'CH-TIME',
-                        'fieldId': 'FD-EVENT', 'values': [{'valueId': 'FV-EVENT', 'value': 'E-REL'}]})
-                    fragment['contentBindings'].append('AT-EVENT')
+                    before['attributes'].append({'attributeId': 'attribute-EVENT', 'ownerId': 'chapter-TIME',
+                        'fieldId': 'field-EVENT', 'values': [{'valueId': 'value-EVENT', 'value': 'event-REL'}]})
+                    fragment['contentBindings'].append('attribute-EVENT')
                 elif route == 'valid_during':
-                    fragment['validDuring'] = {'fromId': 'E-REL'}
+                    fragment['validDuring'] = {'fromId': 'event-REL'}
                 elif route in ('storyTimeStartId', 'storyTimeEndId'):
-                    chapter[route] = 'E-REL'
+                    chapter[route] = 'event-REL'
                 elif route == 'event_presentation':
-                    before['presentations'].append({'presentationId': 'PV-TIME', 'eventId': 'E-REL',
-                        'chapterId': 'CH-TIME', 'kind': 'reveal', 'order': 1})
+                    before['presentations'].append({'presentationId': 'presentation-TIME', 'eventId': 'event-REL',
+                        'chapterId': 'chapter-TIME', 'kind': 'reveal', 'order': 1})
                 else:
-                    before['references'].append({'sourceId': 'CH-TIME', 'targetId': 'E-REL', 'kind': 'event'})
+                    before['references'].append({'sourceId': 'chapter-TIME', 'targetId': 'event-REL', 'kind': 'event'})
                 validate_structure(before)
-                after = move_anchor(before, 'TA-START', 2)
-                impact = self.assert_plan_changes(before, after, {'CH-TIME'})
+                after = move_anchor(before, 'time-START', 2)
+                impact = self.assert_plan_changes(before, after, {'chapter-TIME'})
                 dependents = {row['recordId']: row for row in impact['registeredDependents']}
-                target = 'SF-CH-TIME' if route in ('reference_value', 'valid_during') else 'CH-TIME'
-                self.assertEqual(dependents[target]['causeId'], 'TA-START')
-                self.assertIn('TA-START', {row['id'] for row in chapter_plan(before, 'CH-TIME')['records']})
+                target = 'plan-chapter-TIME' if route in ('reference_value', 'valid_during') else 'chapter-TIME'
+                self.assertEqual(dependents[target]['causeId'], 'time-START')
+                self.assertIn('time-START', {row['id'] for row in chapter_plan(before, 'chapter-TIME')['records']})
 
     def test_relative_zero_cycle_remains_bounded_and_preserves_declared_dependencies(self):
         before = time_plan_source()
-        before['entities'].append({'entityId': 'E-CYCLE', 'entityType': 'event', 'name': '循环事件',
-            'timeSpec': {'kind': 'relative', 'anchorId': 'E-REL', 'offset': -3}})
-        entity(before, 'E-REL')['timeSpec']['anchorId'] = 'E-CYCLE'
+        before['entities'].append({'entityId': 'event-CYCLE', 'entityType': 'event', 'name': '循环事件',
+            'timeSpec': {'kind': 'relative', 'anchorId': 'event-REL', 'offset': -3}})
+        entity(before, 'event-REL')['timeSpec']['anchorId'] = 'event-CYCLE'
         validate_structure(before)
-        self.assertEqual(story_time_states(before)['E-REL']['status'], 'unknown')
-        records = [row['id'] for row in chapter_plan(before, 'CH-TIME')['records']]
-        self.assertEqual(records.count('E-CYCLE'), 1)
-        self.assertEqual(records.count('E-REL'), 1)
+        self.assertEqual(story_time_states(before)['event-REL']['status'], 'unknown')
+        records = [row['id'] for row in chapter_plan(before, 'chapter-TIME')['records']]
+        self.assertEqual(records.count('event-CYCLE'), 1)
+        self.assertEqual(records.count('event-REL'), 1)
         after = deepcopy(before)
-        entity(after, 'E-CYCLE')['name'] = '重新说明循环事件'
+        entity(after, 'event-CYCLE')['name'] = '重新说明循环事件'
         validate_structure(after)
-        self.assert_plan_changes(before, after, {'CH-TIME'})
-        self.assertNotEqual(review_input_hash(before, 'SF-CH-TIME'),
-                            review_input_hash(after, 'SF-CH-TIME'))
+        self.assert_plan_changes(before, after, {'chapter-TIME'})
+        self.assertNotEqual(review_input_hash(before, 'plan-chapter-TIME'),
+                            review_input_hash(after, 'plan-chapter-TIME'))
 
     def test_committed_anchor_change_invalidates_only_dependent_approved_artifacts(self):
         cases = [
-            ({'kind': 'relative', 'anchorId': 'TA-START', 'offset': 3}, 'TA-START', 2, (5, 5)),
-            ({'kind': 'range', 'afterId': 'TA-START', 'beforeId': 'TA-LATER'}, 'TA-START', 2, (2, 10)),
-            ({'kind': 'range', 'afterId': 'TA-START', 'beforeId': 'TA-LATER'}, 'TA-LATER', 12, (0, 12)),
+            ({'kind': 'relative', 'anchorId': 'time-START', 'offset': 3}, 'time-START', 2, (5, 5)),
+            ({'kind': 'range', 'afterId': 'time-START', 'beforeId': 'time-LATER'}, 'time-START', 2, (2, 10)),
+            ({'kind': 'range', 'afterId': 'time-START', 'beforeId': 'time-LATER'}, 'time-LATER', 12, (0, 12)),
         ]
         for time_spec, anchor_id, ordinal, expected in cases:
             with self.subTest(spec=time_spec, anchor=anchor_id), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve()
                 source = time_plan_source()
-                entity(source, 'E-REL')['timeSpec'] = time_spec
-                source['entities'].append({'entityId': 'E-CHAIN', 'entityType': 'event', 'name': '后续事件',
-                    'timeSpec': {'kind': 'relative', 'anchorId': 'E-REL', 'offset': 1}})
-                add_plan(source, 'CH-CHAIN', ['E-CHAIN'])
-                source['fieldDefinitions'].append({'fieldId': 'FD-ANCHOR', 'key': 'time.evidence',
+                entity(source, 'event-REL')['timeSpec'] = time_spec
+                source['entities'].append({'entityId': 'event-CHAIN', 'entityType': 'event', 'name': '后续事件',
+                    'timeSpec': {'kind': 'relative', 'anchorId': 'event-REL', 'offset': 1}})
+                add_plan(source, 'chapter-CHAIN', ['event-CHAIN'])
+                source['fieldDefinitions'].append({'fieldId': 'field-ANCHOR', 'key': 'time.evidence',
                     'label': '日期依据', 'valueType': 'topic', 'appliesTo': ['time_anchor']})
-                source['attributes'].append({'attributeId': 'AT-ANCHOR', 'ownerId': anchor_id,
-                    'fieldId': 'FD-ANCHOR', 'values': []})
+                source['attributes'].append({'attributeId': 'attribute-ANCHOR', 'ownerId': anchor_id,
+                    'fieldId': 'field-ANCHOR', 'values': []})
                 quote = '起点日期已经核定。'
-                source['fragments'].append({'fragmentId': 'SF-ANCHOR-EVIDENCE', 'ownerId': anchor_id,
-                    'text': quote, 'order': 1, 'contentRole': 'fact', 'contentBindings': ['AT-ANCHOR']})
+                source['fragments'].append({'fragmentId': 'fact-ANCHOR-EVIDENCE', 'ownerId': anchor_id,
+                    'text': quote, 'order': 1, 'contentRole': 'fact', 'contentBindings': ['attribute-ANCHOR']})
                 validate_structure(source)
                 write_json(root / '.govel/structure.json', source)
                 workflow = default_workflow()
@@ -262,9 +264,9 @@ class TimeDependencyClosureTests(unittest.TestCase):
                 preview = preview_proposal_batch(root, sourceHash=snapshot_hash(source), items=[{
                     'kind': 'entity', 'recordId': anchor_id,
                     'patch': [{'op': 'set', 'path': ['timeOrdinal'], 'value': ordinal}],
-                    'reason': '核对锚点日期', 'evidence': [{'fragmentId': 'SF-ANCHOR-EVIDENCE', 'quote': quote}],
+                    'reason': '核对锚点日期', 'evidence': [{'fragmentId': 'fact-ANCHOR-EVIDENCE', 'quote': quote}],
                 }], requestId='time-anchor-update', approvalActor='author', approvalEvidence='合成测试批准')
-                self.assertEqual(preview['impact']['approvalInvalidations'], ['CH-CHAIN', 'CH-TIME'])
+                self.assertEqual(preview['impact']['approvalInvalidations'], ['chapter-CHAIN', 'chapter-TIME'])
                 self.assertEqual((root / '.govel/structure.json').read_bytes(), source_bytes)
                 self.assertEqual((root / '.govel/workflow.json').read_bytes(), workflow_bytes)
                 receipt = commit(root, operation_id=preview['operationId'], plan_hash=preview['planHash'],
@@ -272,11 +274,11 @@ class TimeDependencyClosureTests(unittest.TestCase):
                 self.assertEqual(receipt['code'], 'STRUCTURE_COMMITTED')
                 after = load_structure(root)
                 self.assertEqual(after['revision'], source['revision'] + 1)
-                state = story_time_states(after)['E-REL']
+                state = story_time_states(after)['event-REL']
                 self.assertEqual((state['lower'], state['upper']), expected)
-                self.assert_plan_changes(source, after, {'CH-TIME', 'CH-CHAIN'})
+                self.assert_plan_changes(source, after, {'chapter-TIME', 'chapter-CHAIN'})
                 workflow_after = read_json(root / '.govel/workflow.json')
-                for chapter_id in ('CH-TIME', 'CH-CHAIN'):
+                for chapter_id in ('chapter-TIME', 'chapter-CHAIN'):
                     self.assertFalse(workflow_after['approvals'][chapter_id]['approved'])
                     self.assertEqual(workflow_after['approvals'][chapter_id]['invalidatedBy'],
                                      'source_dependencies_changed')
@@ -287,12 +289,12 @@ class TimeDependencyClosureTests(unittest.TestCase):
                             require_approved_artifact(workflow_after, chapter_id, kind)
                         self.assertEqual(caught.exception.code, 'ARTIFACT_NOT_REGISTERED')
                 for key in ('approvals', 'artifacts'):
-                    self.assertEqual(workflow_after[key]['CH-OTHER'], workflow_before[key]['CH-OTHER'])
+                    self.assertEqual(workflow_after[key]['chapter-OTHER'], workflow_before[key]['chapter-OTHER'])
                 for kind in ('stage_a_review', 'candidate_prose', 'stage_b_review'):
-                    self.assertEqual(require_approved_artifact(workflow_after, 'CH-OTHER', kind),
-                                     approved['CH-OTHER', kind])
+                    self.assertEqual(require_approved_artifact(workflow_after, 'chapter-OTHER', kind),
+                                     approved['chapter-OTHER', kind])
                 review = read_json(root / '.govel/source-review.json')['items']
-                self.assertEqual(set(review), {'SF-CH-TIME', 'SF-CH-CHAIN'})
+                self.assertEqual(set(review), {'plan-chapter-TIME', 'plan-chapter-CHAIN'})
                 for fragment_id, item in review.items():
                     self.assertEqual(item['status'], 'pending')
                     self.assertEqual(item['inputHash'], review_input_hash(after, fragment_id))

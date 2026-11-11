@@ -137,9 +137,9 @@ class CallLoggingPolicyTests(unittest.TestCase):
         self.assertEqual(call_logging.logging_status()["storage"]["callCount"], 1)
 
     def test_mcp_records_actual_stable_chapter_after_resolving_display_number(self):
-        from tests.fixtures_current import create_schema5_project
+        from tests.fixtures_current import create_current_project
         root = self.directory / "book"
-        fixture = create_schema5_project(root, chapter_count=1)
+        fixture = create_current_project(root, chapter_count=1)
         chapter_id = fixture["structure"]["chapters"][0]["chapterId"]
         response = mcp_server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                                       "params": {"name": "query_source_chapter_plan", "arguments": {
@@ -152,9 +152,9 @@ class CallLoggingPolicyTests(unittest.TestCase):
         self.assertEqual(detail["finish"]["payloads"]["effectiveArguments"]["value"]["chapterId"], chapter_id)
 
     def test_cli_bridge_keeps_inner_resolved_chapter_instead_of_overwriting_it(self):
-        from tests.fixtures_current import create_schema5_project
+        from tests.fixtures_current import create_current_project
         root = self.directory / "book"
-        fixture = create_schema5_project(root, chapter_count=1)
+        fixture = create_current_project(root, chapter_count=1)
         chapter_id = fixture["structure"]["chapters"][0]["chapterId"]
         with redirect_stdout(io.StringIO()):
             self.assertEqual(novelctl.main(["project", "tools", "read", "--project-root", str(root),

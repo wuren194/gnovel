@@ -245,11 +245,11 @@ class TaskEntryWiringGuards(unittest.TestCase):
             structure = load_structure(root)
             from scripts.core.structure_store import save_structure
             structure['entities'] += [
-                {'entityId': 'TA-EARLY', 'entityType': 'time_anchor', 'name': '早上', 'aliases': [], 'status': 'active', 'timeOrdinal': 1},
-                {'entityId': 'TA-LATE', 'entityType': 'time_anchor', 'name': '晚上', 'aliases': [], 'status': 'active', 'timeOrdinal': 2},
+                {'entityId': 'time-EARLY', 'entityType': 'time_anchor', 'name': '早上', 'aliases': [], 'status': 'active', 'timeOrdinal': 1},
+                {'entityId': 'time-LATE', 'entityType': 'time_anchor', 'name': '晚上', 'aliases': [], 'status': 'active', 'timeOrdinal': 2},
             ]
-            structure['chapters'][0]['storyTimeStartId'] = 'TA-LATE'
-            structure['chapters'][1]['storyTimeStartId'] = 'TA-EARLY'
+            structure['chapters'][0]['storyTimeStartId'] = 'time-LATE'
+            structure['chapters'][1]['storyTimeStartId'] = 'time-EARLY'
             save_structure(root, structure)
             report = prepare_task(root, 'planner', chapter_id=chapter_id)
             timeline = next(row for row in report['toolPlan']['toolActions'] if row['capabilityId'] == 'story.timeline')

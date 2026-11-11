@@ -19,7 +19,7 @@ class SourceRenderingTests(unittest.TestCase):
         self.source = source_fixture(self.root)
 
     def test_query_and_render_use_identical_selection_without_rewriting(self):
-        selection = {'ownerIds': ['C-ALPHA'], 'excludeFields': ['appearance.height', 'appearance.skin']}
+        selection = {'ownerIds': ['character-ALPHA'], 'excludeFields': ['appearance.height', 'appearance.skin']}
         query = query_source(self.root, selection=selection, view='detail')
         rendered = render_source(self.root, selection=selection)
         self.assertEqual(rendered['recordIds'], [r['id'] for r in query['items']])
@@ -27,22 +27,22 @@ class SourceRenderingTests(unittest.TestCase):
         self.assertIn('初次守门时，他一米九的身形挡住了门。', rendered['markdown'])
         self.assertNotIn('他身高一米九。', rendered['markdown'])
         self.assertNotIn('contentBindings', rendered['markdown'])
-        self.assertNotIn('AT-HEIGHT', rendered['markdown'])
+        self.assertNotIn('attribute-HEIGHT', rendered['markdown'])
         self.assertEqual(list(self.root.rglob('*.md')), [])
 
     def test_long_fragment_is_read_completely_at_character_boundaries(self):
         content = ('他说：“你好。”\n' * 4000) + '末尾标志'
         self.source['fragments'][0]['text'] = content
         write_json(self.root / '.govel/structure.json', self.source)
-        page = read_fragment(self.root, fragmentId='SF-HEIGHT', maxBytes=1000)
+        page = read_fragment(self.root, fragmentId='fact-HEIGHT', maxBytes=1000)
         chunks = [page['text']]
         while page['hasMore']:
-            page = read_fragment(self.root, fragmentId='SF-HEIGHT', offset=page['endOffset'],
+            page = read_fragment(self.root, fragmentId='fact-HEIGHT', offset=page['endOffset'],
                                  sourceHash=page['sourceHash'], maxBytes=1000)
             chunks.append(page['text'])
         self.assertEqual(''.join(chunks), content)
         self.assertEqual(page['contentHash'], hashlib.sha256(content.encode()).hexdigest())
-        with self.assertRaises(StructureError): read_fragment(self.root, fragmentId='SF-HEIGHT', offset=1)
+        with self.assertRaises(StructureError): read_fragment(self.root, fragmentId='fact-HEIGHT', offset=1)
 
     def test_export_is_complete_even_when_inline_response_cannot_fit(self):
         content = '长段内容。' * 12000
@@ -86,12 +86,12 @@ class SourceRenderingTests(unittest.TestCase):
         self.source['fragments'] = []
         value = self.source['attributes'][1]['values'][0]
         value.pop('value')
-        selection = {'includeAttributes': ['AT-SKIN']}
+        selection = {'includeAttributes': ['attribute-SKIN']}
         for state, permitted in [('not_applicable', True), ('unknown', False), ('unfilled', False)]:
             with self.subTest(state=state):
                 value['state'] = state
                 write_json(self.root / '.govel/structure.json', self.source)
-                settings = query_settings_source(self.root, self.source, selector='C-ALPHA')['matches'][0]
+                settings = query_settings_source(self.root, self.source, selector='character-ALPHA')['matches'][0]
                 self.assertEqual('appearance.skin' not in settings['unfilled'], permitted)
                 if permitted:
                     result = render_source(self.root, selection=selection, requireReviewed=True)
@@ -109,7 +109,7 @@ class SourceRenderingTests(unittest.TestCase):
         with self.assertRaises(StructureError) as error:
             query_source(self.root)
         self.assertEqual(error.exception.code, 'TRANSACTION_INCOMPLETE')
-        with self.assertRaises(StructureError): read_fragment(self.root, fragmentId='SF-HEIGHT')
+        with self.assertRaises(StructureError): read_fragment(self.root, fragmentId='fact-HEIGHT')
         with self.assertRaises(StructureError): export_source(self.root, output='工作台/阅读.md')
 
     def test_explicit_unknown_time_is_distinct_from_an_all_periods_export(self):
@@ -120,8 +120,8 @@ class SourceRenderingTests(unittest.TestCase):
             self.assertEqual(result['recordIds'], [row['id'] for row in query['items']])
             self.assertIn('故事时点：尚未确定', result['markdown'])
             self.assertGreater(result['coverage']['unknownTimeCount'], 0)
-            self.assertEqual('FV-HEIGHT' in result['recordIds'], unknown_time == 'include')
-        self.assertIn('FV-HEIGHT', render_source(self.root)['recordIds'])
+            self.assertEqual('value-HEIGHT' in result['recordIds'], unknown_time == 'include')
+        self.assertIn('value-HEIGHT', render_source(self.root)['recordIds'])
 
 
 class PerspectiveMetadataTests(unittest.TestCase):
@@ -129,11 +129,11 @@ class PerspectiveMetadataTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = source_fixture(self.root)
-        self.choice = {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}
+        self.choice = {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}
         self.source['bookName'] = 'SECRET-book'
-        next(r for r in self.source['entities'] if r['entityId'] == 'C-BETA')['name'] = 'SECRET-person'
-        next(r for r in self.source['entities'] if r['entityId'] == 'C-BETA')['aliases'] = ['SECRET-alias']
-        next(r for r in self.source['entities'] if r['entityId'] == 'TA-START')['name'] = 'SECRET-time'
+        next(r for r in self.source['entities'] if r['entityId'] == 'character-BETA')['name'] = 'SECRET-person'
+        next(r for r in self.source['entities'] if r['entityId'] == 'character-BETA')['aliases'] = ['SECRET-alias']
+        next(r for r in self.source['entities'] if r['entityId'] == 'time-START')['name'] = 'SECRET-time'
         self.source['fieldDefinitions'][0]['label'] = 'SECRET-field'
         self.save()
 
@@ -141,10 +141,10 @@ class PerspectiveMetadataTests(unittest.TestCase):
         write_json(self.root/'.govel/structure.json', self.source)
 
     def add_belief(self):
-        self.source['fragments'].append({'fragmentId': 'SF-VISIBLE-BELIEF', 'ownerId': 'C-BETA',
+        self.source['fragments'].append({'fragmentId': 'belief-VISIBLE-BELIEF', 'ownerId': 'character-BETA',
             'text': '甲记得门旁的人留下了一把钥匙。', 'order': 1, 'contentRole': 'belief',
-            'perspectiveId': 'C-ALPHA', 'contentBindings': ['AT-BETA-HEIGHT'],
-            'validDuring': {'fromId': 'TA-START'}})
+            'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-BETA-HEIGHT'],
+            'validDuring': {'fromId': 'time-START'}})
         self.save()
 
     def test_no_perspective_fragments_means_no_owner_inventory(self):
@@ -165,19 +165,19 @@ class PerspectiveMetadataTests(unittest.TestCase):
             result = query_source(self.root, selection=self.choice, view=view)
             self.assertNotIn('SECRET', json.dumps(result, ensure_ascii=False))
         overview = query_source(self.root, selection=self.choice)
-        self.assertEqual([(r['id'], r['label']) for r in overview['items']], [('C-BETA', 'C-BETA')])
+        self.assertEqual([(r['id'], r['label']) for r in overview['items']], [('character-BETA', 'character-BETA')])
         selected = select_project_content(self.root, self.choice)
         self.assertNotIn('SECRET', json.dumps(selected, ensure_ascii=False))
-        self.assertEqual(selected['referenceLabels']['C-BETA'], 'C-BETA')
-        self.assertEqual(selected['timeLabels']['TA-START'], 'TA-START')
+        self.assertEqual(selected['referenceLabels']['character-BETA'], 'character-BETA')
+        self.assertEqual(selected['timeLabels']['time-START'], 'time-START')
         for operation in (lambda: render_source(self.root, selection=self.choice)['markdown'],
                           lambda: Path(export_source(self.root, output='工作台/视角阅读.md', selection=self.choice)['output']).read_text()):
             text = operation()
             self.assertIn('甲记得门旁的人留下了一把钥匙。', text)
-            self.assertIn('TA-START起', text)
+            self.assertIn('time-START起', text)
             self.assertNotIn('SECRET', text)
         found = search_source(self.root, terms=['钥匙'], selection=self.choice)
-        self.assertEqual(found['items'][0]['ownerLabel'], 'C-BETA')
+        self.assertEqual(found['items'][0]['ownerLabel'], 'character-BETA')
         self.assertNotIn('SECRET', json.dumps(found, ensure_ascii=False))
         with self.assertRaises(StructureError) as caught:
             search_source(self.root, terms=['钥匙'], selection=self.choice, ownerSelectors=['SECRET-alias'])
@@ -186,11 +186,11 @@ class PerspectiveMetadataTests(unittest.TestCase):
     def test_visible_metadata_is_exposed_only_for_selected_owners_and_denials_win(self):
         from scripts.core.source_search import search_source
         self.add_belief()
-        beta = next(r for r in self.source['entities'] if r['entityId'] == 'C-BETA')
-        beta.update(visibility='public', visibleTo=['C-BETA'])
+        beta = next(r for r in self.source['entities'] if r['entityId'] == 'character-BETA')
+        beta.update(visibility='public', visibleTo=['character-BETA'])
         self.save()
-        self.assertEqual(query_source(self.root, selection=self.choice)['items'][0]['label'], 'C-BETA')
-        beta['visibleTo'] = ['C-ALPHA']; self.save()
+        self.assertEqual(query_source(self.root, selection=self.choice)['items'][0]['label'], 'character-BETA')
+        beta['visibleTo'] = ['character-ALPHA']; self.save()
         self.assertEqual(query_source(self.root, selection=self.choice)['items'][0]['label'], 'SECRET-person')
         found = search_source(self.root, terms=['钥匙'], selection=self.choice, ownerSelectors=['SECRET-alias'])
         self.assertEqual(found['items'][0]['ownerLabel'], 'SECRET-person')
@@ -205,7 +205,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         self.add_belief()
         fragment = self.source['fragments'][-1]
         fragment['sourceRefs'] = [{'path': 'AUTHOR-PROVENANCE/结局.md', 'note': 'AUTHOR-PROVENANCE'}]
-        fragment['dependsOn'] = ['FV-HEIGHT']
+        fragment['dependsOn'] = ['value-HEIGHT']
         self.save()
         before = (self.root / '.govel/structure.json').read_bytes()
         result = query_source(self.root, selection=self.choice, view='detail')
@@ -216,7 +216,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         self.assertNotIn('AUTHOR-PROVENANCE', json.dumps(result, ensure_ascii=False))
         chunks, _ = source_materials(self.root,
             {'tool': 'query_source', 'selection': self.choice},
-            {'readingScope': {'povCharacter': 'C-ALPHA'}}, 0)
+            {'readingScope': {'povCharacter': 'character-ALPHA'}}, 0)
         self.assertNotIn('AUTHOR-PROVENANCE', json.dumps(chunks, ensure_ascii=False))
         author = query_source(self.root, selection={'roles': ['belief']}, view='detail')
         self.assertEqual(next(row['content'] for row in author['items']

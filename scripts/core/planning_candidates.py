@@ -153,7 +153,7 @@ def _placement(source: dict, record: dict) -> dict:
                   'placement': record.get('placement'), 'primaryArcId': record.get('primaryArcId'),
                   'secondaryArcIds': record.get('secondaryArcIds', []),
                   'beforeChapterId': record.get('beforeChapterId')}
-    probe = {**source, 'planningCandidates': [{**normalized, 'candidateId': 'PC-VALIDATION', 'status': 'draft'}]}
+    probe = {**source, 'planningCandidates': [{**normalized, 'candidateId': 'candidate-VALIDATION', 'status': 'draft'}]}
     errors = validate_candidates(probe)
     if errors:
         raise StructureError('PLANNING_CANDIDATE_INVALID', 'invalid candidate placement', {'errors': errors})

@@ -33,7 +33,7 @@ class ArgumentPreflightTests(unittest.TestCase):
         self.root = Path(temp.name).resolve()
         self.operation = 'source.fact-patch-preview'
         self.arguments = {'sourceHash': 7, 'patches': [
-            {'recordId': 'SF-ONE', 'reason': '', 'replacements': []},
+            {'recordId': 'plan-ONE', 'reason': '', 'replacements': []},
             {'recordId': 9, 'reason': 'explicit', 'replacements': [{'old': 'before', 'new': False}]},
         ], 'approvalActor': False, 'approvalEvidence': 'explicit'}
 
@@ -105,8 +105,8 @@ class ArgumentPreflightTests(unittest.TestCase):
             validate_arguments(schema, {'blocked': None})
         self.assertEqual(caught.exception.details['path'], 'arguments.blocked')
         from scripts.core.operation_schemas import canon_proposal_item
-        item = {'kind': 'fact', 'recordId': 'SF-EXAMPLE', 'patch': [{'op': 'set', 'path': ['text'], 'value': 'new'}],
-                'reason': 'explicit', 'evidence': [{'fragmentId': 'SF-EXAMPLE', 'quote': 'old'}]}
+        item = {'kind': 'fact', 'recordId': 'fact-EXAMPLE', 'patch': [{'op': 'set', 'path': ['text'], 'value': 'new'}],
+                'reason': 'explicit', 'evidence': [{'fragmentId': 'fact-EXAMPLE', 'quote': 'old'}]}
         validate_arguments(canon_proposal_item(), item)
         with self.assertRaises(StructureError):
             validate_arguments(canon_proposal_item(), {**item, 'evidenceMode': 'author_declaration'})

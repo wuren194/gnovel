@@ -11,12 +11,12 @@ from tests.fixtures_workflow import register_and_approve
 from scripts.core.chapter_state import advance_chapter_status
 from scripts.core.jsonio import read_json, write_json
 from scripts.core.workflow import WorkflowError, approve_artifacts, default_workflow, record_artifact
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class ChapterStateTests(unittest.TestCase):
     def _planning_project(self, root: Path) -> tuple[dict, dict]:
-        fixture = create_schema5_project(root, chapter_count=1)
+        fixture = create_current_project(root, chapter_count=1)
         structure = read_json(root / ".govel/structure.json")
         chapter = structure["chapters"][0]
         chapter["status"] = "planning_required"

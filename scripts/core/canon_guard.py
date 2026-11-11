@@ -52,6 +52,8 @@ def require_canon_proposal(current: dict, proposed: dict, plan: dict) -> None:
     require_current_source(proposed)
     from .author_decisions import canon_proposal_content
     proposed = canon_proposal_content(current, proposed, plan)
+    from .source_cognition import require_check_transition
+    require_check_transition(current, proposed, plan)
     operation = plan['operation']
     if operation == 'canon_fact_patch':
         from .source_fact_patch import require_fact_patch
@@ -191,9 +193,10 @@ def require_canon_proposal(current: dict, proposed: dict, plan: dict) -> None:
         new = _rows(proposed, 'relations', 'relationId').get(rid)
         if old is None or proposal.get('expectedOldRecord') != old or proposal.get('newRecord') != new:
             raise StructureError(scope_error, 'relation proposal does not match its exact old/new records')
-        if new is not None and (set(new) != set(old) or
-                                any(new.get(key) != value for key, value in old.items() if key != 'kind')):
-            raise StructureError(scope_error, 'only relation kind may change')
+        from .source_relation_proposals import MUTABLE_FIELDS
+        if new is not None and ({key: value for key, value in new.items() if key not in MUTABLE_FIELDS} !=
+                                {key: value for key, value in old.items() if key not in MUTABLE_FIELDS}):
+            raise StructureError(scope_error, 'relation identity, direction and provenance are immutable')
         from .source_relation_proposals import _resolved, _validate_evidence
         resolved, reference = _resolved(current, proposal.get('sessionRef'))
         if resolved != old or reference['chapterId'] != proposal.get('sourceChapterId'):

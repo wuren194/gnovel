@@ -16,12 +16,12 @@ class PlanningPatchBatchTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = initialize_project(self.root)
-        self.source['fieldDefinitions'].append({'fieldId': 'FD-PLAN', 'key': 'plot.plan', 'label': 'Plan',
+        self.source['fieldDefinitions'].append({'fieldId': 'field-PLAN', 'key': 'plot.plan', 'label': 'Plan',
                                                 'valueType': 'topic', 'appliesTo': ['project']})
-        self.source['attributes'].append({'attributeId': 'AT-PLAN', 'ownerId': self.source['projectId'], 'fieldId': 'FD-PLAN', 'values': []})
-        self.source['fragments'] = [{'fragmentId': 'SF-PLAN' + str(i), 'ownerId': self.source['projectId'],
+        self.source['attributes'].append({'attributeId': 'attribute-PLAN', 'ownerId': self.source['projectId'], 'fieldId': 'field-PLAN', 'values': []})
+        self.source['fragments'] = [{'fragmentId': 'plan-PLAN' + str(i), 'ownerId': self.source['projectId'],
             'text': 'Alpha guards the gate. ' + ('Long original paragraph.\r\n' * 1200 if i == 0 else ''),
-            'order': i, 'contentRole': 'plan', 'contentBindings': ['AT-PLAN']} for i in range(2)]
+            'order': i, 'contentRole': 'plan', 'contentBindings': ['attribute-PLAN']} for i in range(2)]
         validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
 
     def changes(self):
@@ -36,8 +36,8 @@ class PlanningPatchBatchTests(unittest.TestCase):
 
     def test_large_resolver_returns_bound_reference_and_patch_without_full_record(self):
         with self.assertRaises(StructureError):
-            call_operation('source.content-resolve', self.root, {'kind': 'planning', 'recordId': 'SF-PLAN0'})
-        resolved = call_operation('source.content-resolve', self.root, {'kind': 'planning', 'recordId': 'SF-PLAN0', 'view': 'model'})
+            call_operation('source.content-resolve', self.root, {'kind': 'planning', 'recordId': 'plan-PLAN0'})
+        resolved = call_operation('source.content-resolve', self.root, {'kind': 'planning', 'recordId': 'plan-PLAN0', 'view': 'model'})
         self.assertNotIn('record', resolved)
         self.assertEqual(resolved['recordHash'], fingerprint(self.source['fragments'][0]))
         from scripts.core.transport_cache import get

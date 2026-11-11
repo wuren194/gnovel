@@ -1,7 +1,7 @@
 ---
 id: G-RELATIONSHIP-ROLES
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 角色关系与行动能力的责任与判断边界。
 ---
 

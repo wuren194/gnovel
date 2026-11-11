@@ -17,7 +17,7 @@ class ArtifactTemplateTests(unittest.TestCase):
     def test_all_templates_pass_runtime_validation(self) -> None:
         for artifact_type in ARTIFACT_TYPES:
             with self.subTest(artifact_type=artifact_type):
-                validate_review_artifact(artifact_template(artifact_type, project_id="P", chapter_id="CH-X"))
+                validate_review_artifact(artifact_template(artifact_type, project_id="P", chapter_id="chapter-X"))
 
     def test_schema_declarations_cover_runtime_types(self) -> None:
         report = validate_artifact_schema_declarations()
@@ -26,7 +26,7 @@ class ArtifactTemplateTests(unittest.TestCase):
 
     def test_cli_template_does_not_require_project(self) -> None:
         proc = subprocess.run(
-            [sys.executable, str(NOVELCTL), "project", "workflow", "artifact-template", "--type", "diagnostics", "--project-id", "P", "--chapter-id", "CH-X"],
+            [sys.executable, str(NOVELCTL), "project", "workflow", "artifact-template", "--type", "diagnostics", "--project-id", "P", "--chapter-id", "chapter-X"],
             cwd=ROOT, capture_output=True, text=True,
         )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)

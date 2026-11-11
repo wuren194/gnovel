@@ -10,14 +10,14 @@ from scripts.core.artifacts import envelope, sha256_json, sha256_text
 from scripts.core.finalization import finalize_chapter, reconcile_workflow
 from scripts.core.jsonio import read_json, write_json
 from scripts.core.workflow import approve_artifacts, default_workflow, record_artifact
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class WorkflowReconcileTests(unittest.TestCase):
     def test_reconcile_reads_approved_chapter_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root, chapter_count=1)
+            fixture = create_current_project(root, chapter_count=1)
             workflow = default_workflow()
             workflow["approvedChapterIds"] = fixture["chapterIds"]
             write_json(root / ".govel/workflow.json", workflow)
@@ -28,7 +28,7 @@ class WorkflowReconcileTests(unittest.TestCase):
     def test_reconcile_selects_earliest_unstable_chapter(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root, chapter_count=2)
+            fixture = create_current_project(root, chapter_count=2)
             structure = read_json(root / ".govel/structure.json")
             structure["chapters"][0]["status"] = "review"
             write_json(root / ".govel/structure.json", structure)
@@ -43,7 +43,7 @@ class WorkflowReconcileTests(unittest.TestCase):
     def test_reconcile_reports_multiple_in_flight_chapters(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root, chapter_count=2)
+            fixture = create_current_project(root, chapter_count=2)
             structure = read_json(root / ".govel/structure.json")
             structure["chapters"][0]["status"] = "draft"
             structure["chapters"][1]["status"] = "review"
@@ -59,7 +59,7 @@ class WorkflowReconcileTests(unittest.TestCase):
     def test_reconcile_reports_chapter_state_divergence(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root, chapter_count=1)
+            fixture = create_current_project(root, chapter_count=1)
             chapter_id = fixture["chapterIds"][0]
             workflow = default_workflow()
             workflow["approvedChapterIds"] = [chapter_id]

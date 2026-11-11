@@ -25,8 +25,8 @@ class SourceReportTextTests(unittest.TestCase):
         source = source_fixture(self.root)
         self.value = '人物说明🙂\r\n保持原文。' * 1800
         self.preview = preview_proposal_batch(self.root, sourceHash=snapshot_hash(source), items=[{
-            'kind': 'entity', 'recordId': 'C-ALPHA', 'patch': [{'op': 'set', 'path': ['summary'], 'value': self.value}],
-            'reason': 'long explicit source change', 'evidence': [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}],
+            'kind': 'entity', 'recordId': 'character-ALPHA', 'patch': [{'op': 'set', 'path': ['summary'], 'value': self.value}],
+            'reason': 'long explicit source change', 'evidence': [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}],
         }], requestId='large-report', approvalActor='author', approvalEvidence='explicit')
 
     def inventory(self):
@@ -103,7 +103,7 @@ class SourceReportTextTests(unittest.TestCase):
 
     def test_compact_undo_details_keep_the_selected_undo_revision(self):
         result = public_report({'operationId': 'OP-TEST', 'revision': 7, 'undoReceiptPath': 'receipt.json',
-                                'impact': {'changedIds': ['SF-LONG-' + str(index) for index in range(2000)]}})
+                                'impact': {'changedIds': ['fact-LONG-' + str(index) for index in range(2000)]}})
         self.assertTrue(result['responseCompacted'])
         self.assertEqual(result['details']['arguments'], {'operationId': 'OP-TEST', 'view': 'text', 'undoRevision': 7})
 
@@ -112,7 +112,7 @@ class SourceReportTextTests(unittest.TestCase):
             report = {'operationId': 'OP-FROZEN', 'operation': 'accept_external_modification',
                       'planHash': 'f' * 64, 'requiresApproval': True,
                       'bindingTransitions': [{'kind': 'accept_external'}],
-                      'impact': {'changedIds': ['SF-' + str(index) for index in range(3000)] if large else []}}
+                      'impact': {'changedIds': ['fact-' + str(index) for index in range(3000)] if large else []}}
             original = json.loads(json.dumps(report))
             result = public_report(report, root=self.root)
             self.assertEqual(report, original)

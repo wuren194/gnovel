@@ -77,7 +77,7 @@ class StructureCommandTests(unittest.TestCase):
                     commit_plan(root, operation_id=preview["operationId"], plan_hash=preview["planHash"], approved=True)
             for relative, before in watched.items():
                 self.assertEqual((root / relative).read_bytes(), before, relative)
-            self.assertEqual(list((root / "规划").glob("CH-*-推演.md")), [])
+            self.assertEqual(list((root / "规划").glob("chapter-*-推演.md")), [])
             self.assertFalse(list((root / ".govel/transactions").glob("*.json")), "失败事务必须清理")
             # 同一份计划必须能原样重试成功（备份残留会在这里暴露 FileExistsError）
             self.assertEqual(commit_plan(root, operation_id=preview["operationId"], plan_hash=preview["planHash"], approved=True)["code"], "STRUCTURE_COMMITTED")

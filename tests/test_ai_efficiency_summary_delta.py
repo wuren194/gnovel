@@ -13,14 +13,14 @@ from scripts.core.operations import call_operation
 from scripts.core.structure_store import StructureError
 from scripts.core.summary_updates import SUMMARY_PATH
 from scripts.story_summarizer import _prepare_context, _commit_summary
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class SummaryDeltaTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
-        self.fixture = create_schema5_project(self.root, chapter_count=3)
+        self.fixture = create_current_project(self.root, chapter_count=3)
         self.prepared = _prepare_context(self.root, view='model')
         self.ids = self.prepared['coveredChapterIds']
         self.character = self.prepared['characters'][0]['characterId']
@@ -169,7 +169,7 @@ class SummaryDeltaTests(unittest.TestCase):
     def test_empty_story_and_unknown_ids_cannot_change_saved_summary(self):
         before = (self.root / SUMMARY_PATH).read_bytes()
         for changes in ({'storySummary': '   '},
-                        {'plotLine': [{'op': 'add', 'chapterId': 'CH-UNKNOWN', 'summary': '不存在'}]},
+                        {'plotLine': [{'op': 'add', 'chapterId': 'chapter-UNKNOWN', 'summary': '不存在'}]},
                         {'characterSummaries': [{'op': 'replace', 'characterId': self.character, 'summary': ' '}]},
                         {'plotLine': [{'op': 'delete', 'chapterId': self.ids[0], 'summary': '不可混用'}]}):
             with self.assertRaises(StructureError):

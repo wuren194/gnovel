@@ -14,7 +14,7 @@ from scripts.core.catalog_api import CATALOG_OPERATIONS, snake_case
 from scripts.core.jsonio import write_json
 from scripts.core.structure_store import load_structure, save_structure
 from scripts.dashboard_server import DashboardHandler
-from tests.fixtures_current import ROOT, create_schema5_project
+from tests.fixtures_current import ROOT, create_current_project
 
 
 class QuietHandler(DashboardHandler):
@@ -27,11 +27,11 @@ class TransportSmokeTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
         structure = load_structure(self.root)
-        structure["volumes"].append({"volumeId": "VOL-SPARE-ID", "ordinal": 2, "title": "备用卷", "status": "planned"})
-        structure["arcs"].append({"arcId": "ARC-SPARE-ID", "title": "备用弧线", "kind": "subplot", "status": "planned", "volumeIds": [], "parentArcId": None})
-        structure["entities"].append({"entityId": "P-ARCHIVED-ID", "entityType": "prop", "name": "归档物件", "aliases": [], "status": "archived", "summary": "恢复预览用", "sourceRefs": []})
+        structure["volumes"].append({"volumeId": "volume-SPARE-ID", "ordinal": 2, "title": "备用卷", "status": "planned"})
+        structure["arcs"].append({"arcId": "arc-SPARE-ID", "title": "备用弧线", "kind": "subplot", "status": "planned", "volumeIds": [], "parentArcId": None})
+        structure["entities"].append({"entityId": "prop-ARCHIVED-ID", "entityType": "prop", "name": "归档物件", "aliases": [], "status": "archived", "summary": "恢复预览用", "sourceRefs": []})
         save_structure(self.root, structure)
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), QuietHandler)
         self.server.project_root = str(self.root)
@@ -105,10 +105,10 @@ class TransportSmokeTests(unittest.TestCase):
             "preview_archive_entity": {"selector": self.fixture["characterId"]},
             "preview_create_volume": {"title": "新卷"},
             "preview_update_volume": {"volumeId": volume, "changes": {"title": "更新卷名"}},
-            "preview_archive_volume": {"volumeId": "VOL-SPARE-ID"},
+            "preview_archive_volume": {"volumeId": "volume-SPARE-ID"},
             "preview_create_arc": {"title": "新弧线", "volumeIds": [volume]},
             "preview_update_arc": {"arcId": arc, "changes": {"promise": "新承诺"}},
-            "preview_archive_arc": {"arcId": "ARC-SPARE-ID"},
+            "preview_archive_arc": {"arcId": "arc-SPARE-ID"},
             "preview_relink_chapter": {"chapterId": self.fixture["chapterIds"][0], "volumeId": volume, "primaryArcId": arc},
             "preview_rename_book": {"newName": "烟波引"},
             "preview_rename_chapter": {"chapterId": self.fixture["chapterIds"][0], "newTitle": "第一章改名"},
@@ -116,7 +116,7 @@ class TransportSmokeTests(unittest.TestCase):
             "preview_rename_entity": {"selector": self.fixture["characterId"], "newName": "沈砚之", "keepOldNameAsAlias": True},
             "preview_alias_entity": {"selector": self.fixture["propId"], "aliases": ["柜钥匙"]},
             "preview_restore_chapter": {"chapterId": self.fixture["chapterIds"][0], "status": "planned"},
-            "preview_restore_entity": {"selector": "P-ARCHIVED-ID"},
+            "preview_restore_entity": {"selector": "prop-ARCHIVED-ID"},
             "preview_set_visibility": {"collection": "chapters", "recordId": self.fixture["chapterIds"][0], "visibleTo": [self.fixture["characterId"]]},
         }[name]
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
@@ -37,8 +39,8 @@ class MaintenanceTests(unittest.TestCase):
         return {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
 
     def patches(self):
-        return [{'recordId': 'SF-HEIGHT', 'replacements': [{'old': '一米九', 'new': '一米八'}], 'reason': '方案第一项'},
-                {'recordId': 'SF-LIFE', 'replacements': [{'old': '独自', 'new': '与同伴一起'}], 'reason': '方案第二项'}]
+        return [{'recordId': 'fact-HEIGHT', 'replacements': [{'old': '一米九', 'new': '一米八'}], 'reason': '方案第一项'},
+                {'recordId': 'fact-LIFE', 'replacements': [{'old': '独自', 'new': '与同伴一起'}], 'reason': '方案第二项'}]
 
     def preview(self, patches=None, source_hash=None):
         return preview_fact_patch(self.root, sourceHash=source_hash or snapshot_hash(load_structure(self.root)),
@@ -70,7 +72,7 @@ class MaintenanceTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 'CURSOR_STALE')
 
     def test_search_selection_and_registry_have_real_consumers(self):
-        self.assertEqual(search_source(self.root, terms=['他'], selection={'ownerIds': ['C-BETA']})['totalMatching'], 0)
+        self.assertEqual(search_source(self.root, terms=['他'], selection={'ownerIds': ['character-BETA']})['totalMatching'], 0)
         policy = deepcopy(query_policy()); policy['searchContextCharacters'] = 1
         with patch('scripts.core.source_search.query_policy', return_value=policy):
             item = search_source(self.root, terms=['身高'])['items'][0]
@@ -85,7 +87,7 @@ class MaintenanceTests(unittest.TestCase):
         self.assertEqual(load_structure(self.root), source)
         result = self.commit(plan)
         self.assertEqual(result['afterRevision'], source['revision'] + 1)
-        self.assertEqual(set(result['impact']['changedIds']), {'SF-HEIGHT', 'SF-LIFE'})
+        self.assertEqual(set(result['impact']['changedIds']), {'fact-HEIGHT', 'fact-LIFE'})
         changed = load_structure(self.root)
         self.assertEqual(changed['fragments'][0]['text'], '他身高一米八。')
         self.assertEqual(changed['fragments'][3]['text'], '他与同伴一起守过城门。')
@@ -139,9 +141,9 @@ class MaintenanceTests(unittest.TestCase):
             with self.subTest(kind=kind), self.assertRaises(StructureError):
                 require_canon_proposal(current, corrupt['proposedStructure'], corrupt)
 
-    def test_schema5_batch_rejects_stale_commit_without_partial_writes(self):
+    def test_current_batch_rejects_stale_commit_without_partial_writes(self):
         source = load_structure(self.root)
-        source['schemaVersion'] = 5
+        source['schemaVersion'] = current_schema_version()
         write_json(self.root / '.govel/structure.json', source)
         stale = self.preview()
         competing = self.preview([self.patches()[1]])
@@ -155,11 +157,11 @@ class MaintenanceTests(unittest.TestCase):
         source = load_structure(self.root)
         for i in range(1154):
             source['fragments'].append({**deepcopy(source['fragments'][0]),
-                'fragmentId': f'SF-SCALE-{i}', 'order': i + 10, 'text': f'第{i}处旧称。'})
+                'fragmentId': f'fact-SCALE-{i}', 'order': i + 10, 'text': f'第{i}处旧称。'})
         write_json(self.root / '.govel/structure.json', source)
         result = search_source(self.root, terms=['旧称'], limit=1)
         self.assertEqual(result['totalMatching'], 1154)
-        patches = [{'recordId': f'SF-SCALE-{i}', 'reason': f'方案第{i}项',
+        patches = [{'recordId': f'fact-SCALE-{i}', 'reason': f'方案第{i}项',
                     'replacements': [{'old': '旧称', 'new': '新称'}]} for i in range(25)]
         plan = self.preview(patches)
         self.commit(plan)
@@ -184,8 +186,8 @@ class MaintenanceTests(unittest.TestCase):
         directory = self.root / '工作台'; directory.mkdir(exist_ok=True)
         (directory / '方案.md').write_text(document)
         checklist = {'source': {'path': '工作台/方案.md', 'sha256': digest(document.encode())}, 'items': [
-            {'itemId': 'Z-1', 'quote': '第一项：调整身高。', 'recordIds': ['SF-HEIGHT'], 'operationIds': [operation_id]},
-            {'itemId': 'Z-2', 'quote': '第二项：调整经历。', 'recordIds': ['SF-LOOK'], 'operationIds': [operation_id]}]}
+            {'itemId': 'Z-1', 'quote': '第一项：调整身高。', 'recordIds': ['fact-HEIGHT'], 'operationIds': [operation_id]},
+            {'itemId': 'Z-2', 'quote': '第二项：调整经历。', 'recordIds': ['fact-LOOK'], 'operationIds': [operation_id]}]}
         write_json(directory / '核对.json', checklist)
         return checklist
 
@@ -202,7 +204,7 @@ class MaintenanceTests(unittest.TestCase):
                 self.assertEqual(row['operationId'], triage[row['recordId']]['operationId'])
         self.assertEqual(result['summary']['submittedItemCount'], 1)
         self.assertEqual(result['summary']['reviewReadyItemCount'], 0)
-        self.assertEqual(result['items'][1]['uncoveredRecordIds'], ['SF-LOOK'])
+        self.assertEqual(result['items'][1]['uncoveredRecordIds'], ['fact-LOOK'])
         self.assertFalse(result['coverage']['semanticReviewComplete'])
         undo(self.root, plan['operationId'], actor='test')
         result = check_maintenance(self.root, checklistPath='工作台/核对.json')
@@ -211,7 +213,7 @@ class MaintenanceTests(unittest.TestCase):
 
     def test_checklist_binds_document_and_reviews_to_current_inputs(self):
         plan = self.preview(); self.commit(plan); self.checklist(plan['operationId'])
-        reviews = query_reviews(self.root, recordIds=['SF-HEIGHT', 'SF-LIFE'])
+        reviews = query_reviews(self.root, recordIds=['fact-HEIGHT', 'fact-LIFE'])
         source = load_structure(self.root)
         by_id = {f['fragmentId']: f for f in source['fragments']}
         submission = [{key: row[key] for key in ('recordId', 'inputHash', 'contentHash')} | {

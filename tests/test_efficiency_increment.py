@@ -169,10 +169,10 @@ class RecordPatchTests(unittest.TestCase):
     def test_fact_patch_reuses_approval_gate_and_preserves_other_fields(self):
         from scripts.core.structure_commands import commit_plan
         from scripts.core.source_content_proposals import resolve_content_target
-        old = resolve_content_target(self.root, recordId='SF-LIFE', kind='fact')
+        old = resolve_content_target(self.root, recordId='fact-LIFE', kind='fact')
         args = {'sessionRef': old['sessionRef'], 'expectedRecordHash': old['recordHash'],
                 'patch': [{'op': 'text', 'path': ['text'], 'original': '守过', 'replacement': '走过'}],
-                'reason': '核对事实', 'evidence': [{'fragmentId': 'SF-LIFE', 'quote': old['record']['text']}],
+                'reason': '核对事实', 'evidence': [{'fragmentId': 'fact-LIFE', 'quote': old['record']['text']}],
                 'approvalActor': 'author', 'approvalEvidence': '确认'}
         plan = call_operation('source.content-proposal-preview', self.root, args)
         with self.assertRaises(StructureError):
@@ -180,7 +180,7 @@ class RecordPatchTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=False)
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
-        new = resolve_content_target(self.root, recordId='SF-LIFE', kind='fact')['record']
+        new = resolve_content_target(self.root, recordId='fact-LIFE', kind='fact')['record']
         self.assertEqual({k: v for k, v in new.items() if k != 'text'}, {k: v for k, v in old['record'].items() if k != 'text'})
         self.assertIn('走过', new['text'])
         with self.assertRaises(StructureError):
@@ -195,17 +195,17 @@ class RecordPatchTests(unittest.TestCase):
             with self.assertRaises(StructureError): apply_record_patch(record, edits, fingerprint(record))
         with self.assertRaises(StructureError):
             apply_record_patch({'text': 'aaa'}, [{'op': 'text', 'path': ['text'], 'original': 'aa', 'replacement': 'b'}], fingerprint({'text': 'aaa'}))
-        resolved = call_operation('source.content-resolve', self.root, {'recordId': 'SF-LIFE', 'kind': 'fact'})
+        resolved = call_operation('source.content-resolve', self.root, {'recordId': 'fact-LIFE', 'kind': 'fact'})
         with self.assertRaises(StructureError):
             call_operation('source.content-proposal-preview', self.root, {'sessionRef': resolved['sessionRef'],
-                'expectedRecordHash': resolved['recordHash'], 'patch': [{'op': 'set', 'path': ['ownerId'], 'value': 'C-BETA'}],
+                'expectedRecordHash': resolved['recordHash'], 'patch': [{'op': 'set', 'path': ['ownerId'], 'value': 'character-BETA'}],
                 'reason': '测试', 'evidence': [], 'approvalActor': 'author', 'approvalEvidence': '确认'})
 
     def test_canon_patch_is_single_field_and_keeps_evidence_requirements(self):
-        resolved = call_operation('source.canon-resolve', self.root, {'selector': 'C-ALPHA'})
+        resolved = call_operation('source.canon-resolve', self.root, {'selector': 'character-ALPHA'})
         args = {'sessionRef': resolved['sessionRef'], 'expectedRecordHash': resolved['recordHash'],
                 'patch': [{'op': 'set', 'path': ['summary'], 'value': '曾守城门'}], 'reason': '核对',
-                'evidence': [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}], 'approvalActor': 'author', 'approvalEvidence': '确认'}
+                'evidence': [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}], 'approvalActor': 'author', 'approvalEvidence': '确认'}
         plan = call_operation('source.canon-proposal-preview', self.root, args)
         self.assertEqual(plan['parameters']['canonProposal']['newValue'], '曾守城门')
         with self.assertRaises(StructureError):
@@ -213,17 +213,17 @@ class RecordPatchTests(unittest.TestCase):
 
     def test_attribute_nested_patch_and_planning_fragment_preserve_gates(self):
         from scripts.core.structure_commands import commit_plan
-        old = call_operation('source.content-resolve', self.root, {'recordId': 'AT-HEIGHT', 'kind': 'attribute'})
+        old = call_operation('source.content-resolve', self.root, {'recordId': 'attribute-HEIGHT', 'kind': 'attribute'})
         plan = call_operation('source.content-proposal-preview', self.root, {
             'sessionRef': old['sessionRef'], 'expectedRecordHash': old['recordHash'],
             'patch': [{'op': 'set', 'path': ['values', 0, 'value', 'number'], 'value': 185}],
-            'reason': '核对', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '他身高一米九。'}],
+            'reason': '核对', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '他身高一米九。'}],
             'approvalActor': 'author', 'approvalEvidence': '确认'})
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(load_structure(self.root)['attributes'][0]['values'][0]['value']['number'], 185)
         from tests.test_source_plan import planning_source
         planning_source(self.root)
-        resolved = call_operation('source.content-resolve', self.root, {'recordId': 'SF-PLAN', 'kind': 'planning'})
+        resolved = call_operation('source.content-resolve', self.root, {'recordId': 'plan-PLAN', 'kind': 'planning'})
         args = {'sessionRef': resolved['sessionRef'], 'expectedRecordHash': resolved['recordHash'],
                 'patch': [{'op': 'text', 'path': ['text'], 'original': '守', 'replacement': '离开'}],
                 'reason': '修订计划', 'evidence': [], 'approvalActor': 'author', 'approvalEvidence': '确认'}
@@ -235,9 +235,9 @@ class RecordPatchTests(unittest.TestCase):
 
     def test_relation_patch_preserves_endpoints_and_author_declaration(self):
         source = load_structure(self.root)
-        source['relations'] = [{'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA', 'toEntity': 'C-BETA', 'kind': 'protects'}]
+        source['relations'] = [{'relationId': 'relation-ALPHA-BETA', 'fromEntity': 'character-ALPHA', 'toEntity': 'character-BETA', 'kind': 'protects'}]
         write_json(self.root / '.govel/structure.json', source)
-        resolved = call_operation('source.relation-resolve', self.root, {'relationId': 'REL-ALPHA-BETA'})
+        resolved = call_operation('source.relation-resolve', self.root, {'relationId': 'relation-ALPHA-BETA'})
         args = {'sessionRef': resolved['sessionRef'], 'expectedRecordHash': resolved['recordHash'],
                 'patch': [{'op': 'set', 'path': ['kind'], 'value': 'trusts'}],
                 'reason': '作者核对', 'evidence': [], 'evidenceMode': 'author_declaration',
@@ -246,7 +246,7 @@ class RecordPatchTests(unittest.TestCase):
         self.assertEqual(plan['parameters']['relationProposal']['newRecord']['kind'], 'trusts')
         with self.assertRaises(StructureError):
             call_operation('source.relation-proposal-preview', self.root, {**args,
-                'patch': [{'op': 'set', 'path': ['fromEntity'], 'value': 'C-BETA'}]})
+                'patch': [{'op': 'set', 'path': ['fromEntity'], 'value': 'character-BETA'}]})
 
 
 class TableAndCalibrationTests(unittest.TestCase):

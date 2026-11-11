@@ -145,7 +145,7 @@ class ArtifactPackTests(unittest.TestCase):
     def test_stage_a_binding_uses_authored_source_plan(self):
         from tests.current_lifecycle import CurrentLifecycleFixture
         helper = CurrentLifecycleFixture(); helper.setUp(); self.addCleanup(helper.doCleanups)
-        root, cid = helper.read_ready_schema5()
+        root, cid = helper.read_ready_current()
         before = (root/'.govel/structure.json').read_bytes()
         result = pack_artifact(root, chapterId=cid, artifactType='stage_a_review',
             payload={'decision': 'pending', 'activeSeats': list(range(1, 11))})

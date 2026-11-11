@@ -65,16 +65,17 @@ def content_defaults() -> dict:
 
 
 def content_id_patterns() -> dict[str, re.Pattern]:
+    from .source_ids import identity_pattern
     policy = source_model_policy()
-    prefixes = {spec['idField']: spec['prefix'] for spec in policy['collections'].values()}
-    prefixes['valueId'] = policy['valueIdPrefix']
-    return {key: re.compile(r'^' + re.escape(prefix) + '-' + policy['idSuffixPattern'] + '$')
-            for key, prefix in prefixes.items()}
+    kinds = {row['idField']: row['idField'].removesuffix('Id') for row in policy['collections'].values()}
+    return {key: identity_pattern(kind) for key, kind in {**kinds, 'valueId': 'value'}.items()}
 
 
 def source_schema() -> dict:
     from .author_decisions import SCOPE_SNAPSHOT_BASIS
     from .source_validation import RECORD_FIELDS, REQUIRED_FIELDS
+    from .source_cognition import COGNITION_FIELDS
+    from .source_relation_proposals import MUTABLE_FIELDS as RELATION_MUTABLE_FIELDS
     from .chapter_contract import (FIELDS as CONTRACT_FIELDS, REQUIRED_FIELDS as CONTRACT_REQUIRED_FIELDS,
                                    contract_schema)
     from .relationship_causality import declaration_schema
@@ -111,6 +112,27 @@ def source_schema() -> dict:
             'valueIdPattern': patterns['valueId'].pattern,
             'valueTypes': policy['valueTypes'], 'valueStates': policy['valueStates'],
             'contentRoles': policy['contentRoles'], 'recordStatuses': policy['recordStatuses'],
+            'fragmentPrefixes': policy['fragmentPrefixes'],
+            'entityPrefixes': policy['entityPrefixes'],
+            'receiptPrefixes': policy['receiptPrefixes'],
+            'generatedSuffixLength': policy['generatedSuffixLength'],
+            'profileTopics': policy['profileTopics'],
+            'recallTopics': policy['recallTopics'],
+            'cognition': {'fields': sorted(COGNITION_FIELDS),
+                          'attitudes': policy['cognitionAttitudes'],
+                          'target': 'concrete valueId or proposition fragmentId; never fieldId or attributeId',
+                          'time': 'acquiredAtId and fragment.validDuring are story time; null is undetermined'},
+            'checks': {'statuses': policy['checkStatuses'], 'appendOnly': True,
+                       'bindings': 'tool-owned targetHash and inputHashes; changed evidence remains historical'},
+            'designations': {'owner': 'entity', 'fields': ['label', 'perspectiveIds', 'validDuring'],
+                             'existing': 'canon_proposal', 'visibility': 'explicit audience and determined story time'},
+            'relations': {'fields': ['relationId', 'fromEntity', 'toEntity', 'kind', 'origin',
+                                     'perspectiveId', 'validDuring', 'basisIds'],
+                          'mutableFields': sorted(RELATION_MUTABLE_FIELDS),
+                          'perspectiveId': 'character or faction; omitted means author relation'},
+            'recall': {'topics': policy['recallTopics'], 'weightMeaning': 'reminder frequency',
+                       'withoutReplacement': True, 'sceneConditioned': False,
+                       'taskRetries': 'reuse sampleId; refuse changed inputs'},
             'presentationKinds': policy['presentationKinds'],
             'ruleSpec': {'ownerType': 'rule', 'requiredFields': sorted(RULE_REQUIRED),
                          'optionalFields': ['evaluation', 'exceptionsAllowed'], 'actions': policy['ruleActions'],
@@ -189,6 +211,9 @@ class SourceIndex:
         records = {**objects, **fields, **attributes, **fragments, **values}
         records.update({r['presentationId']: r for r in structure.get('presentations', [])})
         records.update({r['relationId']: r for r in structure.get('relations', [])})
+        for name in ('checks', 'recallPools'):
+            key = source_model_policy()['collections'][name]['idField']
+            records.update({r[key]: r for r in structure.get(name, [])})
         schema_version = structure.get('schemaVersion') if type(structure.get('schemaVersion')) is int else None
         candidates = {r['candidateId']: r for r in structure.get('planningCandidates', [])
                       if isinstance(r, dict) and isinstance(r.get('candidateId'), str)}

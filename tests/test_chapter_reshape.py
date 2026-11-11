@@ -190,7 +190,7 @@ class ChapterReshapeTests(unittest.TestCase):
         for cuts in ([], [0], [9999], [7, 7], [8, 3], [True]):
             with self.subTest(cuts=cuts), self.assertRaises(StructureError):
                 self.split(requestId='invalid-' + str(cuts), cutOffsets=cuts)
-        for ids in ([self.first], [self.first, self.first], ['CH-MISSING', self.second]):
+        for ids in ([self.first], [self.first, self.first], ['chapter-MISSING', self.second]):
             with self.subTest(ids=ids), self.assertRaises(StructureError):
                 self.merge(requestId='invalid-' + str(ids), chapterIds=ids)
         self.assertEqual(load_structure(self.root), self.initial)

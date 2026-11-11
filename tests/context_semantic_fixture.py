@@ -13,38 +13,38 @@ def fixed_transport_sample(task: str) -> dict:
     Repeated memory locations, a reference, an author decision and a voice
     profile exercise semantic/proof separation without a captured private pack.
     """
-    memory = {'subject': 'C-READER', 'field': 'entity', 'source_chapter': 'CH-PREVIOUS',
-              'value': {'entityId': 'C-READER', 'name': '林禾', 'summary': '在书店整理借阅记录。'}}
+    memory = {'subject': 'character-READER', 'field': 'entity', 'source_chapter': 'chapter-PREVIOUS',
+              'value': {'entityId': 'character-READER', 'name': '林禾', 'summary': '在书店整理借阅记录。'}}
     reference = {'assetId': 'KN-SAMPLE', 'title': '物件的两次出现',
                  'excerpt': '先让借书条参与日常整理，再让来客辨认字迹。',
                  'role': 'REFERENCE KNOWLEDGE', 'sha256': 'a' * 64,
                  'path': 'knowledge/assets/sample.md', 'source': {'path': 'authored', 'sha256': ''}}
     decision = {'decisionId': 'AD-SAMPLE', 'statement': '本章在书店打烊时结束。',
-                'rationale': '保留当晚场景的完整收束。', 'scopeIds': ['CH-CURRENT']}
+                'rationale': '保留当晚场景的完整收束。', 'scopeIds': ['chapter-CURRENT']}
     plan_hash = 'b' * 64
     value = {
-        'view': 'station', 'task': task, 'targetChapter': 'CH-CURRENT', 'povCharacter': 'C-READER',
+        'view': 'station', 'task': task, 'targetChapter': 'chapter-CURRENT', 'povCharacter': 'character-READER',
         'memoryPack': {'working': [memory], 'semantic': [deepcopy(memory)], 'episodic': []},
         'sourceContext': {
             'planReady': True, 'sourcePlanHash': plan_hash, 'ruleSummary': {'ready': True},
             'contentQuery': {'tool': 'query_source', 'selection': {
-                'knowledgeMode': 'perspective', 'perspectiveIds': ['C-READER']}},
-            'planQuery': {'tool': 'query_source_chapter_plan', 'chapterId': 'CH-CURRENT'},
+                'knowledgeMode': 'perspective', 'perspectiveIds': ['character-READER']}},
+            'planQuery': {'tool': 'query_source_chapter_plan', 'chapterId': 'chapter-CURRENT'},
             'rulesQuery': {'tool': 'query_source_rules', 'action': 'write'},
         },
         'readiness': {'ready': True, 'reasons': []},
-        'filterProvenance': {'perspectiveId': 'C-READER', 'excludedIds': []},
+        'filterProvenance': {'perspectiveId': 'character-READER', 'excludedIds': []},
         'knowledgePack': {'role': 'REFERENCE KNOWLEDGE', 'items': [reference], 'omittedBudget': 0},
         'authorDecisions': [decision],
         'workVoiceProfile': {'role': 'WORK VOICE PROFILE', 'examples': ['用日常口语呈现人物。']},
-        'recentChapters': [{'chapterId': 'CH-PREVIOUS', 'relativePath': '正文/昨日的借书条.md',
+        'recentChapters': [{'chapterId': 'chapter-PREVIOUS', 'relativePath': '正文/昨日的借书条.md',
                             'exists': True}],
         'dependencyManifest': {
             'sourceHash': 'c' * 64, 'sourcePlanHash': plan_hash,
             'knowledge': [{'assetId': 'KN-SAMPLE', 'sha256': 'a' * 64}],
             'decisions': [{'decisionId': 'AD-SAMPLE', 'sha256': 'd' * 64}],
             'voiceProfileHash': 'e' * 64,
-            'recentChapters': [{'chapterId': 'CH-PREVIOUS', 'sha256': 'f' * 64}],
+            'recentChapters': [{'chapterId': 'chapter-PREVIOUS', 'sha256': 'f' * 64}],
         },
         'contextBudget': {'total': 50000, 'usedCharacters': 3000},
         'summaryFreshness': {'stale': False},
@@ -59,8 +59,8 @@ def fixture(root: Path, size: str) -> tuple[str, str]:
     source = context_source(root, chapters=1 if size == 'small' else 2)
     # empty_structure allocates a volume ID. Freeze the IDs captured in the
     # pre-change measurement so repeated runs use exactly the same truth.
-    volume = {'small': 'VOL-B26FDCF3B0D8', 'medium': 'VOL-A04BB21CACB3', 'edge': 'VOL-68FCC9493D1B'}[size]
-    arc = {'small': 'ARC-B05F717FEDEB', 'medium': 'ARC-3EE9692AF142', 'edge': 'ARC-BBF24D058FEC'}[size]
+    volume = {'small': 'volume-B26FDCF3B0D8', 'medium': 'volume-A04BB21CACB3', 'edge': 'volume-68FCC9493D1B'}[size]
+    arc = {'small': 'arc-B05F717FEDEB', 'medium': 'arc-3EE9692AF142', 'edge': 'arc-BBF24D058FEC'}[size]
     source = json.loads(json.dumps(source, ensure_ascii=False).replace(source['volumes'][0]['volumeId'], volume)
                         .replace(source['arcs'][0]['arcId'], arc))
     source['createdAt'] = source['updatedAt'] = '2026-10-01T00:00:00+00:00'
@@ -88,4 +88,4 @@ def fixture(root: Path, size: str) -> tuple[str, str]:
     goal = '甲守住城门，关系推进' if size == 'small' else '甲守住城门，关系推进，埋伏笔，叙述视角'
     if size == 'edge':
         goal = '甲守住城门 completely-unrelated-query'
-    return 'CH-AAA', goal
+    return 'chapter-AAA', goal

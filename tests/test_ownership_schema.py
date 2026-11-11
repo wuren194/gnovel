@@ -4,6 +4,8 @@ All tests use synthetic current-format projects; no real novel is touched.
 """
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import tempfile
 import unittest
 from copy import deepcopy
@@ -79,7 +81,7 @@ class MaterializationTests(unittest.TestCase):
         # 路径，走同一条 boundary（preview 阶段即拒）。
         structure = load_structure(self.root)
         proposed = deepcopy(structure)
-        chapter_id = 'CH-BINDING-0088'
+        chapter_id = 'chapter-BINDING-0088'
         proposed['chapters'].append({
             'chapterId': chapter_id, 'displayOrdinal': 9, 'displayCode': 'CH009',
             'title': '占用', 'volumeId': VOLUME_A, 'filePath': '正文/OCCUPIED.md', 'status': 'planning_required',
@@ -185,7 +187,7 @@ class ExactMaterializationAuthorityTests(unittest.TestCase):
         self.assertEqual(chapter['proseBinding']['generation'], structure['revision'])
 
     def test_t2_f6_non_insert_plan_cannot_smuggle_a_chapter(self) -> None:
-        smuggled = 'CH-BINDING-0031'
+        smuggled = 'chapter-BINDING-0031'
         current = load_structure(self.root)
         for parameters in ({'chapterId': CHAPTER_C, 'beforeChapterId': CHAPTER_A},
                            {'chapterId': smuggled}):
@@ -201,7 +203,7 @@ class ExactMaterializationAuthorityTests(unittest.TestCase):
 
     def test_t3_f7_insert_plan_cannot_add_an_extra_chapter(self) -> None:
         current = load_structure(self.root)
-        declared, extra = 'CH-BINDING-0032', 'CH-BINDING-0033'
+        declared, extra = 'chapter-BINDING-0032', 'chapter-BINDING-0033'
         proposed = deepcopy(current)
         proposed['revision'] = current['revision'] + 1
         for chapter_id, ordinal in ((declared, 9), (extra, 10)):
@@ -213,7 +215,7 @@ class ExactMaterializationAuthorityTests(unittest.TestCase):
 
     def test_t4_f8_insert_plan_declaring_one_chapter_cannot_add_another(self) -> None:
         current = load_structure(self.root)
-        declared, added = 'CH-BINDING-0034', 'CH-BINDING-0035'
+        declared, added = 'chapter-BINDING-0034', 'chapter-BINDING-0035'
         proposed = deepcopy(current)
         proposed['revision'] = current['revision'] + 1
         self._append_row(proposed, self._sealed_new_row(
@@ -227,7 +229,7 @@ class ExactMaterializationAuthorityTests(unittest.TestCase):
             self.root, volume_id=VOLUME_A, primary_arc_id=ARC_MAIN, title='新章', actor='test')
         plan_path = _staged_plan_path(self.root, plan)
         staged = read_json(plan_path)
-        extra = 'CH-BINDING-0036'
+        extra = 'chapter-BINDING-0036'
         self._append_row(staged['proposedStructure'], self._sealed_new_row(
             chapter_id=extra, ordinal=90,
             generation=staged['proposedStructure']['revision']))
@@ -278,7 +280,7 @@ class DeclaredChapterNeverMaterializedTests(unittest.TestCase):
     / 渲染失败偶然拒绝。preview 与 commit 共用 `_enforce_transaction_boundary`，两端重放同一条比较。
     """
 
-    DECLARED = 'CH-BINDING-0141'
+    DECLARED = 'chapter-BINDING-0141'
 
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -314,7 +316,7 @@ class DeclaredChapterNeverMaterializedTests(unittest.TestCase):
         self.assertFalse((root / '.govel' / 'plans' / f"{plan['operationId']}.files").exists())
 
 
-    def test_schema5_insert_plan_declares_chapter_but_adds_none_rejected(self) -> None:
+    def test_current_insert_plan_declares_chapter_but_adds_none_rejected(self) -> None:
         root = self._project()
         plan, current = self._declares_but_adds_none(root)
         self._assert_prepare_boundary_rejected(root, plan, current)
@@ -455,7 +457,7 @@ class SourcePlanStabilityTests(unittest.TestCase):
             structure = ownership_project(root)
             current = load_structure(root)
             hash_before = structure_hash(current)
-            new_chapter_id = 'CH-BINDING-0006'
+            new_chapter_id = 'chapter-BINDING-0006'
             proposed = deepcopy(current)
             proposed['revision'] = current['revision'] + 1
             proposed['chapters'].append(new_chapter_row(
@@ -491,12 +493,12 @@ class ImporterOwnershipTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             candidate = self._candidate([{
-                'chapterId': 'CH-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
-                'title': '第一章', 'placement': {'scope': 'volume', 'volumeId': VOLUME_A}, 'filePath': '正文/CH-IMPORT-0001.md', 'status': 'planned',
+                'chapterId': 'chapter-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
+                'title': '第一章', 'placement': {'scope': 'volume', 'volumeId': VOLUME_A}, 'filePath': '正文/chapter-IMPORT-0001.md', 'status': 'planned',
                 'storyTimeStartId': None, 'storyTimeEndId': None}])
             result = create_project_from_candidate(root, candidate)
             structure = result['structure']
-            self.assertEqual(structure['schemaVersion'], 5)
+            self.assertEqual(structure['schemaVersion'], current_schema_version())
             binding = structure['chapters'][0]['proseBinding']
             self.assertEqual(binding['state'], 'unbound')
             self.assertIsNone(binding['expectedContentDigest'])
@@ -508,8 +510,8 @@ class ImporterOwnershipTests(unittest.TestCase):
     def test_candidate_carrying_binding_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            chapter = {'chapterId': 'CH-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
-                       'title': '第一章', 'placement': {'scope': 'volume', 'volumeId': VOLUME_A}, 'filePath': '正文/CH-IMPORT-0001.md', 'status': 'planned',
+            chapter = {'chapterId': 'chapter-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
+                       'title': '第一章', 'placement': {'scope': 'volume', 'volumeId': VOLUME_A}, 'filePath': '正文/chapter-IMPORT-0001.md', 'status': 'planned',
                        'storyTimeStartId': None, 'storyTimeEndId': None,
                        'proseBinding': {'state': 'managed', 'generation': 1,
                                         'expectedContentDigest': None, 'integrityDigest': 'sha256:' + '0' * 64}}
@@ -521,7 +523,7 @@ class ImporterOwnershipTests(unittest.TestCase):
     def test_import_default_is_current_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             result = create_project_from_candidate(Path(temp), self._candidate([]))
-            self.assertEqual(result['structure']['schemaVersion'], 5)
+            self.assertEqual(result['structure']['schemaVersion'], current_schema_version())
 
 
 class CurrentWriterGateTests(unittest.TestCase):
@@ -601,8 +603,8 @@ class CurrentWriterGateTests(unittest.TestCase):
                                                     file_path='正文/悬案新址.md')
         self.assertEqual(caught.exception.code, 'OWNERSHIP_CONFIRMATION_REQUIRED')
 
-    def test_schema5_runs_the_same_current_binding_runtime(self) -> None:
-        root5 = Path(self.temp.name) / 'schema5'
+    def test_current_runs_the_same_current_binding_runtime(self) -> None:
+        root5 = Path(self.temp.name) / 'current'
         ownership_project(root5)
         with self.assertRaises(WorkflowError) as caught:
             finalize_chapter(root5, CHAPTER_B)
@@ -611,13 +613,13 @@ class CurrentWriterGateTests(unittest.TestCase):
                                                        file_path='正文/搬家.md')
         self.assertEqual(plan['bindingTransitions'][0]['kind'], 'move_unbound')
 
-    def test_schema5_undo_routes_to_the_monotonic_engine(self) -> None:
+    def test_current_undo_routes_to_the_monotonic_engine(self) -> None:
         # R26（schema 5 分支，Phase 3 更新）：两条 undo 通路都按当前结构的 ownership 模型
         # 分流——schema 5 不再是「模型不支持」，而是单调逆向事务的确定性拒绝；
         # 绝不因为 source helper 修好而落入 旧版撤销。
         from scripts.core.structure_commands import undo_operation
         from scripts.core.structure_transaction import undo
-        root5 = Path(self.temp.name) / 'schema5-undo'
+        root5 = Path(self.temp.name) / 'current-undo'
         ownership_project(root5)
         with self.assertRaises(StructureError) as caught:
             undo_operation(root5, 'OP-0000000000000000')
@@ -629,10 +631,10 @@ class CurrentWriterGateTests(unittest.TestCase):
             undo(root5, 'OP-0000000000000000', actor='test')
         self.assertEqual(direct.exception.code, 'OPERATION_ID_MISMATCH')
 
-    def test_schema5_preflight_reports_current_binding_state(self) -> None:
+    def test_current_preflight_reports_current_binding_state(self) -> None:
         # Phase 2：schema 5 的定稿前置不再报「模型不支持」，而是给出 Current Binding
         # 的确定性 blocker（这里章还没进 review）。
-        root5 = Path(self.temp.name) / 'schema5-preflight'
+        root5 = Path(self.temp.name) / 'current-preflight'
         ownership_project(root5)
         preflight = preflight_finalization(root5, CHAPTER_B, binding_generation=7)
         self.assertFalse(preflight.ready)
@@ -654,7 +656,7 @@ class ReservedLocatorInvariantTests(unittest.TestCase):
             # 复制一份带相同 filePath 的章（模拟另一章 claim 同一规范槽）；换新身份与
             # 新 displayOrdinal，保证唯一可能的结构失败就是定位符冲突。
             stolen = dict(victim)
-            stolen['chapterId'] = 'CH-BINDING-0099'
+            stolen['chapterId'] = 'chapter-BINDING-0099'
             stolen['displayOrdinal'] = 9
             stolen['displayCode'] = 'CH009'
             on_disk['chapters'].append(stolen)
@@ -695,19 +697,19 @@ class Schema5FoundationTests(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.structure = ownership_project(self.root)
         self.structure['fieldDefinitions'] = [
-            {'fieldId': 'FD-PLAN-1', 'key': 'goal', 'label': '章节目标', 'valueType': 'text',
+            {'fieldId': 'field-PLAN-1', 'key': 'goal', 'label': '章节目标', 'valueType': 'text',
              'appliesTo': ['chapter']}]
         self.structure['attributes'] = [
-            {'attributeId': 'AT-PLAN-1', 'ownerId': CHAPTER_A, 'fieldId': 'FD-PLAN-1',
-             'values': [{'valueId': 'FV-PLAN-1', 'value': '白塔塌陷'}]}]
+            {'attributeId': 'attribute-PLAN-1', 'ownerId': CHAPTER_A, 'fieldId': 'field-PLAN-1',
+             'values': [{'valueId': 'value-PLAN-1', 'value': '白塔塌陷'}]}]
         self.structure['fragments'] = [
-            {'fragmentId': 'SF-PLAN-1', 'ownerId': CHAPTER_A, 'text': '本章推演：白塔在雾里塌了一半。',
-             'order': 0, 'contentBindings': ['AT-PLAN-1'], 'contentRole': 'plan'}]
+            {'fragmentId': 'plan-PLAN-1', 'ownerId': CHAPTER_A, 'text': '本章推演：白塔在雾里塌了一半。',
+             'order': 0, 'contentBindings': ['attribute-PLAN-1'], 'contentRole': 'plan'}]
         write_json(self.root / '.govel' / 'structure.json', self.structure)
         from scripts.core.structure_store import validate_structure as validate
         validate(self.structure)
 
-    def test_schema5_fixture_passes_full_validation(self) -> None:
+    def test_current_fixture_passes_full_validation(self) -> None:
         # S5-1：schema 5 fixture 必须真正通过 validate_structure（含 ownership 硬不变量）。
         from scripts.core.structure_store import validate_structure as validate
         validate(self.structure)
@@ -715,12 +717,12 @@ class Schema5FoundationTests(unittest.TestCase):
         self.assertEqual(report['fatal'], [])
         self.assertEqual(report['chapterLocal'], {})
 
-    def test_chapter_plan_serves_schema5(self) -> None:
+    def test_chapter_plan_serves_current(self) -> None:
         # R1 / Counterexample D：schema 5 chapter_plan 绝不报 SOURCE_MIGRATION_REQUIRED。
         result = chapter_plan(self.structure, CHAPTER_A)
         self.assertEqual(len(result['sourcePlanHash']), 64)
         self.assertEqual(result['recipe']['chapterId'], CHAPTER_A)
-        self.assertEqual(result['planFragmentIds'], ['SF-PLAN-1'])
+        self.assertEqual(result['planFragmentIds'], ['plan-PLAN-1'])
         self.assertTrue(result['ready'])
 
     def test_outline_binding_goes_through_source_plan_hash(self) -> None:
@@ -786,7 +788,7 @@ class Schema5FoundationTests(unittest.TestCase):
     def test_source_schema_exposes_only_current_format(self) -> None:
         from scripts.core.source_model import source_schema
         schema = source_schema()
-        self.assertEqual(schema['schemaVersion'], 5)
+        self.assertEqual(schema['schemaVersion'], current_schema_version())
         self.assertNotIn('structureVersions', schema)
         self.assertNotIn('sourceModes', schema)
 
@@ -839,7 +841,7 @@ class InitialOwnershipBoundaryTests(unittest.TestCase):
             from scripts.core.prose_binding import initializer_authority
             saved = save_structure(root, empty_structure('PRJ-GREENFIELD-1', '新项目'),
                                    _initializer=initializer_authority('test'))
-            self.assertEqual(saved['schemaVersion'], 5)
+            self.assertEqual(saved['schemaVersion'], current_schema_version())
             self.assertEqual(saved['chapters'], [])
 
     def test_sanctioned_initializer_still_works(self) -> None:
@@ -847,7 +849,7 @@ class InitialOwnershipBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             result = create_project_from_candidate(root, self._candidate())
-            self.assertEqual(result['structure']['schemaVersion'], 5)
+            self.assertEqual(result['structure']['schemaVersion'], current_schema_version())
             self.assertEqual(load_structure(root)['chapters'][0]['proseBinding']['state'], 'unbound')
             # 通道之外没有第二条：再对同一个已存在的结构做 generic initial 写也不适用，
             # 而常规保护写路径（update-in-place）由 ProtectedWriterBoundaryTests 覆盖。
@@ -862,11 +864,11 @@ class InitialOwnershipBoundaryTests(unittest.TestCase):
                 'arcs': [{'arcId': ARC_MAIN, 'title': '主线', 'kind': 'main', 'status': 'planned',
                           'volumeIds': [VOLUME_A], 'parentArcId': None, 'promise': '',
                           'resolutionTargetChapterId': None}],
-                'chapters': [{'chapterId': 'CH-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
+                'chapters': [{'chapterId': 'chapter-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
                               'title': '第一章', 'placement': {'scope': 'volume', 'volumeId': VOLUME_A},
-                              'filePath': '正文/CH-IMPORT-0001.md', 'status': 'planned',
+                              'filePath': '正文/chapter-IMPORT-0001.md', 'status': 'planned',
                               'storyTimeStartId': None, 'storyTimeEndId': None}],
-                'chapterArcLinks': [{'chapterId': 'CH-IMPORT-0001', 'arcId': ARC_MAIN,
+                'chapterArcLinks': [{'chapterId': 'chapter-IMPORT-0001', 'arcId': ARC_MAIN,
                                      'role': 'primary', 'weight': 1.0, 'phaseId': None, 'notes': ''}],
                 'entities': [], 'relations': [], 'references': []}
 
@@ -889,10 +891,10 @@ class ImporterPathSafetyTests(unittest.TestCase):
                 'arcs': [{'arcId': ARC_MAIN, 'title': '主线', 'kind': 'main', 'status': 'planned',
                           'volumeIds': [VOLUME_A], 'parentArcId': None, 'promise': '',
                           'resolutionTargetChapterId': None}],
-                'chapters': [{'chapterId': 'CH-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
+                'chapters': [{'chapterId': 'chapter-IMPORT-0001', 'displayOrdinal': 1, 'displayCode': 'CH001',
                               'title': '第一章', 'placement': {'scope': 'volume', 'volumeId': VOLUME_A}, 'filePath': file_path, 'status': 'planned',
                               'storyTimeStartId': None, 'storyTimeEndId': None}],
-                'chapterArcLinks': [{'chapterId': 'CH-IMPORT-0001', 'arcId': ARC_MAIN,
+                'chapterArcLinks': [{'chapterId': 'chapter-IMPORT-0001', 'arcId': ARC_MAIN,
                                      'role': 'primary', 'weight': 1.0, 'phaseId': None, 'notes': ''}],
                 'entities': [], 'relations': [], 'references': []}
 
@@ -969,10 +971,10 @@ class ImporterPathSafetyTests(unittest.TestCase):
         restore = self._probe_guard()
         try:
             with mock.patch.object(refactor_paths, 'is_canonical', side_effect=spy):
-                create_project_from_candidate(self.root, self._candidate('正文/CH-IMPORT-0001.md'))
+                create_project_from_candidate(self.root, self._candidate('正文/chapter-IMPORT-0001.md'))
         finally:
             restore()
-        self.assertIn((str(self.root), '正文/CH-IMPORT-0001.md'), calls)
+        self.assertIn((str(self.root), '正文/chapter-IMPORT-0001.md'), calls)
         self.assertEqual(self.probed, [])
         # 共享规则本身拒绝 symlink 逃逸，且不读项目外内容。
         (self.root / '正文' / 'link.md').symlink_to(self.sentinel)
@@ -984,8 +986,8 @@ class ImporterPathSafetyTests(unittest.TestCase):
 
     def test_safe_slot_still_imports(self) -> None:
         # 正控：合法候选照常导入，证明拒绝来自路径安全而非别的门。
-        result = create_project_from_candidate(self.root, self._candidate('正文/CH-IMPORT-0001.md'))
-        self.assertEqual(result['structure']['schemaVersion'], 5)
+        result = create_project_from_candidate(self.root, self._candidate('正文/chapter-IMPORT-0001.md'))
+        self.assertEqual(result['structure']['schemaVersion'], current_schema_version())
 
 
 class SourceImpactLocatorTests(unittest.TestCase):

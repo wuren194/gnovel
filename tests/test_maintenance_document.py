@@ -100,7 +100,7 @@ class MaintenanceDocumentTests(unittest.TestCase):
         raw = self.path.read_bytes().decode()
         before_source = (self.root / '.govel/structure.json').read_bytes()
         result = self.write(report, [
-            {'segmentIds': [segments[1]['id'], segments[2]['id']], 'recordIds': ['SF-HEIGHT', 'SF-LIFE']},
+            {'segmentIds': [segments[1]['id'], segments[2]['id']], 'recordIds': ['fact-HEIGHT', 'fact-LIFE']},
             {'segmentIds': [segments[3]['id']], 'range': {'start': 3, 'end': 7}, 'recordIds': []},
         ])
         checklist = read_json(self.root / result['checklistPath'])
@@ -122,12 +122,12 @@ class MaintenanceDocumentTests(unittest.TestCase):
             pass
         report = self.prepare()
         ids = [row['id'] for row in report['segments']]
-        valid = {'segmentIds': [ids[1]], 'recordIds': ['SF-HEIGHT']}
+        valid = {'segmentIds': [ids[1]], 'recordIds': ['fact-HEIGHT']}
         invalid = [
             {'segmentIds': ['foreign-segment'], 'recordIds': []},
             {'segmentIds': [ids[1], ids[3]], 'recordIds': []},
             {'segmentIds': [ids[2], ids[1]], 'recordIds': []},
-            {'segmentIds': [ids[2]], 'recordIds': ['SF-UNKNOWN']},
+            {'segmentIds': [ids[2]], 'recordIds': ['fact-UNKNOWN']},
             {'segmentIds': [ids[2]], 'recordIds': [], 'range': {'start': 8, 'end': 5}},
             {'segmentIds': [ids[2]], 'recordIds': [], 'range': {'start': 0, 'end': 1000}},
             {'segmentIds': [ids[2]], 'recordIds': [], 'range': {'start': True, 'end': 5}},
@@ -154,7 +154,7 @@ class MaintenanceDocumentTests(unittest.TestCase):
 
     def test_identical_retry_reuses_the_existing_checklist_without_touching_it(self):
         report = self.prepare()
-        selection = [{'segmentIds': [report['segments'][1]['id']], 'recordIds': ['SF-HEIGHT']}]
+        selection = [{'segmentIds': [report['segments'][1]['id']], 'recordIds': ['fact-HEIGHT']}]
         first = self.write(report, selection)
         path = self.root / first['checklistPath']
         before, stamp = self.inventory(), path.stat()
@@ -234,7 +234,7 @@ class MaintenanceDocumentTests(unittest.TestCase):
 
     def test_cli_and_mcp_use_the_same_selection_contract(self):
         report = self.prepare()
-        items = [{'segmentIds': [report['segments'][1]['id']], 'recordIds': ['SF-HEIGHT']}]
+        items = [{'segmentIds': [report['segments'][1]['id']], 'recordIds': ['fact-HEIGHT']}]
         choices = self.root / '工作台/selection.json'
         write_json(choices, items)
         cli = subprocess.run([sys.executable, str(TOOLBOX_ROOT / 'scripts/novelctl.py'), 'project', 'source',

@@ -15,7 +15,7 @@ from scripts.core.finalization_preflight import preflight_finalization
 from scripts.core.jsonio import read_json, write_json
 from scripts.core.locks import project_lock
 from scripts.core.workflow import WorkflowError, approve_artifacts, default_workflow, record_artifact
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import review_ready_project
 from scripts.core.artifact_pack import pack_artifact
 
@@ -214,9 +214,9 @@ class FinalizationPreflightTests(unittest.TestCase):
 
     def test_other_chapter_pending_transaction_blocks_project(self) -> None:
         path = self.root / ".govel/transactions/TX-OTHER.json"
-        write_json(path, {"transactionId": "TX-OTHER", "chapterId": "CH-OTHER", "phase": "prose"})
+        write_json(path, {"transactionId": "TX-OTHER", "chapterId": "chapter-OTHER", "phase": "prose"})
         receipt = self.assert_blocked("TRANSACTION_INCOMPLETE")
-        self.assertEqual(receipt["transactions"][0]["chapterId"], "CH-OTHER")
+        self.assertEqual(receipt["transactions"][0]["chapterId"], "chapter-OTHER")
 
     def test_unreadable_transaction_blocks_project(self) -> None:
         path = self.root / ".govel/transactions/TX-BROKEN.json"
@@ -234,7 +234,7 @@ class FinalizationPreflightTests(unittest.TestCase):
         self.assert_blocked("SOURCE_STATE_CHANGE_REQUIRES_TRANSACTION")
 
     def test_proposed_structure_is_validated_before_transaction(self) -> None:
-        self.replace_payload("state_candidate", changes=[{"op": "append", "collection": "relations", "value": {"relationId": "REL-ABCDEF12", "fromEntity": "absent", "toEntity": "absent"}}])
+        self.replace_payload("state_candidate", changes=[{"op": "append", "collection": "relations", "value": {"relationId": "relation-ABCDEF12", "fromEntity": "absent", "toEntity": "absent"}}])
         self.assert_blocked("SOURCE_STATE_CHANGE_REQUIRES_TRANSACTION")
 
     def test_transaction_targets_are_checked(self) -> None:

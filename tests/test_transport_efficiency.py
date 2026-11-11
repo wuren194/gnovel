@@ -109,13 +109,13 @@ class TransportTests(unittest.TestCase):
         cid, goal = fixture(self.root, 'small')
         source = read_json(self.root / '.govel/structure.json')
         source['pairAssessment'] = {'status': 'not_applicable', 'reason': '本合成视角传输测试没有配对情节。'}
-        visible = next(r for r in source['fragments'] if r['fragmentId'] == 'SF-BELIEF')
+        visible = next(r for r in source['fragments'] if r['fragmentId'] == 'belief-BELIEF')
         visible['text'] = '甲认得门上的字。' * 1800
-        hidden = next(r for r in source['fragments'] if r['fragmentId'] == 'SF-TEXT')
+        hidden = next(r for r in source['fragments'] if r['fragmentId'] == 'text-TEXT')
         hidden['text'] = '乙的隐藏线索不能泄漏'
         save_context_source(self.root, source)
         report = call_operation('task.prepare', self.root, {'task': 'planner', 'chapterId': cid,
-            'povCharacter': 'C-ALPHA', 'chapterGoal': goal, 'view': 'model'})
+            'povCharacter': 'character-ALPHA', 'chapterGoal': goal, 'view': 'model'})
         ids = [r['readId'] for r in report['reading']['sourceReads']]
         self.assertTrue(ids)
         args = {'credential': report['reading']['credential'], 'readIds': ids, 'maxBytes': 6000}
@@ -129,10 +129,10 @@ class TransportTests(unittest.TestCase):
             cursor = result['nextCursor']
         self.assertGreater(len(pages), 1)
         records = [json.loads(''.join(parts)) for parts in chunks.values()]
-        record = next(r for r in records if r['id'] == 'SF-BELIEF')
+        record = next(r for r in records if r['id'] == 'belief-BELIEF')
         self.assertEqual(record['content']['text'], visible['text'])
         self.assertNotIn(hidden['text'], json.dumps(pages, ensure_ascii=False))
-        self.assertNotIn('SF-TEXT', {r['id'] for r in records})
+        self.assertNotIn('text-TEXT', {r['id'] for r in records})
 
     def test_long_repair_windows_preserve_all_text_and_distinct_rules(self):
         from scripts.core.artifacts import sha256_text
@@ -191,9 +191,9 @@ class TransportTests(unittest.TestCase):
             call_operation('workflow.patch-candidate', self.root, {**args, 'patches': [{**args['patches'][0], 'replacement': '别的改动'}]})
 
     def test_model_summary_reference_roundtrip_rejects_changed_prose(self):
-        from tests.fixtures_current import create_schema5_project
+        from tests.fixtures_current import create_current_project
         from scripts.story_summarizer import _commit_summary, StorySummarizerError
-        create_schema5_project(self.root, chapter_count=2)
+        create_current_project(self.root, chapter_count=2)
         prepared = call_operation('summary.prepare', self.root, {})
         self.assertNotIn('inputSnapshot', prepared)
         payload = {k: prepared[k] for k in ('projectId', 'asOfChapterId', 'structureRevision', 'coveredChapterIds', 'inputSnapshotRef')}

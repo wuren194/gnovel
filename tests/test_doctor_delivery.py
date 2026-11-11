@@ -14,7 +14,7 @@ from tests.fixtures_source import source_fixture
 
 
 def issue(code='BLOCK', message='Needs an explicit review', severity='blocking'):
-    return {'code': code, 'domain': 'canon', 'objectType': 'fragment', 'objectId': 'SF-LIFE',
+    return {'code': code, 'domain': 'canon', 'objectType': 'fragment', 'objectId': 'fact-LIFE',
             'severity': severity, 'status': 'semantic_review_required', 'message': message,
             'evidence': {'long': 'proof'}, 'recommendedAction': 'Review it', 'affectedOperations': ['source.review-submit']}
 

@@ -12,7 +12,7 @@ from scripts.core.chapter_creation import preview_chapter
 from scripts.core.operations import call_operation
 from scripts.core.source_reports import public_report
 from scripts.core.structure_store import StructureError, load_structure
-from tests.fixtures_current import initialize_project, create_schema5_project
+from tests.fixtures_current import initialize_project, create_current_project
 
 
 class AuthorPathRecoveryTests(unittest.TestCase):
@@ -50,7 +50,7 @@ class AuthorPathRecoveryTests(unittest.TestCase):
     def test_external_preview_projection_never_advertises_closed_commit(self):
         for huge in (False, True):
             report = {'operationId': 'OP-EXTERNAL', 'operation': 'accept_external_modification',
-                      'requiresApproval': True, 'planHash': 'frozen', 'parameters': {'chapterId': 'CH-TEST'},
+                      'requiresApproval': True, 'planHash': 'frozen', 'parameters': {'chapterId': 'chapter-TEST'},
                       'impact': {'changedIds': ['x' * 60 + str(i) for i in range(1000)] if huge else []},
                       'externalReviewMaterials': {'availability': 'missing_accepted_bytes',
                           'missingPrerequisites': ['accepted_prose_bytes'], 'adoptionExecutable': False}}
@@ -64,7 +64,7 @@ class AuthorPathRecoveryTests(unittest.TestCase):
         self.assertFalse(error['ok'])
 
     def test_chapter_approval_reports_replacement_and_removed_scope(self):
-        fixture = create_schema5_project(self.root, chapter_count=2)
+        fixture = create_current_project(self.root, chapter_count=2)
         def approve(chapters):
             out, err = io.StringIO(), io.StringIO()
             args = ['project', 'workflow', 'approve-chapters', '--project-root', str(self.root)]
@@ -83,7 +83,7 @@ class AuthorPathRecoveryTests(unittest.TestCase):
     def test_stage_a_preflight_lists_independent_plan_coverage_gaps(self):
         from scripts.core.authoring_forms import review_form
         from scripts.core.jsonio import write_json
-        fixture = create_schema5_project(self.root, chapter_count=1)
+        fixture = create_current_project(self.root, chapter_count=1)
         source = fixture['structure']
         source['fragments'][0]['chapterContract']['behaviorCoverage'] = {
             'relationship': 'applicable', 'living': 'applicable'}
@@ -115,7 +115,7 @@ class AuthorPathRecoveryTests(unittest.TestCase):
     def test_advance_recovery_only_returns_real_read_actions(self):
         from scripts.core.chapter_state import advance_chapter_status
         from scripts.core.operations import operations
-        fixture = create_schema5_project(self.root, chapter_count=1)
+        fixture = create_current_project(self.root, chapter_count=1)
         with self.assertRaises(ValueError) as caught:
             advance_chapter_status(self.root, fixture['chapterIds'][0], 'planned')
         recovery = caught.exception.details['recovery']

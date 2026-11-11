@@ -1,7 +1,7 @@
 ---
 id: G-CAUSAL
 version: 4.2.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 场景因果与状态变化合同——源计划声明关键选择与关系依据，Writer 展开行动，Editor 以正文证据复核
 ---
 

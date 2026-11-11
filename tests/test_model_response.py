@@ -28,17 +28,17 @@ def artifacts(count=12):
 
 def receipt_sample():
     blocker = {'code': 'ARTIFACTS_NOT_APPROVED', 'message': '本次工件尚待作者阅读和批准。' * 25,
-               'details': {'chapterId': 'CH-EXAMPLE', 'artifactType': 'stage_b_review',
+               'details': {'chapterId': 'chapter-EXAMPLE', 'artifactType': 'stage_b_review',
                            'artifactPath': '工作台/B.json', 'artifactSha256': 'a' * 64},
                'recovery': {'readActions': [{'operation': 'workflow.review-form', 'arguments': {
-                   'chapterId': 'CH-EXAMPLE', 'artifactType': 'stage_b_review'}, 'effects': 'read'}],
+                   'chapterId': 'chapter-EXAMPLE', 'artifactType': 'stage_b_review'}, 'effects': 'read'}],
                    'conditionalActions': [{'operation': 'project.workflow.artifact-approve',
-                       'arguments': {'chapterId': 'CH-EXAMPLE', 'artifactHash': ['stage_b_review=' + 'a' * 64]},
+                       'arguments': {'chapterId': 'chapter-EXAMPLE', 'artifactHash': ['stage_b_review=' + 'a' * 64]},
                        'effects': 'approval', 'needsApproval': True, 'executable': False,
                        'when': 'after_author_review'}], 'automatic': False}}
     inventory = {'complete': False, 'status': 'unassessed', 'requests': [{'requestId': 'facts-1'}]}
-    return {'ok': False, 'code': 'CLOSEOUT_PREPARED', 'chapterId': 'CH-EXAMPLE',
-            'guidance': {'blockerCount': 1, 'proseTarget': {'path': '正文/CH-EXAMPLE.md',
+    return {'ok': False, 'code': 'CLOSEOUT_PREPARED', 'chapterId': 'chapter-EXAMPLE',
+            'guidance': {'blockerCount': 1, 'proseTarget': {'path': '正文/chapter-EXAMPLE.md',
                          'state': 'not_written', 'finalizeWritesFormalProse': True}},
             'prepareRef': 'gn:chapter-closeout:' + 'c' * 32, 'blockers': [blocker],
             'receipt': {'blockers': [deepcopy(blocker)], 'artifacts': artifacts(),
@@ -139,7 +139,7 @@ class ModelResponseTests(unittest.TestCase):
 
     def test_duplicate_error_message_keeps_all_blockers_and_exact_error_code(self):
         message = '这个实际错误说明需要保留，但不重复交付。' * 30
-        blockers = [{'code': 'EXPECTED_BLOCK', 'message': message, 'details': {'chapterId': 'CH-EXAMPLE'}},
+        blockers = [{'code': 'EXPECTED_BLOCK', 'message': message, 'details': {'chapterId': 'chapter-EXAMPLE'}},
                     {'code': 'ANOTHER_BLOCK', 'message': '另一处阻断。', 'details': {'artifactPath': '工作台/B.json'}}]
         original = {'ok': False, 'code': 'EXPECTED_BLOCK', 'error': message, 'details': {'blockers': blockers}}
         model = project_response(self.root, 'workflow.closeout', original)
@@ -156,7 +156,7 @@ class ModelResponseTests(unittest.TestCase):
 
     def test_text_failure_preserves_completed_write_without_reexecution(self):
         completed = {'ok': True, 'code': 'CHAPTER_CLOSED', 'requestId': 'completed-request',
-                     'chapterId': 'CH-EXAMPLE', 'bindingGeneration': 8}
+                     'chapterId': 'chapter-EXAMPLE', 'bindingGeneration': 8}
         with patch.object(mcp_server, 'call_tool', return_value=completed) as execute, \
                 patch.object(mcp_server, 'render_model_text', side_effect=ValueError('presentation failed')):
             response = mcp_server.handle({'id': 1, 'method': 'tools/call', 'params': {
@@ -276,8 +276,8 @@ class ModelResponseTests(unittest.TestCase):
                     self.assertIn('original-ref', text)
 
     def test_public_dispatchers_strip_display_option_but_keep_unknown_operations_strict(self):
-        from tests.fixtures_current import create_schema5_project
-        fixture = create_schema5_project(self.root, chapter_count=1)
+        from tests.fixtures_current import create_current_project
+        fixture = create_current_project(self.root, chapter_count=1)
         chapter = fixture['structure']['chapters'][0]
         arguments = {'chapterId': chapter['chapterId'], 'input': chapter['filePath'], 'responseView': 'model'}
         original = deepcopy(arguments)
@@ -300,7 +300,7 @@ class ModelResponseTests(unittest.TestCase):
         with patch.dict(os.environ, {'GOVEL_LOG_MODE': 'full', 'GOVEL_LOG_DIR': str(self.directory / 'logs')}), \
                 patch.object(novelctl, '_dispatch', return_value=original), redirect_stdout(output):
             novelctl.main(['project', 'workflow', 'closeout-prepare', '--project-root', str(self.root),
-                           '--chapter-id', 'CH-EXAMPLE'])
+                           '--chapter-id', 'chapter-EXAMPLE'])
             rows = call_logging.list_call_logs()
             detail = call_logging.show_call_log(rows['calls'][0]['callId'])
         self.assertEqual(detail['finish']['payloads']['businessResult']['value'], original)
@@ -310,11 +310,11 @@ class ModelResponseTests(unittest.TestCase):
 
     def test_new_and_legacy_error_paths_keep_codes_and_full_access(self):
         message = '多个位置重复引用的错误说明。' * 50
-        blockers = [{'code': 'EXPECTED_BLOCK', 'message': message, 'details': {'chapterId': 'CH-EXAMPLE'}}]
+        blockers = [{'code': 'EXPECTED_BLOCK', 'message': message, 'details': {'chapterId': 'chapter-EXAMPLE'}}]
         error = StructureError('EXPECTED_BLOCK', message, {'blockers': blockers})
         for command, tool, arguments in (
             (['workflow', 'closeout', '--request-id', 'request-1'], 'closeout_chapter', {'requestId': 'request-1'}),
-            (['workflow', 'chapter-receipt', '--chapter-id', 'CH-EXAMPLE'], 'workflow_chapter_receipt', {'chapterId': 'CH-EXAMPLE'}),
+            (['workflow', 'chapter-receipt', '--chapter-id', 'chapter-EXAMPLE'], 'workflow_chapter_receipt', {'chapterId': 'chapter-EXAMPLE'}),
         ):
             with self.subTest(tool=tool):
                 output = io.StringIO()

@@ -35,7 +35,7 @@ def apply_changes(source: dict, changes: list[dict], *, pair_assessment: dict | 
     def allocate(row, key, kind):
         identity = row.get(key)
         if identity is None or (isinstance(identity, str) and identity.startswith('$')):
-            created = new_id(kind)
+            created = new_id(kind, content_role=row.get('contentRole'))
             if created in allocated:
                 raise StructureError('SOURCE_ID_COLLISION', 'generated identity is already in use', {'id': created})
             allocated.add(created)
@@ -72,9 +72,11 @@ def apply_changes(source: dict, changes: list[dict], *, pair_assessment: dict | 
             kind = key.removesuffix('Id')
             if collection == 'entities':
                 entity_type = row.get('entityType')
-                kind = PREFIX_BY_TYPE.get(entity_type) if isinstance(entity_type, str) else None
-                if kind is None:
+                if not isinstance(entity_type, str) or entity_type not in PREFIX_BY_TYPE:
                     raise StructureError('SOURCE_CHANGES_INVALID', 'new entity requires a known entityType')
+                kind = entity_type
+            if collection == 'fragments' and row.get('contentRole') not in source_model_policy()['contentRoles']:
+                raise StructureError('SOURCE_ROLE_INVALID', 'fragment creation requires an explicit contentRole')
             allocate(row, key, kind)
             if collection == 'attributes' and isinstance(row.get('values'), list):
                 for value in row['values']:
@@ -90,7 +92,7 @@ def apply_changes(source: dict, changes: list[dict], *, pair_assessment: dict | 
             return [resolve(v, key) for v in value]
         if isinstance(value, str) and value.startswith('$') and (key.endswith('Id') or key in {
                 'id', 'fromEntity', 'toEntity', 'contentBindings', 'dependsOn', 'volumeIds',
-                'scopeIds', 'inputIds', 'eventIds', 'characterIds'}):
+                'scopeIds', 'inputIds', 'eventIds', 'characterIds', 'basisIds', 'perspectiveIds'}):
             if value not in identities:
                 raise StructureError('SOURCE_HANDLE_UNKNOWN', 'temporary identity was not declared', {'handle': value})
             return identities[value]

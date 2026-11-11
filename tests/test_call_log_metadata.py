@@ -14,10 +14,10 @@ from scripts.core import call_log_metadata as metadata
 class CallLogReferenceTests(unittest.TestCase):
     def test_existing_fields_keep_their_pointer_and_do_not_follow_paths(self):
         payload = {
-            'chapterId': 'CH-CURRENT', 'activeToken': 7,
-            'nextAction': {'arguments': {'chapterId': 'CH-NEXT', 'operationId': 'OP-NEXT'}},
+            'chapterId': 'chapter-CURRENT', 'activeToken': 7,
+            'nextAction': {'arguments': {'chapterId': 'chapter-NEXT', 'operationId': 'OP-NEXT'}},
             'dependencyManifest': [{'path': '/private/novel/source.json', 'sha256': 'abc'}],
-            'notes': '正文提到 CH-NOT-A-REFERENCE，也提到密码和 activeToken。',
+            'notes': '正文提到 chapter-NOT-A-REFERENCE，也提到密码和 activeToken。',
             'taskId': 'invented-task', 'artifactId': 'invented-artifact',
             'a~/b': {'artifactSha256': 'def'},
         }
@@ -27,7 +27,7 @@ class CallLogReferenceTests(unittest.TestCase):
         self.assertEqual(payload, before)
         observed = {row['pointer']: row for row in rows}
         self.assertEqual(observed['/activeToken']['value'], 7)
-        self.assertEqual(observed['/nextAction/arguments/chapterId']['value'], 'CH-NEXT')
+        self.assertEqual(observed['/nextAction/arguments/chapterId']['value'], 'chapter-NEXT')
         self.assertEqual(observed['/dependencyManifest/0/path']['value'], '/private/novel/source.json')
         self.assertEqual(observed['/a~0~1b/artifactSha256']['value'], 'def')
         self.assertTrue(all(row['origin'] == 'response' for row in rows))
@@ -36,11 +36,11 @@ class CallLogReferenceTests(unittest.TestCase):
         self.assertNotIn('/artifactId', observed)
 
     def test_depth_and_cycles_are_bounded_without_losing_shared_references(self):
-        shared = {'chapterId': 'CH-A'}
-        payload = {'left': shared, 'right': shared, 'chapterId': 'CH-ROOT'}
+        shared = {'chapterId': 'chapter-A'}
+        payload = {'left': shared, 'right': shared, 'chapterId': 'chapter-ROOT'}
         payload['cycle'] = payload
         rows = metadata.correlations(payload, 'request', 1)
-        self.assertEqual(rows, [{'field': 'chapterId', 'value': 'CH-ROOT',
+        self.assertEqual(rows, [{'field': 'chapterId', 'value': 'chapter-ROOT',
                                  'pointer': '/chapterId', 'origin': 'request'}])
         rows = metadata.correlations(payload, 'request', 3)
         self.assertEqual([row['pointer'] for row in rows],
@@ -48,7 +48,7 @@ class CallLogReferenceTests(unittest.TestCase):
 
     def test_target_context_uses_direct_cli_and_rpc_targets_only(self):
         direct = {'project_root': './never-initialized', 'chapter_id': 'CH001',
-                  'task': 'writer', 'nextAction': {'chapterId': 'CH-NEXT'}}
+                  'task': 'writer', 'nextAction': {'chapterId': 'chapter-NEXT'}}
         with patch.object(Path, 'resolve', side_effect=AssertionError('no project resolution')):
             context = metadata.target_context(direct)
         self.assertEqual(context, {'projectRoot': os.path.abspath('./never-initialized'),
@@ -56,19 +56,19 @@ class CallLogReferenceTests(unittest.TestCase):
         self.assertNotIn('projectId', context)
         rpc = {'method': 'tools/call', 'params': {
             'name': 'prepare_task', 'arguments': {'projectRoot': '/novel',
-                                                'chapterId': 'CH-A', 'station': 'writer'}}}
+                                                'chapterId': 'chapter-A', 'station': 'writer'}}}
         self.assertEqual(metadata.target_context(rpc),
-                         {'projectRoot': '/novel', 'chapterId': 'CH-A', 'station': 'writer'})
+                         {'projectRoot': '/novel', 'chapterId': 'chapter-A', 'station': 'writer'})
         self.assertEqual(metadata.target_context({'nextAction': direct}), {})
         self.assertEqual(metadata.target_context({'method': 'initialize', 'params': direct}), {})
 
     def test_discovery_bridge_retains_outer_project_and_inner_chapter(self):
         arguments = {'projectRoot': '/outer', 'operation': 'source.chapter-plan',
-                     'arguments': {'projectRoot': '/invalid-inner', 'chapterId': 'CH-A',
-                                   'nextAction': {'chapterId': 'CH-NEXT'}}}
+                     'arguments': {'projectRoot': '/invalid-inner', 'chapterId': 'chapter-A',
+                                   'nextAction': {'chapterId': 'chapter-NEXT'}}}
         rpc = {'method': 'tools/call', 'params': {
             'name': 'read_discovered_operation', 'arguments': arguments}}
-        expected = {'projectRoot': '/outer', 'chapterId': 'CH-A'}
+        expected = {'projectRoot': '/outer', 'chapterId': 'chapter-A'}
         self.assertEqual(metadata.target_context(rpc), expected)
         self.assertEqual(metadata.target_context({**arguments, 'operation_binding': 'capabilities.read'}),
                          expected)

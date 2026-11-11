@@ -32,7 +32,7 @@ class Round7CloseoutTests(unittest.TestCase):
         for schema in (5,):
             for mode in ('off', 'broad', 'curated'):
                 with self.subTest(schema=schema, knowledgeMode=mode):
-                    root, cid = helper.read_ready_schema5(f's{schema}-{mode}')
+                    root, cid = helper.read_ready_current(f's{schema}-{mode}')
                     second = helper.materialize(root, title='下一章')['chapterId']
                     structure = load_structure(root)
                     if schema == 5:
@@ -40,7 +40,7 @@ class Round7CloseoutTests(unittest.TestCase):
                         # The real runner now requires an explicit authored source contract.
                         plan = next(f for f in structure['fragments'] if f['ownerId'] == cid and f['contentRole'] == 'plan')
                         plan['chapterContract'] = {'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}, 'targetRange': [10, 50]}
-                    structure['entities'].append({'entityId': 'C-CLOSEOUT', 'entityType': 'character',
+                    structure['entities'].append({'entityId': 'character-CLOSEOUT', 'entityType': 'character',
                         'name': '合成人物', 'aliases': [], 'status': 'active', 'summary': '守门人', 'sourceRefs': []})
                     save_structure(root, structure)
                     workflow = read_json(root/'.govel/workflow.json')
@@ -56,11 +56,11 @@ class Round7CloseoutTests(unittest.TestCase):
                         'activeSeats': list(range(1, 11)), binding['field']: binding['hash'],
                         'consensus': [], 'disagreements': [], 'openItems': []})
                     advance_chapter_status(root, cid, 'planned')
-                    writer = prepare_task(root, 'write', chapter_id=cid, pov_character='C-CLOSEOUT',
+                    writer = prepare_task(root, 'write', chapter_id=cid, pov_character='character-CLOSEOUT',
                         chapter_goal='关系推进', knowledge_mode=mode)
                     self.assertTrue(writer['ok'], writer['blocking'])
                     context = build_station_context(str(root), cid, task_type='writer',
-                        pov_character='C-CLOSEOUT', chapter_goal='关系推进', knowledge_mode=mode,
+                        pov_character='character-CLOSEOUT', chapter_goal='关系推进', knowledge_mode=mode,
                         view='station', read_only=True)
                     self.assertEqual(context['contextHash'], writer['context']['contextHash'])
                     model, proof = semantic_view(context)
@@ -69,10 +69,10 @@ class Round7CloseoutTests(unittest.TestCase):
                     self.assertEqual(proof['contextHash'], context['contextHash'])
                     if mode == 'off': self.assertEqual(model['referenceKnowledge'], [])
                     health = query_context_health(root, chapterId=cid, chapterGoal='关系推进',
-                        povCharacter='C-CLOSEOUT', knowledgeMode=mode, expectedHash=context['contextHash'])
+                        povCharacter='character-CLOSEOUT', knowledgeMode=mode, expectedHash=context['contextHash'])
                     self.assertTrue(health['ready'], health)
                     changed = query_context_health(root, chapterId=cid, chapterGoal='关系推进',
-                        povCharacter='C-CLOSEOUT', knowledgeMode='broad' if mode == 'off' else 'off',
+                        povCharacter='character-CLOSEOUT', knowledgeMode='broad' if mode == 'off' else 'off',
                         expectedHash=context['contextHash'])
                     self.assertFalse(changed['ready'])
                     prose = '合成人物将钥匙放回桌上，确认登记本中的签名。'
@@ -135,7 +135,7 @@ class Round7CloseoutTests(unittest.TestCase):
             context = build(root)
             row = next(r for r in context['memoryPack']['semantic'] if r['field'] == 'chapterArcLink')
             other = deepcopy(row)
-            other['value']['chapterId'] = 'CH-OTHER'
+            other['value']['chapterId'] = 'chapter-OTHER'
             context['memoryPack']['semantic'].append(other)
             self.assertNotIn('CONTEXT_VALUE_CONFLICT', {r['code'] for r in assess_context(context)['issues']})
             same = deepcopy(row)

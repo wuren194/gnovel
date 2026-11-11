@@ -153,7 +153,7 @@ class CallLogStorageTests(unittest.TestCase):
 
     def test_full_payload_roundtrip_private_permissions_and_read_only_queries(self):
         content = {"body": "未公开稿件。" * self.policy["inlinePayloadBytes"], "access_token": "private-token"}
-        ident = self.begin(value=content, projectRoot="/example/project", chapterId="CH-CURRENT")
+        ident = self.begin(value=content, projectRoot="/example/project", chapterId="chapter-CURRENT")
         self.finish(ident, value={"review": "保留具体引文。", "artifactSha256": "observed-sha"})
         before = self.snapshot()
         shown = self.store.show(ident)
@@ -162,7 +162,7 @@ class CallLogStorageTests(unittest.TestCase):
         self.assertEqual(request["availability"], "available")
         self.assertEqual(request["value"]["body"], content["body"])
         self.assertEqual(request["value"]["access_token"], "[REDACTED]")
-        self.assertEqual(shown["metadata"]["chapterId"], "CH-CURRENT")
+        self.assertEqual(shown["metadata"]["chapterId"], "chapter-CURRENT")
         self.assertEqual(shown["status"], "success")
         self.assertEqual(self.store.list_calls()["calls"][0]["callId"], ident)
         self.assertEqual(self.store.stats()["callCount"], 1)

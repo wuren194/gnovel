@@ -13,7 +13,7 @@ from scripts.core.finalization import finalize_chapter, reconcile_workflow
 from scripts.core.jsonio import read_json, write_json
 from scripts.core.operations import call_operation
 from scripts.core.structure_store import load_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import review_ready_project
 
 
@@ -123,7 +123,7 @@ class ContinuityTests(unittest.TestCase):
 class MissingContinuityTests(unittest.TestCase):
     def test_missing_receipts_are_not_backfilled_or_bundled(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); fixture = create_schema5_project(root, chapter_count=3)
+            root = Path(temp); fixture = create_current_project(root, chapter_count=3)
             source = load_structure(root); workflow = read_json(root/'.govel/workflow.json')
             before = (root/'.govel/workflow.json').read_bytes()
             pending = pending_continuity(source, workflow)
@@ -133,5 +133,5 @@ class MissingContinuityTests(unittest.TestCase):
                 with self.assertRaises(ContinuityError) as caught: continuity_preview(root, cid)
                 self.assertEqual(caught.exception.code, 'CONTINUITY_RECEIPT_MISSING')
             with self.assertRaises(ContinuityError):
-                require_predecessors_ready(source, workflow, {'chapterId': 'CH-NEXT', 'displayOrdinal': 4})
+                require_predecessors_ready(source, workflow, {'chapterId': 'chapter-NEXT', 'displayOrdinal': 4})
             self.assertEqual((root/'.govel/workflow.json').read_bytes(), before)

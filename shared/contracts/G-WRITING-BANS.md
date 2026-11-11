@@ -1,7 +1,7 @@
 ---
 id: G-WRITING-BANS
 version: 1.1.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: Writer 与 Editor 共用的事实、表达、输出隔离和修订边界。
 ---
 

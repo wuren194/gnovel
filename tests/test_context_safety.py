@@ -18,22 +18,22 @@ class ContextSafetyTests(unittest.TestCase):
         self.root = Path(temp.name).resolve()
         self.source = context_source(self.root)
         self.source['entities'].extend([
-            {'entityId': 'L-DOCK', 'entityType': 'location', 'name': '旧港', 'aliases': ['码头'], 'status': 'active'},
-            {'entityId': 'P-KEY', 'entityType': 'prop', 'name': '旧钥匙', 'aliases': [], 'status': 'active'},
+            {'entityId': 'location-DOCK', 'entityType': 'location', 'name': '旧港', 'aliases': ['码头'], 'status': 'active'},
+            {'entityId': 'prop-KEY', 'entityType': 'prop', 'name': '旧钥匙', 'aliases': [], 'status': 'active'},
         ])
-        self.source['references'] = [{'sourceId': 'CH-BBB', 'targetId': 'C-ALPHA', 'kind': 'uses'},
-                                     {'sourceId': 'CH-BBB', 'targetId': 'L-DOCK', 'kind': 'located_in'}]
-        self.source['attributes'].append({'attributeId': 'AT-NEXT', 'ownerId': 'CH-BBB', 'fieldId': 'FD-PLAN', 'values': []})
-        self.source['fragments'].append({'fragmentId': 'SF-NEXT', 'ownerId': 'CH-BBB', 'order': 1, 'contentRole': 'plan',
-                                         'contentBindings': ['AT-NEXT'], 'text': '甲在旧港寻找钥匙。'})
+        self.source['references'] = [{'sourceId': 'chapter-BBB', 'targetId': 'character-ALPHA', 'kind': 'uses'},
+                                     {'sourceId': 'chapter-BBB', 'targetId': 'location-DOCK', 'kind': 'located_in'}]
+        self.source['attributes'].append({'attributeId': 'attribute-NEXT', 'ownerId': 'chapter-BBB', 'fieldId': 'field-PLAN', 'values': []})
+        self.source['fragments'].append({'fragmentId': 'plan-NEXT', 'ownerId': 'chapter-BBB', 'order': 1, 'contentRole': 'plan',
+                                         'contentBindings': ['attribute-NEXT'], 'text': '甲在旧港寻找钥匙。'})
 
     def build(self, *, summary=None, **kwargs):
         save_context_source(self.root, self.source)
         kwargs.setdefault('read_only', True); kwargs.setdefault('knowledge_mode', 'off')
         if summary is None:
-            return context.build_station_context(self.root, 'CH-BBB', **kwargs)
+            return context.build_station_context(self.root, 'chapter-BBB', **kwargs)
         with patch.object(context, '_load_story_summary', return_value=summary):
-            return context.build_station_context(self.root, 'CH-BBB', **kwargs)
+            return context.build_station_context(self.root, 'chapter-BBB', **kwargs)
 
     def assert_budget(self, result):
         pack = result['memoryPack']
@@ -58,17 +58,17 @@ class ContextSafetyTests(unittest.TestCase):
         self.assert_budget(self.build(chapter_goal='在码头调查钥匙去向', view='station'))
 
     def test_pov_applies_before_metadata_memory_and_typed_source_reads(self):
-        self.entity('C-BETA')['name'] = 'SECRET-person'
-        self.entity('L-DOCK')['summary'] = 'SECRET-location'
-        self.entity('L-DOCK')['mandatory'] = True
+        self.entity('character-BETA')['name'] = 'SECRET-person'
+        self.entity('location-DOCK')['summary'] = 'SECRET-location'
+        self.entity('location-DOCK')['mandatory'] = True
         self.source['chapters'][0]['title'] = 'SECRET-title'
-        self.source['fragments'].append({'fragmentId': 'SF-PRIVATE', 'ownerId': 'CH-BBB', 'order': 2,
-            'contentRole': 'belief', 'perspectiveId': 'C-BETA', 'contentBindings': ['AT-NEXT'], 'text': 'SECRET-belief'})
-        self.source['fragments'].append({'fragmentId': 'SF-KNOWN', 'ownerId': 'CH-BBB', 'order': 3,
-            'contentRole': 'belief', 'perspectiveId': 'C-ALPHA', 'contentBindings': ['AT-NEXT'], 'text': '甲认为钥匙仍在旧港。'})
-        summary = {'asOfChapterId': 'CH-AAA', 'storySummary': 'SECRET-summary', 'characterSummaries': []}
+        self.source['fragments'].append({'fragmentId': 'belief-PRIVATE', 'ownerId': 'chapter-BBB', 'order': 2,
+            'contentRole': 'belief', 'perspectiveId': 'character-BETA', 'contentBindings': ['attribute-NEXT'], 'text': 'SECRET-belief'})
+        self.source['fragments'].append({'fragmentId': 'belief-KNOWN', 'ownerId': 'chapter-BBB', 'order': 3,
+            'contentRole': 'belief', 'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-NEXT'], 'text': '甲认为钥匙仍在旧港。'})
+        summary = {'asOfChapterId': 'chapter-AAA', 'storySummary': 'SECRET-summary', 'characterSummaries': []}
         for view in ('full', 'station'):
-            result = self.build(pov_character='C-ALPHA', summary=summary, view=view)
+            result = self.build(pov_character='character-ALPHA', summary=summary, view=view)
             self.assertNotIn('SECRET', context.serialize_context(result))
             self.assertFalse(result['readiness']['ready'])
             self.assertEqual(result['readiness']['unavailableMandatoryCount'], 1)
@@ -80,24 +80,24 @@ class ContextSafetyTests(unittest.TestCase):
             self.assertNotIn('SECRET-belief', text)
             self.assertNotIn('他身高一米九。', text, '客观事实不能冒充视角已知内容')
         state, _ = state_cache.project_projections(self.root)
-        pack = context._build_memory_pack({'targetChapter': 'CH-BBB', 'povCharacter': 'C-ALPHA'}, state)
+        pack = context._build_memory_pack({'targetChapter': 'chapter-BBB', 'povCharacter': 'character-ALPHA'}, state)
         self.assertNotIn('SECRET', context.serialize_context(pack))
 
     def test_visibility_is_not_inferred_from_relevance_and_denials_win(self):
-        self.entity('L-DOCK').update(summary='甲可见的码头', visibility='public')
-        self.entity('C-BETA').update(summary='HIDDEN', visibleTo=['C-BETA'], visibility='public')
-        for audience in (None, [], 'C-ALPHA'):
-            self.assertFalse(context._explicitly_visible({'visibleTo': audience, 'visibility': 'public'}, 'C-ALPHA'))
-        result = self.build(pov_character='C-ALPHA', chapter_goal='码头')
+        self.entity('location-DOCK').update(summary='甲可见的码头', visibility='public')
+        self.entity('character-BETA').update(summary='HIDDEN', visibleTo=['character-BETA'], visibility='public')
+        for audience in (None, [], 'character-ALPHA'):
+            self.assertFalse(context._explicitly_visible({'visibleTo': audience, 'visibility': 'public'}, 'character-ALPHA'))
+        result = self.build(pov_character='character-ALPHA', chapter_goal='码头')
         self.assertIn('甲可见的码头', context.serialize_context(result['memoryPack']))
         self.assertNotIn('HIDDEN', context.serialize_context(result))
 
     def test_huge_optional_record_is_omitted_without_slicing_its_value(self):
-        self.entity('C-ALPHA')['summary'] = '大' * 100000
+        self.entity('character-ALPHA')['summary'] = '大' * 100000
         result = self.build(view='station')
         self.assert_budget(result)
         self.assertGreater(result['memoryPack']['provenance']['semantic']['omittedBudget'], 0)
-        self.assertFalse(any(row['subject'] == 'C-ALPHA' and row['field'] == 'entity' for row in result['memoryPack']['semantic']))
+        self.assertFalse(any(row['subject'] == 'character-ALPHA' and row['field'] == 'entity' for row in result['memoryPack']['semantic']))
         self.assertNotIn('大' * 100, context.serialize_context(result))
 
     def test_outer_envelope_is_bounded_even_when_recent_title_is_huge(self):
@@ -105,34 +105,34 @@ class ContextSafetyTests(unittest.TestCase):
         result = self.build(view='station')
         self.assert_budget(result)
         self.assertEqual(result['recentChapterProvenance']['omittedBudget'], 1)
-        self.assertEqual(result['recentChapters'][0]['chapterId'], 'CH-BBB')
+        self.assertEqual(result['recentChapters'][0]['chapterId'], 'chapter-BBB')
 
     def test_mandatory_metadata_and_required_typed_rules_are_never_silently_dropped(self):
-        self.entity('L-DOCK').update(summary='不能进入封闭区域', mandatory=True)
-        self.source['entities'].append({'entityId': 'RU-GATE', 'entityType': 'rule', 'name': '出入限制',
+        self.entity('location-DOCK').update(summary='不能进入封闭区域', mandatory=True)
+        self.source['entities'].append({'entityId': 'rule-GATE', 'entityType': 'rule', 'name': '出入限制',
             'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
-                         'scopeIds': ['CH-BBB'], 'actions': ['prepare'], 'inputIds': ['SF-NEXT']}})
+                         'scopeIds': ['chapter-BBB'], 'actions': ['prepare'], 'inputIds': ['plan-NEXT']}})
         result = self.build(chapter_goal='探索森林', view='station')
         mandatory = [r for layer in context.LAYERS for r in result['memoryPack'][layer] if r['mandatory']]
-        self.assertIn('L-DOCK', {row['subject'] for row in mandatory})
+        self.assertIn('location-DOCK', {row['subject'] for row in mandatory})
         self.assertFalse(result['readiness']['ready'])
-        self.assertEqual(result['sourceContext']['ruleSummary']['blockingRuleIds'], ['RU-GATE'])
+        self.assertEqual(result['sourceContext']['ruleSummary']['blockingRuleIds'], ['rule-GATE'])
         self.assert_budget(result)
-        self.entity('L-DOCK')['summary'] = '巨' * 100000
+        self.entity('location-DOCK')['summary'] = '巨' * 100000
         with self.assertRaisesRegex(context.ContextBuilderError, 'CONTEXT_BUDGET_IMPOSSIBLE'):
             self.build(view='station')
-        self.entity('L-DOCK')['summary'] = '不能进入封闭区域'
+        self.entity('location-DOCK')['summary'] = '不能进入封闭区域'
         with self.assertRaisesRegex(context.ContextBuilderError, 'CONTEXT_BUDGET_IMPOSSIBLE'):
             self.build(chapter_goal='纲' * 100000)
 
     def test_explicit_chapter_references_and_aliases_select_registered_entities(self):
         result = self.build(chapter_goal='完全不同的长篇章节目标')
         subjects = {r['subject'] for r in result['memoryPack']['semantic']}
-        self.assertTrue({'C-ALPHA', 'L-DOCK'} <= subjects)
-        self.assertNotIn('C-BETA', subjects)
+        self.assertTrue({'character-ALPHA', 'location-DOCK'} <= subjects)
+        self.assertNotIn('character-BETA', subjects)
         self.source['references'] = []
         result = self.build(chapter_goal='本章必须前往码头寻找证据')
-        self.assertIn('L-DOCK', {r['subject'] for r in result['memoryPack']['semantic']})
+        self.assertIn('location-DOCK', {r['subject'] for r in result['memoryPack']['semantic']})
 
     def test_deterministic_output_and_registry_budgets_for_each_task(self):
         for task in continuation_policy()['memoryBudgets']:
@@ -146,14 +146,14 @@ class ContextSafetyTests(unittest.TestCase):
     def test_recent_chapter_paths_exclude_archived_chapters(self):
         self.source['chapters'][0]['status'] = 'archived'
         result = self.build(view='station', recent=2)
-        self.assertEqual([r['chapterId'] for r in result['recentChapters']], ['CH-BBB'])
+        self.assertEqual([r['chapterId'] for r in result['recentChapters']], ['chapter-BBB'])
         self.assertEqual(result['recentChapterProvenance']['input'], 1)
 
     def test_registry_budget_changes_selection_and_impossible_envelope_fails(self):
         for i in range(20):
-            self.source['entities'].append({'entityId': f'L-EXTRA-{i}', 'entityType': 'location', 'name': f'地点{i}',
+            self.source['entities'].append({'entityId': f'location-EXTRA-{i}', 'entityType': 'location', 'name': f'地点{i}',
                                            'summary': '文' * 500, 'status': 'active', 'aliases': []})
-            self.source['references'].append({'sourceId': 'CH-BBB', 'targetId': f'L-EXTRA-{i}', 'kind': 'uses'})
+            self.source['references'].append({'sourceId': 'chapter-BBB', 'targetId': f'location-EXTRA-{i}', 'kind': 'uses'})
         policy = continuation_policy()
         with patch('scripts.core.project.workflow_policy', return_value={'continuation': policy}):
             policy['memoryBudgets']['planner'] = 10**9
@@ -172,18 +172,18 @@ class ContextSafetyTests(unittest.TestCase):
             with self.assertRaisesRegex(context.ContextBuilderError, 'CONTEXT_BUDGET_IMPOSSIBLE'): self.build(view='station')
 
     def test_pov_denial_of_required_evidence_reports_not_ready(self):
-        self.entity('C-ALPHA').update(mandatory=True, visibleTo=[])
-        result = self.build(pov_character='C-ALPHA', view='station')
+        self.entity('character-ALPHA').update(mandatory=True, visibleTo=[])
+        result = self.build(pov_character='character-ALPHA', view='station')
         self.assertFalse(result['readiness']['ready'])
         self.assertEqual(result['readiness']['unavailableMandatoryCount'], 1)
         self.assert_budget(result)
 
     def test_scoped_summary_excludes_other_character_summaries(self):
-        summary = {'povCharacter': 'C-ALPHA', 'asOfChapterId': 'CH-AAA',
+        summary = {'povCharacter': 'character-ALPHA', 'asOfChapterId': 'chapter-AAA',
                    'storySummary': '当前视角摘要', 'plotLine': [], 'characterSummaries': [
-                       {'characterId': 'C-ALPHA', 'summary': '自身状态'},
-                       {'characterId': 'C-BETA', 'summary': 'SECRET-other'}]}
-        result = self.build(pov_character='C-ALPHA', summary=summary)
+                       {'characterId': 'character-ALPHA', 'summary': '自身状态'},
+                       {'characterId': 'character-BETA', 'summary': 'SECRET-other'}]}
+        result = self.build(pov_character='character-ALPHA', summary=summary)
         self.assertEqual(result['storySummary']['storySummary'], '当前视角摘要')
         self.assertNotIn('SECRET', context.serialize_context(result))
 
@@ -206,7 +206,7 @@ class ContextSafetyTests(unittest.TestCase):
                     self.build()
 
     def test_escaping_and_unicode_are_counted_as_serialized_characters(self):
-        self.entity('C-ALPHA')['summary'] = '中文"\\\n测试🌙' * 30
+        self.entity('character-ALPHA')['summary'] = '中文"\\\n测试🌙' * 30
         result = self.build(view='station')
         self.assert_budget(result)
         self.assertGreater(len(context.serialize_context(result).encode()), len(context.serialize_context(result)))

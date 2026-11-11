@@ -69,7 +69,7 @@ def assemble(source, payload, materials, identity_map=None):
                          and attribute['attributeId'] in r['contentBindings']), None)
         if matching is not None:
             return matching['fragmentId']
-        rid = allocate(handle, 'fragment')
+        rid = allocate(handle, 'fact')
         proposed['fragments'].append({'fragmentId': rid, 'ownerId': owner, 'text': text(body, 'observation'),
             'order': 1 + max((r['order'] for r in proposed['fragments'] if r['ownerId'] == owner), default=0),
             'contentBindings': [attribute['attributeId']], 'dependsOn': [], 'contentRole': 'fact'})
@@ -112,7 +112,7 @@ def assemble(source, payload, materials, identity_map=None):
         name = text(row['name'], 'entity.name')
         if any(name in [e['name'], *e.get('aliases', [])] for e in proposed['entities']):
             raise StructureError('IMPORT_ENTITY_AMBIGUOUS', 'name already exists; use its stable ID for observations', {'name': name})
-        rid = allocate(row['ref'], PREFIX_BY_TYPE[row['entityType']])
+        rid = allocate(row['ref'], row['entityType'])
         proposed['entities'].append({'entityId': rid, 'entityType': row['entityType'], 'name': name,
                                      'summary': text(row['summary'], 'entity.summary'), 'aliases': [], 'status': 'active'})
         quote(row['chapterId'], row['quote'], rid, '原稿明确的人物／对象资料')

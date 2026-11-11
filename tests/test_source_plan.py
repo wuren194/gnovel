@@ -20,16 +20,16 @@ from tests.fixtures_source import single_source_chapter, source_fixture
 
 def planning_source(root: Path):
     source = source_fixture()
-    cid = 'CH-PLAN'
+    cid = 'chapter-PLAN'
     source['chapters'].append({'chapterId': cid, 'title': '守门', 'displayOrdinal': 1,
         'placement': {'scope': 'volume', 'volumeId': source['volumes'][0]['volumeId']},
         'filePath': '正文/守门.md', 'status': 'planning_required'})
     source['chapterArcLinks'].append({'chapterId': cid, 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-    source['fieldDefinitions'].append({'fieldId': 'FD-PLAN', 'key': 'plot.plan', 'label': '剧情计划',
+    source['fieldDefinitions'].append({'fieldId': 'field-PLAN', 'key': 'plot.plan', 'label': '剧情计划',
                                      'valueType': 'topic', 'appliesTo': ['chapter', 'project', 'volume']})
-    source['attributes'].append({'attributeId': 'AT-PLAN', 'ownerId': cid, 'fieldId': 'FD-PLAN', 'values': []})
-    source['fragments'].append({'fragmentId': 'SF-PLAN', 'ownerId': cid, 'text': '甲守城门。', 'order': 1,
-                               'contentRole': 'plan', 'contentBindings': ['AT-PLAN'], 'dependsOn': ['AT-HEIGHT'],
+    source['attributes'].append({'attributeId': 'attribute-PLAN', 'ownerId': cid, 'fieldId': 'field-PLAN', 'values': []})
+    source['fragments'].append({'fragmentId': 'plan-PLAN', 'ownerId': cid, 'text': '甲守城门。', 'order': 1,
+                               'contentRole': 'plan', 'contentBindings': ['attribute-PLAN'], 'dependsOn': ['attribute-HEIGHT'],
                                'chapterContract': {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                                    'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
     validate_structure(source)
@@ -76,41 +76,41 @@ class SourcePlanTests(unittest.TestCase):
 
     def test_new_global_plan_is_selected_and_invalidates_affected_approval(self):
         before = deepcopy(self.source)
-        self.source['attributes'].append({'attributeId': 'AT-GLOBAL', 'ownerId': self.source['projectId'], 'fieldId': 'FD-PLAN', 'values': []})
-        self.source['fragments'].append({'fragmentId': 'SF-GLOBAL', 'ownerId': self.source['projectId'], 'text': '全书守门事件必须登记代价。',
-            'order': 0, 'contentRole': 'plan', 'contentBindings': ['AT-GLOBAL']})
+        self.source['attributes'].append({'attributeId': 'attribute-GLOBAL', 'ownerId': self.source['projectId'], 'fieldId': 'field-PLAN', 'values': []})
+        self.source['fragments'].append({'fragmentId': 'plan-GLOBAL', 'ownerId': self.source['projectId'], 'text': '全书守门事件必须登记代价。',
+            'order': 0, 'contentRole': 'plan', 'contentBindings': ['attribute-GLOBAL']})
         validate_structure(self.source)
         impact = source_impact(before, self.source)
         self.assertIn(self.cid, impact['approvalInvalidations'])
 
     def test_project_fact_only_affects_chapter_with_registered_dependency(self):
-        self.source['attributes'].append({'attributeId': 'AT-GLOBAL', 'ownerId': self.source['projectId'],
-                                          'fieldId': 'FD-PLAN', 'values': []})
-        self.source['fragments'].append({'fragmentId': 'SF-GLOBAL', 'ownerId': self.source['projectId'],
-            'text': '城门朝东。', 'order': 0, 'contentRole': 'fact', 'contentBindings': ['AT-GLOBAL']})
+        self.source['attributes'].append({'attributeId': 'attribute-GLOBAL', 'ownerId': self.source['projectId'],
+                                          'fieldId': 'field-PLAN', 'values': []})
+        self.source['fragments'].append({'fragmentId': 'fact-GLOBAL', 'ownerId': self.source['projectId'],
+            'text': '城门朝东。', 'order': 0, 'contentRole': 'fact', 'contentBindings': ['attribute-GLOBAL']})
         before = deepcopy(self.source)
         self.source['fragments'][-1]['text'] = '城门朝西。'
         self.assertEqual(chapter_plan(before, self.cid)['sourcePlanHash'], chapter_plan(self.source, self.cid)['sourcePlanHash'])
         self.assertNotIn(self.cid, source_impact(before, self.source)['approvalInvalidations'])
         for source in (before, self.source):
-            next(row for row in source['fragments'] if row['fragmentId'] == 'SF-PLAN')['dependsOn'].append('SF-GLOBAL')
+            next(row for row in source['fragments'] if row['fragmentId'] == 'plan-PLAN')['dependsOn'].append('fact-GLOBAL')
             validate_structure(source)
         self.assertIn(self.cid, source_impact(before, self.source)['approvalInvalidations'])
 
     def test_whole_character_card_reference_invalidates_only_the_referencing_chapter(self):
-        self.source['chapters'].append(single_source_chapter(self.source, 'CH-OTHER',
+        self.source['chapters'].append(single_source_chapter(self.source, 'chapter-OTHER',
                                       volume_id=self.source['volumes'][0]['volumeId'], ordinal=2))
-        self.source['chapterArcLinks'].append({'chapterId': 'CH-OTHER', 'arcId': self.source['arcs'][0]['arcId'],
+        self.source['chapterArcLinks'].append({'chapterId': 'chapter-OTHER', 'arcId': self.source['arcs'][0]['arcId'],
                                                'role': 'primary'})
-        self.source['references'].append({'sourceId': self.cid, 'targetId': 'C-ALPHA', 'kind': 'character'})
+        self.source['references'].append({'sourceId': self.cid, 'targetId': 'character-ALPHA', 'kind': 'character'})
         validate_structure(self.source)
         changed = deepcopy(self.source)
         changed['fragments'][3]['text'] = '他曾独自守过城门。'
         validate_structure(changed)
         self.assertEqual(source_impact(self.source, changed)['approvalInvalidations'], [self.cid])
         records = {row['id'] for row in chapter_plan(self.source, self.cid)['records']}
-        self.assertIn('AT-LIFE', records)
-        self.assertIn('SF-LIFE', records)
+        self.assertIn('attribute-LIFE', records)
+        self.assertIn('fact-LIFE', records)
 
     def test_unrelated_fact_edit_preserves_approval_bytes(self):
         from scripts.core.source_impact import review_outputs
@@ -206,7 +206,7 @@ class SourcePlanTests(unittest.TestCase):
         from scripts.core.structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION
         write_json(self.root / '.govel/project.json', {'schemaVersion': PROJECT_SCHEMA_VERSION,
             'workflowVersion': WORKFLOW_VERSION, 'projectId': self.source['projectId']})
-        self.source['fragments'][-1]['contentBindings'] = ['AT-MISSING']
+        self.source['fragments'][-1]['contentBindings'] = ['attribute-MISSING']
         write_json(self.root / '.govel/structure.json', self.source)
         status = state_cache.status(self.root)
         self.assertEqual(status['status'], 'invalid')
@@ -216,20 +216,20 @@ class SourcePlanTests(unittest.TestCase):
 def _cross_volume_source():
     source = source_fixture()
     v1 = source['volumes'][0]['volumeId']
-    v2 = 'VOL-CROSS0002'
+    v2 = 'volume-CROSS0002'
     source['volumes'].append({'volumeId': v2, 'ordinal': 2, 'title': '第二卷', 'status': 'planned'})
     source['arcs'][0]['volumeIds'] = [v1, v2]
     arc = source['arcs'][0]['arcId']
-    source['chapters'] = [single_source_chapter(source, 'CH-AAA', volume_id=v1, ordinal=1),
-                          single_source_chapter(source, 'CH-BBB', volume_id=v2, ordinal=2)]
-    source['chapterArcLinks'] = [{'chapterId': 'CH-AAA', 'arcId': arc, 'role': 'primary'},
-                                 {'chapterId': 'CH-BBB', 'arcId': arc, 'role': 'primary'}]
-    source['units'] = [{'unitId': 'UN-PRJ', 'title': '跨卷单元', 'ordinal': 1, 'status': 'active',
+    source['chapters'] = [single_source_chapter(source, 'chapter-AAA', volume_id=v1, ordinal=1),
+                          single_source_chapter(source, 'chapter-BBB', volume_id=v2, ordinal=2)]
+    source['chapterArcLinks'] = [{'chapterId': 'chapter-AAA', 'arcId': arc, 'role': 'primary'},
+                                 {'chapterId': 'chapter-BBB', 'arcId': arc, 'role': 'primary'}]
+    source['units'] = [{'unitId': 'unit-PRJ', 'title': '跨卷单元', 'ordinal': 1, 'status': 'active',
                         'placement': {'scope': 'project'},
-                        'members': [{'memberType': 'chapter', 'memberId': 'CH-AAA', 'order': 1},
-                                    {'memberType': 'chapter', 'memberId': 'CH-BBB', 'order': 2}]}]
-    source['fragments'].append({'fragmentId': 'SF-UNIT', 'ownerId': 'UN-PRJ', 'text': '本单元统一的规划。',
-                                'order': 1, 'contentBindings': ['AT-LIFE'], 'contentRole': 'plan'})
+                        'members': [{'memberType': 'chapter', 'memberId': 'chapter-AAA', 'order': 1},
+                                    {'memberType': 'chapter', 'memberId': 'chapter-BBB', 'order': 2}]}]
+    source['fragments'].append({'fragmentId': 'plan-UNIT', 'ownerId': 'unit-PRJ', 'text': '本单元统一的规划。',
+                                'order': 1, 'contentBindings': ['attribute-LIFE'], 'contentRole': 'plan'})
     validate_structure(source)
     return source, v1
 
@@ -237,42 +237,42 @@ def _cross_volume_source():
 class SchemaThreePlanScopeTests(unittest.TestCase):
     def test_volume_scope_includes_volume(self):
         source, v1 = _cross_volume_source()
-        recipe = chapter_plan(source, 'CH-AAA')['recipe']
+        recipe = chapter_plan(source, 'chapter-AAA')['recipe']
         self.assertEqual(recipe['kind'], 'chapter-plan-v2')
         self.assertIn(v1, recipe['scopeIds'])
-        self.assertIn('UN-PRJ', recipe['scopeIds'])
+        self.assertIn('unit-PRJ', recipe['scopeIds'])
 
     def test_project_chapter_has_no_fake_volume(self):
         source = source_fixture()
         source['arcs'][0]['volumeIds'] = []
-        source['chapters'] = [single_source_chapter(source, 'CH-PRJ', volume_id=None, ordinal=1)]
-        source['chapterArcLinks'] = [{'chapterId': 'CH-PRJ', 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'}]
+        source['chapters'] = [single_source_chapter(source, 'chapter-PRJ', volume_id=None, ordinal=1)]
+        source['chapterArcLinks'] = [{'chapterId': 'chapter-PRJ', 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'}]
         validate_structure(source)
-        scope = chapter_plan(source, 'CH-PRJ')['recipe']['scopeIds']
-        self.assertFalse([sid for sid in scope if sid.startswith('VOL-')])
+        scope = chapter_plan(source, 'chapter-PRJ')['recipe']['scopeIds']
+        self.assertFalse([sid for sid in scope if sid.startswith('volume-')])
 
     def test_cross_volume_unit_fragment_reaches_members(self):
         source, _ = _cross_volume_source()
-        record_ids = {row['id'] for row in chapter_plan(source, 'CH-AAA')['records']}
-        self.assertIn('SF-UNIT', record_ids)
-        self.assertIn('UN-PRJ', record_ids)
+        record_ids = {row['id'] for row in chapter_plan(source, 'chapter-AAA')['records']}
+        self.assertIn('plan-UNIT', record_ids)
+        self.assertIn('unit-PRJ', record_ids)
 
     def test_unit_change_changes_plan_hash_unrelated_does_not(self):
         source, _ = _cross_volume_source()
-        base = chapter_plan(source, 'CH-AAA')['sourcePlanHash']
+        base = chapter_plan(source, 'chapter-AAA')['sourcePlanHash']
         changed = deepcopy(source)
         changed['fragments'][-1]['text'] = '改写后的单元规划。'
-        self.assertNotEqual(chapter_plan(changed, 'CH-AAA')['sourcePlanHash'], base)
+        self.assertNotEqual(chapter_plan(changed, 'chapter-AAA')['sourcePlanHash'], base)
         # A second unit that does not contain CH-AAA must not perturb its plan.
         unrelated = deepcopy(source)
-        unrelated['chapters'].append(single_source_chapter(unrelated, 'CH-CCC',
+        unrelated['chapters'].append(single_source_chapter(unrelated, 'chapter-CCC',
                                                            volume_id=unrelated['volumes'][1]['volumeId'], ordinal=3))
-        unrelated['chapterArcLinks'].append({'chapterId': 'CH-CCC', 'arcId': unrelated['arcs'][0]['arcId'], 'role': 'primary'})
-        unrelated['units'].append({'unitId': 'UN-OTHER', 'title': '别单元', 'ordinal': 2, 'status': 'active',
+        unrelated['chapterArcLinks'].append({'chapterId': 'chapter-CCC', 'arcId': unrelated['arcs'][0]['arcId'], 'role': 'primary'})
+        unrelated['units'].append({'unitId': 'unit-OTHER', 'title': '别单元', 'ordinal': 2, 'status': 'active',
                                    'placement': {'scope': 'project'},
-                                   'members': [{'memberType': 'chapter', 'memberId': 'CH-CCC', 'order': 1}]})
+                                   'members': [{'memberType': 'chapter', 'memberId': 'chapter-CCC', 'order': 1}]})
         validate_structure(unrelated)
-        self.assertEqual(chapter_plan(unrelated, 'CH-AAA')['sourcePlanHash'], base)
+        self.assertEqual(chapter_plan(unrelated, 'chapter-AAA')['sourcePlanHash'], base)
 
     pass
 

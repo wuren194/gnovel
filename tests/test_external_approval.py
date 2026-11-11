@@ -134,9 +134,9 @@ class ExternalConfirmationTests(unittest.TestCase):
     def plan(self):
         root = Path('/tmp/govel-neutral-approval').resolve()
         return root, {'operationId': 'OP-neutral', 'planHash': 'a' * 64,
-            'proposedStructure': {'bookName': '测试作品', 'chapters': [{'chapterId': 'CH-001', 'title': '测试章节'}]},
-            'externalReviewMaterials': {'projectRoot': str(root), 'projectId': 'P-neutral',
-                'chapterId': 'CH-001', 'bindingGeneration': 2, 'filePath': '正文/测试.md',
+            'proposedStructure': {'bookName': '测试作品', 'chapters': [{'chapterId': 'chapter-001', 'title': '测试章节'}]},
+            'externalReviewMaterials': {'projectRoot': str(root), 'projectId': 'prop-neutral',
+                'chapterId': 'chapter-001', 'bindingGeneration': 2, 'filePath': '正文/测试.md',
                 'expectedContentDigest': 'sha256:' + 'b' * 64,
                 'observedContentDigest': 'sha256:' + 'c' * 64,
                 'observedObject': {'dev': 1, 'ino': 2}, 'H1': {}, 'H2': {'path': 'frozen.md'}}}

@@ -53,7 +53,6 @@ def _chapter(root: Path, chapter_id: str) -> dict[str, Any]:
 
 
 def _chapter_dir(root: Path, chapter_id: str) -> Path:
-    # chapterId 受 ID_PATTERNS 约束（CH-…），这里仍走 safe_project_path 防路径逃逸。
     return safe_project_path(root, f"{WORKBENCH_DIR}/{chapter_id}")
 
 

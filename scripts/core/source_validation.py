@@ -10,9 +10,12 @@ RECORD_FIELDS = {
     'fieldDefinitions': {'fieldId', 'key', 'label', 'valueType', 'appliesTo', 'description'},
     'attributes': {'attributeId', 'ownerId', 'fieldId', 'values'},
     'fragments': {'fragmentId', 'ownerId', 'text', 'order', 'contentBindings', 'dependsOn', 'validDuring',
-                  'contentRole', 'status', 'perspectiveId', 'sourceRefs', 'chapterContract'},
+                  'contentRole', 'status', 'perspectiveId', 'sourceRefs', 'chapterContract', 'topic', 'cognition'},
     'units': {'unitId', 'placement', 'title', 'ordinal', 'status', 'members'},
     'presentations': {'presentationId', 'eventId', 'chapterId', 'kind', 'order'},
+    'checks': {'checkId', 'targetId', 'targetHash', 'holderId', 'status', 'checkedAtId', 'recordedAt',
+               'reason', 'evidence', 'inputHashes'},
+    'recallPools': {'poolId', 'characterId', 'count', 'facets', 'status'},
 }
 REQUIRED_FIELDS = {
     'fieldDefinitions': {'fieldId', 'key', 'label', 'valueType', 'appliesTo'},
@@ -20,6 +23,8 @@ REQUIRED_FIELDS = {
     'fragments': {'fragmentId', 'ownerId', 'text', 'order', 'contentBindings', 'contentRole'},
     'units': {'unitId', 'placement', 'title', 'ordinal', 'members'},
     'presentations': {'presentationId', 'eventId', 'chapterId', 'kind', 'order'},
+    'checks': RECORD_FIELDS['checks'],
+    'recallPools': {'poolId', 'characterId', 'count', 'facets'},
 }
 UNIT_MEMBER_FIELDS = {'memberType', 'memberId', 'order'}
 
@@ -325,6 +330,10 @@ def validate_source_content(structure: dict) -> list[dict]:
             error('SOURCE_ORDER_INVALID', path)
         if fragment.get('contentRole') not in policy['contentRoles']:
             error('SOURCE_ROLE_INVALID', path)
+        else:
+            from .source_ids import identity_pattern
+            if not identity_pattern(fragment['contentRole']).fullmatch(fid):
+                error('SOURCE_ID_ROLE_MISMATCH', path, contentRole=fragment['contentRole'])
         if fragment.get('status', 'active') not in policy['recordStatuses']:
             error('SOURCE_STATUS_INVALID', path)
         if 'chapterContract' in fragment:
@@ -359,6 +368,12 @@ def validate_source_content(structure: dict) -> list[dict]:
     for row in structure.get('relations', []):
         if not _text(row.get('kind')):
             error('SOURCE_RELATION_KIND_REQUIRED', 'relations.' + str(row.get('relationId')))
+    if errors:
+        return errors
+    from .source_cognition import validate_cognition
+    from .source_profile import validate_profiles
+    errors.extend(validate_cognition(structure, index, period))
+    errors.extend(validate_profiles(structure, index))
     from .source_rules import validate_rules
     errors.extend(validate_rules(structure, index))
     if not errors:

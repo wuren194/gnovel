@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import tempfile
 import unittest
 import os
@@ -10,36 +12,36 @@ from unittest.mock import patch
 
 from scripts.core.view_adapters import chapter_view, plan_impact_view, project_summary
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class ChapterViewTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name) / "book"
-        self.fixture = create_schema5_project(self.root, chapter_count=2)
+        self.fixture = create_current_project(self.root, chapter_count=2)
         self.structure = self.fixture["structure"]
         # Current placement is the only persisted structural parent.
         base = self.structure["chapters"][0]
-        self.schema5_chapter = {"chapterId": base["chapterId"], "title": base["title"],
+        self.current_chapter = {"chapterId": base["chapterId"], "title": base["title"],
                                 "displayCode": base["displayCode"], "displayOrdinal": base["displayOrdinal"],
                                 "status": "draft", "placement": {"scope": "volume", "volumeId": base["placement"]["volumeId"]}}
-        self.schema5_structure = {**self.structure, "schemaVersion": 5, "chapters": [self.schema5_chapter]}
+        self.current_structure = {**self.structure, "schemaVersion": current_schema_version(), "chapters": [self.current_chapter]}
 
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def test_schema5_chapter_view_uses_placement_never_volume_id(self) -> None:
-        view = chapter_view(self.schema5_structure, self.schema5_chapter)
+    def test_current_chapter_view_uses_placement_never_volume_id(self) -> None:
+        view = chapter_view(self.current_structure, self.current_chapter)
         self.assertEqual(view["placement"]["scope"], "volume")
-        self.assertEqual(view["derivedVolumeId"], self.schema5_chapter["placement"]["volumeId"])
+        self.assertEqual(view["derivedVolumeId"], self.current_chapter["placement"]["volumeId"])
         self.assertNotIn("volumeId", view)  # UI 层永不直接接触 legacy 字段
-        self.assertEqual(view["chapterId"], self.schema5_chapter["chapterId"])
-        self.assertEqual(view["displayOrdinal"], self.schema5_chapter["displayOrdinal"])
+        self.assertEqual(view["chapterId"], self.current_chapter["chapterId"])
+        self.assertEqual(view["displayOrdinal"], self.current_chapter["displayOrdinal"])
 
     def test_project_scope_chapter_has_null_volume(self) -> None:
-        project_chapter = {**self.schema5_chapter, "placement": {"scope": "project"}}
-        view = chapter_view(self.schema5_structure, project_chapter)
+        project_chapter = {**self.current_chapter, "placement": {"scope": "project"}}
+        view = chapter_view(self.current_structure, project_chapter)
         self.assertIsNone(view["derivedVolumeId"])
         self.assertEqual(view["placement"], {"scope": "project"})
 
@@ -50,16 +52,16 @@ class ChapterViewTests(unittest.TestCase):
         self.assertEqual(view["unitMembership"], ["UNIT-1"])
 
     def test_unknown_placement_shape_fails_closed(self) -> None:
-        broken = {**self.schema5_chapter, "placement": {"scope": "galaxy"}}
+        broken = {**self.current_chapter, "placement": {"scope": "galaxy"}}
         with self.assertRaises(StructureError):
-            chapter_view(self.schema5_structure, broken)
+            chapter_view(self.current_structure, broken)
 
 
 class BoundedSummaryTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name) / "book"
-        self.fixture = create_schema5_project(self.root, chapter_count=6)
+        self.fixture = create_current_project(self.root, chapter_count=6)
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -139,10 +141,10 @@ class PlanImpactViewTests(unittest.TestCase):
         self.assertFalse(plan_impact_view({"operation": "x"})["known"])
 
     def test_real_impact_passes_through(self) -> None:
-        view = plan_impact_view({"impact": {"renumberedChapters": [{"chapterId": "CH-B", "from": 2, "to": 3}],
-                                            "referenceCount": 4, "staleCandidates": ["PC-1"]}})
+        view = plan_impact_view({"impact": {"renumberedChapters": [{"chapterId": "chapter-B", "from": 2, "to": 3}],
+                                            "referenceCount": 4, "staleCandidates": ["candidate-1"]}})
         self.assertTrue(view["known"])
-        self.assertEqual(view["renumberedChapters"][0]["chapterId"], "CH-B")
+        self.assertEqual(view["renumberedChapters"][0]["chapterId"], "chapter-B")
         self.assertEqual(view["staleCandidateCount"], 1)
 
 

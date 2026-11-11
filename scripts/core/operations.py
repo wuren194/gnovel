@@ -138,14 +138,14 @@ def _new_operations() -> list[OperationSpec]:
                                'kind': {'type': 'string', 'enum': list(PROTECTED)}, 'chapterId': STRING,
                                'limit': INTEGER, 'maxBytes': INTEGER, 'cursor': STRING}, ['recordIds', 'kind']),
                       'read', lambda root, a: resolve_content_batch(root, **a), ('source', 'content-resolve-batch'), category='author',
-                      examples=({'kind': 'planning', 'recordIds': ['SF-FIRST', 'SF-SECOND']},)),
+                      examples=({'kind': 'planning', 'recordIds': ['plan-FIRST', 'plan-SECOND']},)),
         OperationSpec('source.content-resolve', 'resolve_source_content_target',
                       '解析当前属性、事实或规划片段；model 返回补丁所需绑定和分页读取入口，不要求长记录完整返回。',
                       _schema({'recordId': STRING, 'kind': {'type': 'string', 'enum': list(PROTECTED)},
                                'chapterId': STRING, 'view': {'type': 'string', 'enum': ['full', 'model']}}, ['recordId', 'kind']),
                       'read', lambda root, a: resolve_content_target(root, **a),
                       ('source', 'content-resolve'), category='author',
-                      examples=({'recordId': 'SF-EXAMPLE', 'kind': 'planning', 'view': 'model'},)),
+                      examples=({'recordId': 'plan-EXAMPLE', 'kind': 'planning', 'view': 'model'},)),
         OperationSpec('source.content-proposal-preview', 'preview_source_content_change',
                       '以 content-resolve 的 sessionRef、expectedRecordHash 和局部 patch 预览属性、事实或规划修改；也接受完整旧新记录。规划仍走 source_change，事实仍须引证。',
                       _schema({'sessionRef': STRING, 'expectedOldRecord': {'type': 'object'},
@@ -194,9 +194,9 @@ def _new_operations() -> list[OperationSpec]:
                       ('source', 'proposal-batch-preview'), category='author', discover=True,
                       examples=({'sourceHash': '<sourceHash>', 'requestId': 'settings-batch-1',
                                  'approvalActor': '作者', 'approvalEvidence': '已确认的修订方案',
-                                 'items': [{'kind': 'fact', 'recordId': 'SF-EXAMPLE',
+                                 'items': [{'kind': 'fact', 'recordId': 'fact-EXAMPLE',
                                             'patch': [{'op': 'text', 'path': ['text'], 'original': '旧称', 'replacement': '新称'}],
-                                            'reason': '落实已确认条目', 'evidence': [{'fragmentId': 'SF-EXAMPLE', 'quote': '旧称'}]}]},)),
+                                            'reason': '落实已确认条目', 'evidence': [{'fragmentId': 'fact-EXAMPLE', 'quote': '旧称'}]}]},)),
         OperationSpec('source.search', 'search_source_fragments',
                       '按字面词的任一、全部或近邻匹配检索片段；可按对象名称筛选。保留 POV 与上下文，命中不等于冲突。',
                       _schema({'terms': STRINGS, 'selection': source_selection(), 'contextCharacters': INTEGER,
@@ -413,7 +413,7 @@ def _new_operations() -> list[OperationSpec]:
                    'properties': {'changes': {'items': explicit_change_bindings}}}]},
         'plan-write', lambda root, a: preview_source_change(root, **a), ('source', 'change-preview'), category='author', discover=True,
         examples=({'baseRevision': 1, 'requestId': 'planning-1', 'reason': '已确认的规划修订',
-                   'changes': [{'action': 'patch', 'collection': 'fragments', 'id': 'SF-EXAMPLE',
+                   'changes': [{'action': 'patch', 'collection': 'fragments', 'id': 'fact-EXAMPLE',
                                 'expectedRecordHash': '<recordHash>', 'patch': [{'op': 'text', 'path': ['text'],
                                 'original': '旧文', 'replacement': '新文'}]}]},)))
     result.extend([
@@ -758,7 +758,7 @@ def _new_operations() -> list[OperationSpec]:
                                'diagnostics': {'type': 'object', 'properties': diagnostic_inputs, 'additionalProperties': False},
                                'authorization': {'type': 'string', 'enum': ['read', 'candidate']}}, ['task', 'authorization']),
                       'candidate-write', execute, ('tools', 'execute'), audiences=station_audiences, tasks=station_tasks,
-                      examples=({'task': 'editor', 'chapterId': 'CH-EXAMPLE', 'authorization': 'read'},)),
+                      examples=({'task': 'editor', 'chapterId': 'chapter-EXAMPLE', 'authorization': 'read'},)),
         OperationSpec('task.prepare', 'prepare_task', '只读任务准备清单：必读材料、就绪判断、缺项与工具动作计划。继续或写下一章用 task=continue，按当前状态路由，不自动建章或批准。',
                       _schema({**task_schema,
                                'task': {**STRING, 'description': '续写／接着写用 continue，由当前状态决定工位；明确设计用 design，按计划执笔用 write，修改／润色用 revise。'},
@@ -766,7 +766,7 @@ def _new_operations() -> list[OperationSpec]:
                                'heldPrepareRef': {**STRING, 'description': '仅在仍持有该准备报告时回传；model 视图只交付变化部分，换窗或压缩后不传。'},
                                'view': {'type': 'string', 'enum': ['station', 'model']}}, ['task']),
                       'read', prepare, ('task', 'prepare'),
-                      examples=({'task': 'continue', 'view': 'model'}, {'task': 'write', 'chapterId': 'CH-EXAMPLE', 'view': 'model'},
+                      examples=({'task': 'continue', 'view': 'model'}, {'task': 'write', 'chapterId': 'chapter-EXAMPLE', 'view': 'model'},
                                 {'task': 'revise', 'chapterId': 'CH001', 'view': 'model'})),
         OperationSpec('context.read', 'read_continuation_context', '只读续写上下文：不重建缓存、不修复项目。',
                       _schema({'chapterId': STRING, 'povCharacter': STRING, 'chapterGoal': STRING, 'taskType': STRING, 'knowledgeMode': knowledge_mode_schema,
@@ -829,8 +829,8 @@ def _new_operations() -> list[OperationSpec]:
                       {'oneOf': [{'required': ['volumeId']}, {'required': ['placement']}]},
                       'plan-write', lambda root, a: preview_chapter(root, **a), ('workflow', 'chapter-preview'),
                       audiences=('router', 'planner'), tasks=('planner',),
-                      examples=({'requestId': 'chapter-plan-1', 'title': '交班', 'volumeId': 'VOL-EXAMPLE',
-                                 'primaryArcId': 'ARC-EXAMPLE', 'outlineText': '工位提供的本章推演。',
+                      examples=({'requestId': 'chapter-plan-1', 'title': '交班', 'volumeId': 'volume-EXAMPLE',
+                                 'primaryArcId': 'arc-EXAMPLE', 'outlineText': '工位提供的本章推演。',
                                  'planField': 'plot.plan', 'dependsOn': [], 'reason': '作者选定的章节方案'},)),
     ])
     from .refactor import operation_contract, refactor_reference_candidates
@@ -975,6 +975,8 @@ def _new_operations() -> list[OperationSpec]:
     result.extend(efficiency_operations())
     from .authoring_operations import authoring_operations
     result.extend(authoring_operations())
+    from .character_operations import character_operations
+    result.extend(character_operations())
     from .call_log_operations import call_log_operations
     result.extend(call_log_operations())
     from .import_operations import import_operations

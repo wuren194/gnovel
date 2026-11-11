@@ -18,11 +18,11 @@ class ContextPreheatTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.source, self.current = planning_source(self.root)
         self.source['chapters'].append({
-            'chapterId': 'CH-NEXT', 'title': '下一章', 'displayOrdinal': 2,
+            'chapterId': 'chapter-NEXT', 'title': '下一章', 'displayOrdinal': 2,
             'placement': self.current['placement'], 'filePath': '正文/下一章.md',
             'status': 'planning_required',
         })
-        self.source['chapterArcLinks'].append({'chapterId': 'CH-NEXT',
+        self.source['chapterArcLinks'].append({'chapterId': 'chapter-NEXT',
                                                'arcId': self.source['arcs'][0]['arcId'], 'role': 'primary'})
         self.save()
 
@@ -58,7 +58,7 @@ class ContextPreheatTests(unittest.TestCase):
 
     def test_no_registered_successor_fails_closed(self):
         with self.assertRaises(StructureError) as caught:
-            preheat_next_chapter(self.root, afterChapterId='CH-NEXT')
+            preheat_next_chapter(self.root, afterChapterId='chapter-NEXT')
         self.assertEqual(caught.exception.code, 'NEXT_CHAPTER_NOT_FOUND')
 
 
@@ -77,7 +77,7 @@ class ContextPreheatContractTests(unittest.TestCase):
         self.save_context_source(self.root, source if source is not None else self.source)
 
     def preheat(self, **kwargs):
-        return preheat_next_chapter(self.root, afterChapterId='CH-AAA', **kwargs)
+        return preheat_next_chapter(self.root, afterChapterId='chapter-AAA', **kwargs)
 
     def test_metadata_preheat_does_not_read_future_prose_or_generate_plot(self):
         first = self.preheat()
@@ -97,15 +97,15 @@ class ContextPreheatContractTests(unittest.TestCase):
         current = self.source
         current['chapters'][0]['status'] = 'stable'
         self.save(current)
-        (self.root / '正文/CH-AAA.md').write_text('第一章正文。', encoding='utf-8')
+        (self.root / '正文/chapter-AAA.md').write_text('第一章正文。', encoding='utf-8')
         self.assertTrue(self.preheat(expectedInputHash=before['inputHash'])['reusableMetadata'])
 
     def test_source_plan_change_makes_preheat_stale(self):
         changed = self.source
-        changed['attributes'].append({'attributeId': 'AT-NEXT', 'ownerId': 'CH-BBB',
-                                      'fieldId': 'FD-PLAN', 'values': []})
-        changed['fragments'].append({'fragmentId': 'SF-NEXT', 'ownerId': 'CH-BBB', 'text': '乙在码头等待。',
-                                     'order': 1, 'contentRole': 'plan', 'contentBindings': ['AT-NEXT']})
+        changed['attributes'].append({'attributeId': 'attribute-NEXT', 'ownerId': 'chapter-BBB',
+                                      'fieldId': 'field-PLAN', 'values': []})
+        changed['fragments'].append({'fragmentId': 'plan-NEXT', 'ownerId': 'chapter-BBB', 'text': '乙在码头等待。',
+                                     'order': 1, 'contentRole': 'plan', 'contentBindings': ['attribute-NEXT']})
         self.save(changed)
         first = self.preheat()
         self.assertTrue(first['metadata']['planReady'])
@@ -120,7 +120,7 @@ class ContextPreheatContractTests(unittest.TestCase):
     def test_reference_change_makes_preheat_stale(self):
         first = self.preheat()
         changed = self.source
-        changed['references'].append({'sourceId': 'CH-BBB', 'targetId': 'C-BETA', 'kind': 'uses'})
+        changed['references'].append({'sourceId': 'chapter-BBB', 'targetId': 'character-BETA', 'kind': 'uses'})
         self.save(changed)
         again = self.preheat(expectedInputHash=first['inputHash'])
         self.assertTrue(again['stale'])
@@ -136,7 +136,7 @@ class ContextPreheatContractTests(unittest.TestCase):
         changed['arcs'].append({'arcId': arc_id, 'title': '支线', 'kind': 'sub', 'status': 'planned',
                                 'volumeIds': [volume], 'parentArcId': None, 'promise': '',
                                 'resolutionTargetChapterId': None})
-        changed['chapterArcLinks'].append({'chapterId': 'CH-BBB', 'arcId': arc_id, 'role': 'secondary'})
+        changed['chapterArcLinks'].append({'chapterId': 'chapter-BBB', 'arcId': arc_id, 'role': 'secondary'})
         self.save(changed)
         again = self.preheat(expectedInputHash=first['inputHash'])
         self.assertTrue(again['stale'])
@@ -163,11 +163,11 @@ class ContextPreheatContractTests(unittest.TestCase):
 
     def test_builder_records_the_preheat_fingerprint_for_its_chapter(self):
         from scripts.core.context_builder import build_station_context
-        expected = preheat_fingerprint(self.source, 'CH-AAA')
-        context = build_station_context(str(self.root), 'CH-BBB', task_type='planner',
+        expected = preheat_fingerprint(self.source, 'chapter-AAA')
+        context = build_station_context(str(self.root), 'chapter-BBB', task_type='planner',
                                         view='station', read_only=True)
         self.assertEqual(context['sourceContext']['preheatInputFingerprint'], expected)
-        first_chapter = build_station_context(str(self.root), 'CH-AAA', task_type='planner',
+        first_chapter = build_station_context(str(self.root), 'chapter-AAA', task_type='planner',
                                               view='station', read_only=True)
         self.assertIsNone(first_chapter['sourceContext']['preheatInputFingerprint'],
                           '没有前驱章的章节没有可复用的预取指纹')
@@ -175,24 +175,24 @@ class ContextPreheatContractTests(unittest.TestCase):
         changed = self.source
         changed['chapters'][1]['title'] = '又改了'
         self.save(changed)
-        moved = build_station_context(str(self.root), 'CH-BBB', task_type='planner',
+        moved = build_station_context(str(self.root), 'chapter-BBB', task_type='planner',
                                      view='station', read_only=True)
         self.assertNotEqual(moved['sourceContext']['preheatInputFingerprint'], expected)
-        self.assertTrue(preheat_next_chapter(self.root, afterChapterId='CH-AAA',
+        self.assertTrue(preheat_next_chapter(self.root, afterChapterId='chapter-AAA',
                                              expectedInputHash=expected)['stale'])
 
     def test_supplied_plan_must_belong_to_the_registered_successor(self):
         from scripts.core.source_plan import chapter_plan
-        correct = chapter_plan(self.source, 'CH-BBB')
-        self.assertEqual(preheat_metadata(self.source, 'CH-AAA', _plan=correct),
-                         preheat_metadata(self.source, 'CH-AAA'))
-        self.assertEqual(preheat_fingerprint(self.source, 'CH-AAA', _plan=correct),
-                         preheat_fingerprint(self.source, 'CH-AAA'))
-        wrong = chapter_plan(self.source, 'CH-AAA')
+        correct = chapter_plan(self.source, 'chapter-BBB')
+        self.assertEqual(preheat_metadata(self.source, 'chapter-AAA', _plan=correct),
+                         preheat_metadata(self.source, 'chapter-AAA'))
+        self.assertEqual(preheat_fingerprint(self.source, 'chapter-AAA', _plan=correct),
+                         preheat_fingerprint(self.source, 'chapter-AAA'))
+        wrong = chapter_plan(self.source, 'chapter-AAA')
         for read in (preheat_metadata, preheat_fingerprint):
             with self.subTest(reader=read.__name__):
                 with self.assertRaisesRegex(ValueError, 'another chapter'):
-                    read(self.source, 'CH-AAA', _plan=wrong)
+                    read(self.source, 'chapter-AAA', _plan=wrong)
 
     def test_preheat_never_caches_complete_station_context(self):
         result = self.preheat()

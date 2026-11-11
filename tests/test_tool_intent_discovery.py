@@ -237,16 +237,16 @@ class ToolIntentDiscoveryTests(unittest.TestCase):
         write_json(self.root / '.govel/project.json', {
             'schemaVersion': PROJECT_SCHEMA_VERSION, 'workflowVersion': WORKFLOW_VERSION,
             'projectId': self.source['projectId'], 'bookName': self.source['bookName'], 'approvalMode': 'manual'})
-        self.source['volumes'] = [{'volumeId': 'VOL-EXPORT', 'title': '卷一', 'ordinal': 1, 'status': 'planned'}]
-        self.source['arcs'] = [{'arcId': 'ARC-EXPORT', 'title': '主线', 'kind': 'main', 'status': 'planned',
-                               'volumeIds': ['VOL-EXPORT'], 'parentArcId': None}]
-        chapter = single_source_chapter(self.source, 'CH-EXPORT', status='stable', volume_id='VOL-EXPORT')
+        self.source['volumes'] = [{'volumeId': 'volume-EXPORT', 'title': '卷一', 'ordinal': 1, 'status': 'planned'}]
+        self.source['arcs'] = [{'arcId': 'arc-EXPORT', 'title': '主线', 'kind': 'main', 'status': 'planned',
+                               'volumeIds': ['volume-EXPORT'], 'parentArcId': None}]
+        chapter = single_source_chapter(self.source, 'chapter-EXPORT', status='stable', volume_id='volume-EXPORT')
         from scripts.core.prose_binding import seal_binding
         chapter['proseBinding'] = seal_binding(self.source['projectId'], chapter['chapterId'], chapter['filePath'],
                                                state='managed', generation=self.source['revision'],
                                                expected_content_digest='sha256:' + hashlib.sha256('已入库的章节正文。'.encode()).hexdigest())
         self.source['chapters'].append(chapter)
-        self.source['chapterArcLinks'] = [{'chapterId': 'CH-EXPORT', 'arcId': 'ARC-EXPORT', 'role': 'primary'}]
+        self.source['chapterArcLinks'] = [{'chapterId': 'chapter-EXPORT', 'arcId': 'arc-EXPORT', 'role': 'primary'}]
         write_json(self.root / '.govel/structure.json', self.source)
         (self.root / '正文').mkdir()
         (self.root / chapter['filePath']).write_text('已入库的章节正文。', encoding='utf-8')
@@ -300,7 +300,7 @@ class ToolIntentDiscoveryTests(unittest.TestCase):
                             'arguments': {'selection': {'ownerTypes': [3]}}})
         self.assertTrue(invalid['isError'])
         self.assertIn('arguments.selection.ownerTypes[0]', invalid['structuredContent']['error'])
-        query = {'selection': {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}}
+        query = {'selection': {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}}
         spec = next(row for row in operations() if row.id == 'source.query')
         direct = self.call(spec.name, {'projectRoot': str(self.root), **query})
         bridged = self.call('read_discovered_operation', {'projectRoot': str(self.root),

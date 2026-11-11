@@ -1,7 +1,7 @@
 ---
 id: G-MULTI-IDENTITY-REVIEW
 version: 2.11.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 多身份审校契约。十身份两阶段流程：决策点分头讨论（阶段 A）、正文合并审查（阶段 B）；含席位清单、审查维度、组席规则与两阶段输出骨架。主对话单体执行，不 spawn 子代理。
 ---
 

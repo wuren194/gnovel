@@ -151,7 +151,7 @@ class BehaviorInventoryTests(unittest.TestCase):
         self.assertEqual(artifact['payload']['repairReview']['pendingIssueIds'], [])
 
     def test_parent_owner_and_field_cannot_masquerade_as_fact(self):
-        for rid in ('C-TEST-ALPHA', self.add_topic()):
+        for rid in ('character-TEST-ALPHA', self.add_topic()):
             with self.subTest(rid=rid), self.assertRaises(ReviewArtifactError) as caught:
                 self.record(self.fact_payload(target=rid))
             self.assertEqual(caught.exception.code, 'FACT_TARGET_INVALID')
@@ -220,11 +220,11 @@ class LivingArrangementTests(unittest.TestCase):
         plan['text'] = text or '他仍住原来的普通住宅，今晚自愿做饭；明日的服务照常，后续是否照料尚未决定。'
         plan['chapterContract']['behaviorCoverage'] = {'relationship': 'not_applicable', 'living': 'applicable'}
         plan['chapterContract']['livingArrangements'] = [{
-            'id': 'LIFE-MEAL', 'characterIds': ['C-TEST-ALPHA'], 'triggers': ['first_sustained'],
+            'id': 'LIFE-MEAL', 'characterIds': ['character-TEST-ALPHA'], 'triggers': ['first_sustained'],
             'arrangement': '核对是否将本次晚饭写成长期照料。', 'basisIds': basis or [],
             'constraints': '晚间时间允许；未知服务未推成不存在。', 'choiceReason': '本人自愿完成本次晚饭。',
             'scope': '仅今晚；未来安排保持计划。'}]
-        plan['dependsOn'] = ['C-TEST-ALPHA', *(basis or [])]
+        plan['dependsOn'] = ['character-TEST-ALPHA', *(basis or [])]
         source['chapters'][0]['reviewClass'] = 'ordinary'
         write_json(self.root/'.govel/structure.json', source)
         result = self.op('source.change-preview', baseRevision=source['revision'], requestId='living-plan', reason='本临时项目明确生活安排审校范围。',
@@ -252,8 +252,8 @@ class LivingArrangementTests(unittest.TestCase):
         source = load_structure(self.root)
         plan = next(f for f in source['fragments'] if f['ownerId'] == self.cid and f['contentRole'] == 'plan')
         plan['chapterContract']['livingArrangements'] = [{
-            'id': 'LIFE-UNKNOWN', 'characterIds': ['C-TEST-ALPHA'], 'triggers': ['alternative_excluded'],
-            'arrangement': '排除服务选项', 'basisIds': ['SF-NOT-REGISTERED'],
+            'id': 'LIFE-UNKNOWN', 'characterIds': ['character-TEST-ALPHA'], 'triggers': ['alternative_excluded'],
+            'arrangement': '排除服务选项', 'basisIds': ['fact-NOT-REGISTERED'],
             'constraints': '材料不足', 'choiceReason': '需要核验', 'scope': '本次安排'}]
         from scripts.core.structure_store import validate_structure, StructureError
         with self.assertRaises(StructureError) as caught: validate_structure(source)
@@ -293,10 +293,10 @@ class BehaviorRetentionTests(unittest.TestCase):
         source = load_structure(self.root)
         plan = deepcopy(next(f for f in source['fragments'] if f['ownerId'] == self.cid and f['contentRole'] == 'plan'))
         plan['text'] = '他在休假期间自愿每天做饭，双方约定照料只到假期结束；同住不妨碍随时离开。'
-        plan['dependsOn'] = ['C-TEST-ALPHA']
+        plan['dependsOn'] = ['character-TEST-ALPHA']
         plan['chapterContract']['behaviorCoverage'] = {'relationship': 'not_applicable', 'living': 'applicable'}
         plan['chapterContract']['livingArrangements'] = [{
-            'id': 'LIFE-MEALS', 'characterIds': ['C-TEST-ALPHA'], 'triggers': ['first_sustained'],
+            'id': 'LIFE-MEALS', 'characterIds': ['character-TEST-ALPHA'], 'triggers': ['first_sustained'],
             'arrangement': '休假期间自愿每日做饭，假期结束重新协商。', 'basisIds': [],
             'constraints': '假期内安排可容纳做饭，未排除对方的住所与服务。',
             'choiceReason': '本人提出照料，对方保留离开的选择。', 'scope': '仅休假期间。'}]
@@ -423,7 +423,7 @@ class FactRequestBindingTests(unittest.TestCase):
         preview = self.op('source.change-preview', requestId='fact-topic', baseRevision=source['revision'],
             reason='给临时项目建立独立人物经历字段，后续事实不改变当前章计划。', changes=[{
                 'action': 'put', 'collection': 'fieldDefinitions', 'record': {
-                    'fieldId': 'FD-RETENTION-FACT', 'key': 'retention.history', 'label': '经历',
+                    'fieldId': 'field-RETENTION-FACT', 'key': 'retention.history', 'label': '经历',
                     'valueType': 'topic', 'appliesTo': ['character']}}])
         args = dict(preview['nextAction']['arguments']); args.pop('projectRoot', None)
         self.op('source.commit', **args)
@@ -446,7 +446,7 @@ class FactRequestBindingTests(unittest.TestCase):
 
     def commit_fact(self, identity, request_id, quote, statement):
         preview = self.op('source.chapter-facts-preview', requestId=request_id, chapterId=self.cid, facts=[{
-            'findingId': identity, 'ownerId': 'C-TEST-ALPHA', 'field': 'retention.history',
+            'findingId': identity, 'ownerId': 'character-TEST-ALPHA', 'field': 'retention.history',
             'statement': statement, 'quote': quote, 'reason': '根据当前已审义务登记这次动作。'}])
         args = dict(preview['nextAction']['arguments']); args.pop('projectRoot', None)
         self.op('source.commit', **args)

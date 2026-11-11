@@ -6,7 +6,7 @@ import unittest
 
 from scripts.core.jsonio import write_json
 from scripts.core.structure_store import load_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class ReportRegressionTests(unittest.TestCase):
@@ -14,7 +14,7 @@ class ReportRegressionTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
-        self.fixture = create_schema5_project(self.root, chapter_count=3)
+        self.fixture = create_current_project(self.root, chapter_count=3)
 
     def test_outline_constraints_read_the_supplied_new_and_changed_fragments(self):
         from scripts.core.outline_facts import inspect_outline
@@ -29,7 +29,7 @@ class ReportRegressionTests(unittest.TestCase):
             changed = deepcopy(plan)
             changed['text'] = text
             if added:
-                changed.update(fragmentId='SF-MEMORY-ONLY', order=2)
+                changed.update(fragmentId='plan-MEMORY-ONLY', order=2)
                 changed.pop('chapterContract', None)
                 proposed['fragments'].append(changed)
             else:
@@ -44,7 +44,7 @@ class ReportRegressionTests(unittest.TestCase):
         workflow = default_workflow(); workflow['approvedChapterIds'] = self.fixture['chapterIds']
         for row in source['chapters']:
             row['status'] = 'planning_required'
-        volume = deepcopy(source['volumes'][0]); volume.update(volumeId='VOL-NEXT', ordinal=2, status='planned')
+        volume = deepcopy(source['volumes'][0]); volume.update(volumeId='volume-NEXT', ordinal=2, status='planned')
         source['volumes'].append(volume)
         source['chapters'][2]['placement'] = {'scope': 'volume', 'volumeId': volume['volumeId']}
         action = lambda index, name='router': {'chapterId': self.fixture['chapterIds'][index], 'action': name}

@@ -98,9 +98,9 @@ class EndToEndPipelineTests(unittest.TestCase):
             code, init = self.run_cli(["project", "quick-init", "--project-root", str(root), "--book-name", "幽灵", "--no-agents-md"])
             self.assertEqual(code, 0, init)
             artifact_path = root / "工作台" / "candidate.json"
-            artifact = envelope("candidate_prose", {"text": "候选"}, project_id=init["project"]["projectId"], chapter_id="CH-TEST")
+            artifact = envelope("candidate_prose", {"text": "候选"}, project_id=init["project"]["projectId"], chapter_id="chapter-TEST")
             artifact_path.write_text(json.dumps(artifact, ensure_ascii=False), encoding="utf-8")
-            code, result = self.run_cli(["project", "workflow", "artifact-register", "--project-root", str(root), "--chapter-id", "CH-TEST", "--artifact", str(artifact_path)])
+            code, result = self.run_cli(["project", "workflow", "artifact-register", "--project-root", str(root), "--chapter-id", "chapter-TEST", "--artifact", str(artifact_path)])
             self.assertNotEqual(code, 0)
             self.assertEqual(result["code"], "ARTIFACT_CHAPTER_UNKNOWN")
 

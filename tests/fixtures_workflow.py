@@ -9,7 +9,7 @@ from scripts.core.jsonio import read_json, write_json
 from scripts.core.review_artifacts import AUXILIARY_GATES, STAGE_B_SLOTS
 from scripts.core.structure_store import save_structure
 from scripts.core.workflow import approve_artifacts, default_workflow, record_artifact
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 def evidenced_slots(text: str) -> dict:
@@ -81,7 +81,7 @@ def review_ready_project(root: Path, *, chapter_count: int = 2, changes: list | 
         structure = read_json(root/'.govel/structure.json')
         fixture = {'structure': structure, 'chapterIds': [row['chapterId'] for row in structure['chapters']]}
     else:
-        fixture = create_schema5_project(root, chapter_count=chapter_count)
+        fixture = create_current_project(root, chapter_count=chapter_count)
     structure = fixture['structure']
     for row in structure['chapters']:
         row['status'] = 'planning_required'

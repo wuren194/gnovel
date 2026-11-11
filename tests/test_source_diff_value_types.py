@@ -13,21 +13,21 @@ class SourceDiffValueTypeTests(unittest.TestCase):
         for old_value, new_value, new_type in ((1, True, 'boolean'), (190, 190.0, 'number')):
             with self.subTest(new_type=new_type, new_value=new_value):
                 old = source_fixture()
-                field = next(row for row in old['fieldDefinitions'] if row['fieldId'] == 'FD-SKIN')
+                field = next(row for row in old['fieldDefinitions'] if row['fieldId'] == 'field-SKIN')
                 field['valueType'] = 'number'
-                attribute = next(row for row in old['attributes'] if row['attributeId'] == 'AT-SKIN')
+                attribute = next(row for row in old['attributes'] if row['attributeId'] == 'attribute-SKIN')
                 attribute['values'][0]['value'] = old_value
                 new = deepcopy(old)
-                next(row for row in new['fieldDefinitions'] if row['fieldId'] == 'FD-SKIN')['valueType'] = new_type
-                next(row for row in new['attributes'] if row['attributeId'] == 'AT-SKIN')['values'][0]['value'] = new_value
+                next(row for row in new['fieldDefinitions'] if row['fieldId'] == 'field-SKIN')['valueType'] = new_type
+                next(row for row in new['attributes'] if row['attributeId'] == 'attribute-SKIN')['values'][0]['value'] = new_value
                 validate_structure(old)
                 validate_structure(new)
-                values = [row for row in source_diff(old, new) if row['recordId'] == 'AT-SKIN']
+                values = [row for row in source_diff(old, new) if row['recordId'] == 'attribute-SKIN']
                 self.assertEqual(len(values), 1)
                 self.assertEqual(values[0]['path'], ['values', 0, 'value'])
                 self.assertIs(type(values[0]['before']), type(old_value))
                 self.assertIs(type(values[0]['after']), type(new_value))
-                self.assertTrue({'AT-SKIN', 'FV-SKIN'} <= set(identity_changes(old, new)['changedIds']))
+                self.assertTrue({'attribute-SKIN', 'value-SKIN'} <= set(identity_changes(old, new)['changedIds']))
 
     def test_dictionary_key_order_does_not_create_a_false_change(self):
         old = source_fixture()

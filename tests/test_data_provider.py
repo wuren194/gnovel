@@ -15,7 +15,7 @@ from unittest.mock import patch
 from scripts.core import data_provider as provider
 from scripts.core.operations import call_operation
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class ProviderTests(unittest.TestCase):
@@ -213,7 +213,7 @@ class ProviderTests(unittest.TestCase):
         note = self.material()
         project = self.base / 'project'
         project.mkdir()
-        fixture = create_schema5_project(project, chapter_count=1)
+        fixture = create_current_project(project, chapter_count=1)
         with self.environment():
             report = call_operation('task.prepare', project, {'task': 'writer', 'chapterId': fixture['chapterIds'][0], 'view': 'model'})
             selected = report['providerReads']
@@ -235,7 +235,7 @@ class ProviderTests(unittest.TestCase):
         project = self.base / 'bound-project'
         project.mkdir()
         with self.environment():
-            create_schema5_project(project, chapter_count=1)
+            create_current_project(project, chapter_count=1)
         with patch.dict(os.environ, {'GOVEL_DATA_HOME': str(self.base / 'empty')}, clear=True):
             from scripts.core.structure_store import load_structure
             with self.assertRaises(provider.ProviderError) as caught:
@@ -333,7 +333,7 @@ print(json.dumps(results))
         self.asset()
         project = self.base / 'project'
         project.mkdir()
-        fixture = create_schema5_project(project, chapter_count=1)
+        fixture = create_current_project(project, chapter_count=1)
         report = self.fresh_python('''
 import os, json
 from pathlib import Path

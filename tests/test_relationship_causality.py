@@ -26,32 +26,32 @@ class RelationshipCausalityTests(unittest.TestCase):
         self.plan_text = '沈砚能独自搬运货箱，但共同核验清单能保留货主的签收证明，因此接受分工。'
         self.source = load_structure(self.root)
         self.source['entities'].append({
-            'entityId': 'C-CAUSAL-PARTNER', 'entityType': 'character', 'name': '陈舟',
+            'entityId': 'character-CAUSAL-PARTNER', 'entityType': 'character', 'name': '陈舟',
             'summary': '负责核对货单的成年同事'})
         self.source['relations'].append({
-            'relationId': 'REL-CAUSAL-COOPERATION', 'fromEntity': 'C-TEST-ALPHA',
-            'toEntity': 'C-CAUSAL-PARTNER', 'kind': '共同交接货物'})
+            'relationId': 'relation-CAUSAL-COOPERATION', 'fromEntity': 'character-TEST-ALPHA',
+            'toEntity': 'character-CAUSAL-PARTNER', 'kind': '共同交接货物'})
         self.source['fieldDefinitions'].append({
-            'fieldId': 'FD-CAUSAL-BASIS', 'key': 'character.cooperationBasis',
+            'fieldId': 'field-CAUSAL-BASIS', 'key': 'character.cooperationBasis',
             'label': '合作依据', 'valueType': 'topic', 'appliesTo': ['character']})
         self.source['attributes'].append({
-            'attributeId': 'AT-CAUSAL-BASIS', 'ownerId': 'C-TEST-ALPHA',
-            'fieldId': 'FD-CAUSAL-BASIS', 'values': []})
+            'attributeId': 'attribute-CAUSAL-BASIS', 'ownerId': 'character-TEST-ALPHA',
+            'fieldId': 'field-CAUSAL-BASIS', 'values': []})
         for order, (rid, text) in enumerate([
-            ('SF-CAUSAL-CAPABILITY', '沈砚能独自搬运货箱，熟悉仓库的交接流程。'),
-            ('SF-CAUSAL-LEVERAGE', '货主要求两名同事共同核验货单后才确认签收。'),
-            ('SF-CAUSAL-SUCCESSOR', '签收后双方约定轮流核验下一批货物，分担差错责任。'),
+            ('fact-CAUSAL-CAPABILITY', '沈砚能独自搬运货箱，熟悉仓库的交接流程。'),
+            ('fact-CAUSAL-LEVERAGE', '货主要求两名同事共同核验货单后才确认签收。'),
+            ('fact-CAUSAL-SUCCESSOR', '签收后双方约定轮流核验下一批货物，分担差错责任。'),
         ], 1):
             self.source['fragments'].append({
-                'fragmentId': rid, 'ownerId': 'C-TEST-ALPHA', 'order': order,
+                'fragmentId': rid, 'ownerId': 'character-TEST-ALPHA', 'order': order,
                 'text': text, 'contentRole': 'fact',
-                'contentBindings': ['AT-CAUSAL-BASIS'], 'dependsOn': []})
+                'contentBindings': ['attribute-CAUSAL-BASIS'], 'dependsOn': []})
         self.plan = next(row for row in self.source['fragments'] if row['ownerId'] == self.cid)
         self.plan['text'] = self.plan_text
         self.declaration = {
-            'id': 'RC-COOPERATION', 'relationId': 'REL-CAUSAL-COOPERATION',
-            'capabilityBasisIds': ['SF-CAUSAL-CAPABILITY'],
-            'leverageBasisIds': ['SF-CAUSAL-LEVERAGE'],
+            'id': 'RC-COOPERATION', 'relationId': 'relation-CAUSAL-COOPERATION',
+            'capabilityBasisIds': ['fact-CAUSAL-CAPABILITY'],
+            'leverageBasisIds': ['fact-CAUSAL-LEVERAGE'],
             'capabilityAssessment': '有独立搬运能力，签收仍需共同核验。',
             'resistanceCost': '拒绝核验会延迟货主签收。',
             'complianceCost': '需要按双方约定留出核验时间。',
@@ -135,10 +135,10 @@ class RelationshipCausalityTests(unittest.TestCase):
             with self.subTest(status=status):
                 self.declaration['continuation'] = {
                     'status': status,
-                    'successorBasisIds': ['SF-CAUSAL-SUCCESSOR'] if status == 'replaced' else [],
+                    'successorBasisIds': ['fact-CAUSAL-SUCCESSOR'] if status == 'replaced' else [],
                     'reason': '本次交接结束后按约定处理合作安排。'}
-                if 'SF-CAUSAL-SUCCESSOR' not in self.plan['dependsOn']:
-                    self.plan['dependsOn'].append('SF-CAUSAL-SUCCESSOR')
+                if 'fact-CAUSAL-SUCCESSOR' not in self.plan['dependsOn']:
+                    self.plan['dependsOn'].append('fact-CAUSAL-SUCCESSOR')
                 validate_structure(self.source)
                 self.assertEqual(source_contract(self.source, self.cid)['relationshipCausality'],
                                  [self.declaration])
@@ -156,22 +156,22 @@ class RelationshipCausalityTests(unittest.TestCase):
                     validate_structure(self.source)
 
     def test_replacement_requires_successor_while_release_and_retention_forbid_one(self):
-        for status, ids in [('replaced', []), ('retained', ['SF-CAUSAL-SUCCESSOR']),
-                            ('released', ['SF-CAUSAL-SUCCESSOR']), ('unknown', [])]:
+        for status, ids in [('replaced', []), ('retained', ['fact-CAUSAL-SUCCESSOR']),
+                            ('released', ['fact-CAUSAL-SUCCESSOR']), ('unknown', [])]:
             with self.subTest(status=status):
-                if 'SF-CAUSAL-SUCCESSOR' not in self.plan['dependsOn']:
-                    self.plan['dependsOn'].append('SF-CAUSAL-SUCCESSOR')
+                if 'fact-CAUSAL-SUCCESSOR' not in self.plan['dependsOn']:
+                    self.plan['dependsOn'].append('fact-CAUSAL-SUCCESSOR')
                 self.declaration['continuation'] = {'status': status, 'successorBasisIds': ids,
                                                     'reason': '本次交接已经结束。'}
                 with self.assertRaises(StructureError):
                     validate_structure(self.source)
 
     def test_relation_must_exist_and_connect_two_characters(self):
-        for target in ('REL-MISSING', 'P-TEST-KEY'):
+        for target in ('relation-MISSING', 'prop-TEST-KEY'):
             with self.subTest(target=target):
                 changed = deepcopy(self.source)
                 plan = next(row for row in changed['fragments'] if row['ownerId'] == self.cid)
-                if target.startswith('REL-'):
+                if target.startswith('relation-'):
                     plan['chapterContract']['relationshipCausality'][0]['relationId'] = target
                 else:
                     changed['relations'][-1]['toEntity'] = target
@@ -180,8 +180,8 @@ class RelationshipCausalityTests(unittest.TestCase):
 
     def test_every_relation_and_basis_id_requires_an_explicit_fragment_dependency(self):
         self.declaration['continuation'] = {'status': 'replaced',
-            'successorBasisIds': ['SF-CAUSAL-SUCCESSOR'], 'reason': '改用下一批货物的轮值约定。'}
-        self.plan['dependsOn'].append('SF-CAUSAL-SUCCESSOR')
+            'successorBasisIds': ['fact-CAUSAL-SUCCESSOR'], 'reason': '改用下一批货物的轮值约定。'}
+        self.plan['dependsOn'].append('fact-CAUSAL-SUCCESSOR')
         dependencies = list(self.plan['dependsOn'])
         for omitted in dependencies:
             with self.subTest(omitted=omitted):
@@ -190,7 +190,7 @@ class RelationshipCausalityTests(unittest.TestCase):
                     validate_structure(self.source)
 
     def test_duplicate_or_unknown_basis_ids_cannot_be_used_as_evidence(self):
-        for ids in (['SF-CAUSAL-CAPABILITY', 'SF-CAUSAL-CAPABILITY'], ['SF-UNKNOWN']):
+        for ids in (['fact-CAUSAL-CAPABILITY', 'fact-CAUSAL-CAPABILITY'], ['fact-UNKNOWN']):
             with self.subTest(ids=ids):
                 self.declaration['capabilityBasisIds'] = ids
                 with self.assertRaises(StructureError):
@@ -200,12 +200,12 @@ class RelationshipCausalityTests(unittest.TestCase):
         before = chapter_plan(self.source, self.cid)
         ids = {row['id'] for row in before['records']}
         self.assertTrue(set(self.plan['dependsOn']) <= ids)
-        self.assertNotIn('SF-CAUSAL-SUCCESSOR', ids)
+        self.assertNotIn('fact-CAUSAL-SUCCESSOR', ids)
         next(row for row in self.source['fragments']
-             if row['fragmentId'] == 'SF-CAUSAL-SUCCESSOR')['text'] += '新增一个未使用的轮值说明。'
+             if row['fragmentId'] == 'fact-CAUSAL-SUCCESSOR')['text'] += '新增一个未使用的轮值说明。'
         self.assertEqual(chapter_plan(self.source, self.cid)['sourcePlanHash'], before['sourcePlanHash'])
         next(row for row in self.source['fragments']
-             if row['fragmentId'] == 'SF-CAUSAL-LEVERAGE')['text'] += '货主现在允许单人签收。'
+             if row['fragmentId'] == 'fact-CAUSAL-LEVERAGE')['text'] += '货主现在允许单人签收。'
         self.assertNotEqual(chapter_plan(self.source, self.cid)['sourcePlanHash'], before['sourcePlanHash'])
 
     def test_forms_are_blank_bound_read_only_and_do_not_approve(self):
@@ -394,7 +394,7 @@ class RelationshipCausalityTests(unittest.TestCase):
 
     def test_multiple_active_contracts_are_not_silently_selected_for_review(self):
         other = deepcopy(self.plan)
-        other.update(fragmentId='SF-CAUSAL-OTHER-PLAN', order=2)
+        other.update(fragmentId='plan-CAUSAL-OTHER-PLAN', order=2)
         other['chapterContract']['relationshipCausality'] = []
         self.source['fragments'].append(other)
         self.save_source()

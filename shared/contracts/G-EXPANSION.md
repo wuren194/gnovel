@@ -1,7 +1,7 @@
 ---
 id: G-EXPANSION
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 在已批准计划内展开已有节点、保留因果与结局、核对篇幅预算的修订规则。
 ---
 

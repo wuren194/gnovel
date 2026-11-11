@@ -15,7 +15,7 @@ from scripts.core.structure_commands import (
 from scripts.core.structure_store import StructureError, load_structure, save_structure
 from scripts.core.jsonio import write_json
 from scripts.core.canon_proposals import resolve_canon_target, preview_canon_change
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,7 +25,7 @@ class TimeOrdinalTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
 
     def commit(self, plan):
         return commit_plan(self.root, operation_id=plan["operationId"], plan_hash=plan["planHash"], approved=True)
@@ -48,7 +48,7 @@ class TimeOrdinalTests(unittest.TestCase):
 
     def test_structure_validation_rejects_a_hand_edited_ordinal(self) -> None:
         structure = load_structure(self.root)
-        structure["entities"].append({"entityId": "TA-BAD000001", "entityType": "time_anchor", "name": "坏锚",
+        structure["entities"].append({"entityId": "time-BAD000001", "entityType": "time_anchor", "name": "坏锚",
                                       "aliases": [], "status": "active", "summary": "", "sourceRefs": [],
                                       "absoluteTime": "某时", "timeOrdinal": "45"})
         with self.assertRaises(StructureError) as ctx:
@@ -60,19 +60,19 @@ class TimeOrdinalTests(unittest.TestCase):
         self.commit(preview_create_time_anchor(self.root, name='锚', absolute_time='某时'))
         anchor_id = list(self.anchors())[0]
         source = load_structure(self.root)
-        source['fieldDefinitions'].append({'fieldId': 'FD-TIME-EVIDENCE', 'key': 'time.description',
+        source['fieldDefinitions'].append({'fieldId': 'field-TIME-EVIDENCE', 'key': 'time.description',
             'label': '时点说明', 'valueType': 'topic', 'appliesTo': ['time_anchor']})
-        source['attributes'].append({'attributeId': 'AT-TIME-EVIDENCE', 'ownerId': anchor_id,
-            'fieldId': 'FD-TIME-EVIDENCE', 'values': []})
-        source['fragments'].append({'fragmentId': 'SF-TIME-EVIDENCE', 'ownerId': anchor_id, 'order': 1,
-            'contentRole': 'fact', 'contentBindings': ['AT-TIME-EVIDENCE'], 'text': '此时点由作者审定。'})
+        source['attributes'].append({'attributeId': 'attribute-TIME-EVIDENCE', 'ownerId': anchor_id,
+            'fieldId': 'field-TIME-EVIDENCE', 'values': []})
+        source['fragments'].append({'fragmentId': 'fact-TIME-EVIDENCE', 'ownerId': anchor_id, 'order': 1,
+            'contentRole': 'fact', 'contentBindings': ['attribute-TIME-EVIDENCE'], 'text': '此时点由作者审定。'})
         write_json(self.root/'.govel/structure.json', source)
         for value in (7, None):
             current = self.anchors()[anchor_id]
             ref = resolve_canon_target(self.root, selector=anchor_id)['sessionRef']
             plan = preview_canon_change(self.root, sessionRef=ref, fieldPath='timeOrdinal',
                 expectedOldExists='timeOrdinal' in current, expectedOldValue=current.get('timeOrdinal'),
-                newValue=value, reason='明确调整时间序', evidence=[{'fragmentId': 'SF-TIME-EVIDENCE', 'quote': '此时点由作者审定。'}],
+                newValue=value, reason='明确调整时间序', evidence=[{'fragmentId': 'fact-TIME-EVIDENCE', 'quote': '此时点由作者审定。'}],
                 approvalActor='author-test', approvalEvidence='已检查这一值的修改')
             self.commit(plan)
             self.assertEqual(self.anchors()[anchor_id].get('timeOrdinal'), value)
@@ -84,40 +84,40 @@ class TimelineOrderingTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
         structure = load_structure(self.root)
-        register_entity(structure, {"entityId": "TA-ZZZZ9999", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-ZZZZ9999", "entityType": "time_anchor",
                                     "name": "最晚", "absoluteTime": "9999-12-31", "timeOrdinal": 0})
-        register_entity(structure, {"entityId": "TA-AAAA0001", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-AAAA0001", "entityType": "time_anchor",
                                     "name": "最早", "absoluteTime": "0001-01-01"})
-        register_entity(structure, {"entityId": "TA-MMMM0002", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-MMMM0002", "entityType": "time_anchor",
                                     "name": "居中", "absoluteTime": "5000-06-01", "timeOrdinal": -45})
         save_structure(self.root, structure)
 
     def test_ordinal_anchors_sort_numerically_before_lexical_fallback(self) -> None:
         view = story_timeline(self.root)
-        self.assertEqual([a["entityId"] for a in view["anchors"]], ["TA-MMMM0002", "TA-ZZZZ9999", "TA-AAAA0001"])
+        self.assertEqual([a["entityId"] for a in view["anchors"]], ["time-MMMM0002", "time-ZZZZ9999", "time-AAAA0001"])
         self.assertEqual(view["anchors"][0]["timeOrdinal"], -45)
         self.assertIsNone(view["anchors"][2]["timeOrdinal"])
 
     def test_ordinal_less_anchors_keep_the_lexical_order(self) -> None:
         structure = load_structure(self.root)
-        register_entity(structure, {"entityId": "TA-BBBB0003", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-BBBB0003", "entityType": "time_anchor",
                                     "name": "次早", "absoluteTime": "1000-01-01"})
         save_structure(self.root, structure)
         view = story_timeline(self.root)
-        self.assertEqual([a["entityId"] for a in view["anchors"]], ["TA-MMMM0002", "TA-ZZZZ9999", "TA-AAAA0001", "TA-BBBB0003"])
+        self.assertEqual([a["entityId"] for a in view["anchors"]], ["time-MMMM0002", "time-ZZZZ9999", "time-AAAA0001", "time-BBBB0003"])
 
     def test_anchor_without_absolute_time_sorts_last(self) -> None:
         """空 absoluteTime 的字典序最小，不能因此跑到所有锚点之前。"""
         structure = load_structure(self.root)
-        register_entity(structure, {"entityId": "TA-NONE0004", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-NONE0004", "entityType": "time_anchor",
                                     "name": "无绝对时间", "absoluteTime": ""})
         save_structure(self.root, structure)
         view = story_timeline(self.root)
         self.assertEqual([a["entityId"] for a in view["anchors"]],
-                         ["TA-MMMM0002", "TA-ZZZZ9999", "TA-AAAA0001", "TA-NONE0004"])
-        self.assertEqual(view["anchors"][-1]["entityId"], "TA-NONE0004")
+                         ["time-MMMM0002", "time-ZZZZ9999", "time-AAAA0001", "time-NONE0004"])
+        self.assertEqual(view["anchors"][-1]["entityId"], "time-NONE0004")
 
 
 class ArchivedAnchorTests(unittest.TestCase):
@@ -125,7 +125,7 @@ class ArchivedAnchorTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
 
     def _mount(self, anchor_id: str, *, status: str) -> str:
         structure = load_structure(self.root)
@@ -140,15 +140,15 @@ class ArchivedAnchorTests(unittest.TestCase):
 
     def test_timeline_flags_mounts_on_archived_anchors(self) -> None:
         """已归档锚点仍被挂载时必须给出信号（缺陷 8），而不是静默照旧解析。"""
-        first_chapter = self._mount("TA-ARCH0001", status="archived")
+        first_chapter = self._mount("time-ARCH0001", status="archived")
         view = story_timeline(self.root)
         rows = [p for p in view["problems"] if p["code"] == "ARCHIVED_ANCHOR_REFERENCED"]
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["chapterId"], first_chapter)
-        self.assertEqual(rows[0]["anchorId"], "TA-ARCH0001")
+        self.assertEqual(rows[0]["anchorId"], "time-ARCH0001")
 
     def test_timeline_accepts_mounts_on_active_anchors(self) -> None:
-        self._mount("TA-LIVE0001", status="active")
+        self._mount("time-LIVE0001", status="active")
         view = story_timeline(self.root)
         self.assertNotIn("ARCHIVED_ANCHOR_REFERENCED", [p["code"] for p in view["problems"]])
 
@@ -158,15 +158,15 @@ class TimelineMermaidTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
         structure = load_structure(self.root)
-        register_entity(structure, {"entityId": "TA-OPEN0001", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-OPEN0001", "entityType": "time_anchor",
                                     "name": "转入昭华: 开篇", "absoluteTime": "深秋", "timeOrdinal": -45})
-        register_entity(structure, {"entityId": "TA-LONE0002", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-LONE0002", "entityType": "time_anchor",
                                     "name": "无章节锚点", "absoluteTime": "冬季", "timeOrdinal": 0})
         for chapter in structure["chapters"]:
-            chapter["storyTimeStartId"] = "TA-OPEN0001"
-            chapter["storyTimeEndId"] = "TA-OPEN0001"
+            chapter["storyTimeStartId"] = "time-OPEN0001"
+            chapter["storyTimeEndId"] = "time-OPEN0001"
         save_structure(self.root, structure)
 
     def test_chapters_compress_into_ranges_and_colon_is_escaped(self) -> None:
@@ -182,7 +182,7 @@ class TimelineMermaidTests(unittest.TestCase):
     def test_newline_in_a_label_cannot_break_the_timeline(self) -> None:
         """换行是 mermaid 的硬断点：一个含换行的名字会让整张图渲染失败。"""
         structure = load_structure(self.root)
-        register_entity(structure, {"entityId": "TA-BREAK001", "entityType": "time_anchor",
+        register_entity(structure, {"entityId": "time-BREAK001", "entityType": "time_anchor",
                                     "name": "第一行\n第二行", "absoluteTime": "某时"})
         save_structure(self.root, structure)
         text = timeline_mermaid(story_timeline(self.root))
@@ -195,13 +195,13 @@ class GraphMermaidTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
         structure = load_structure(self.root)
         structure["references"].append({"sourceId": self.fixture["chapterIds"][0], "targetId": self.fixture["characterId"]})
         structure["relations"] = [
-            {"relationId": "REL-PLAIN0001", "fromEntity": self.fixture["characterId"],
+            {"relationId": "relation-PLAIN0001", "fromEntity": self.fixture["characterId"],
              "toEntity": self.fixture["propId"], "kind": "unspecified"},
-            {"relationId": "REL-LABEL0002", "fromEntity": self.fixture["characterId"],
+            {"relationId": "relation-LABEL0002", "fromEntity": self.fixture["characterId"],
              "toEntity": self.fixture["locationId"], "kind": "住所"},
         ]
         save_structure(self.root, structure)
@@ -212,14 +212,14 @@ class GraphMermaidTests(unittest.TestCase):
         self.assertIn('subgraph "人物"', text)
         self.assertIn('subgraph "道具"', text)
         self.assertIn('subgraph "地点"', text)
-        self.assertIn('C_TEST_ALPHA["沈砚 ·1"]', text)
-        self.assertIn("P_TEST_KEY[\"储物柜钥匙\"]", text)
-        self.assertIn("C_TEST_ALPHA --> P_TEST_KEY", text)
-        self.assertIn("C_TEST_ALPHA -->|住所| L_TEST_ROOM", text)
+        self.assertIn('character_TEST_ALPHA["沈砚 ·1"]', text)
+        self.assertIn("prop_TEST_KEY[\"储物柜钥匙\"]", text)
+        self.assertIn("character_TEST_ALPHA --> prop_TEST_KEY", text)
+        self.assertIn("character_TEST_ALPHA -->|住所| location_TEST_ROOM", text)
 
     def test_time_anchors_do_not_appear(self) -> None:
         structure = load_structure(self.root)
-        register_entity(structure, {"entityId": "TA-HIDE0001", "entityType": "time_anchor", "name": "锚", "absoluteTime": "某时"})
+        register_entity(structure, {"entityId": "time-HIDE0001", "entityType": "time_anchor", "name": "锚", "absoluteTime": "某时"})
         save_structure(self.root, structure)
         self.assertNotIn("TA_HIDE", graph_mermaid(entity_graph(self.root)))
 
@@ -229,16 +229,16 @@ class GraphMermaidTests(unittest.TestCase):
         entity["name"] = "沈\n砚"
         write_json(self.root/".govel/structure.json", structure)
         text = graph_mermaid(entity_graph(self.root))
-        self.assertIn('C_TEST_ALPHA["沈 砚 ·1"]', text)
+        self.assertIn('character_TEST_ALPHA["沈 砚 ·1"]', text)
 
     def test_pipe_in_an_edge_label_is_escaped(self) -> None:
         """`|` 就是 `-->|label|` 的分隔符，留在标签里会把边拆坏。"""
         structure = load_structure(self.root)
-        structure["relations"].append({"relationId": "REL-PIPE0003", "fromEntity": self.fixture["propId"],
+        structure["relations"].append({"relationId": "relation-PIPE0003", "fromEntity": self.fixture["propId"],
                                       "toEntity": self.fixture["locationId"], "kind": "甲|乙"})
         save_structure(self.root, structure)
         text = graph_mermaid(entity_graph(self.root))
-        self.assertIn("P_TEST_KEY -->|甲｜乙| L_TEST_ROOM", text)
+        self.assertIn("prop_TEST_KEY -->|甲｜乙| location_TEST_ROOM", text)
 
 
 class ViewCliTests(unittest.TestCase):
@@ -246,7 +246,7 @@ class ViewCliTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
 
     def cli(self, *args):
         return subprocess.run([sys.executable, str(ROOT / "scripts/novelctl.py"), "project", "structure", *args,

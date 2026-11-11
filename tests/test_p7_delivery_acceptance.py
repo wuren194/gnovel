@@ -13,6 +13,8 @@ edges of the toolbox:
 
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import importlib
 import json
 import os
@@ -560,7 +562,7 @@ class CanonImpactAcceptanceTests(unittest.TestCase):
         (self.root / ".govel").mkdir()
         source = source_fixture(self.root)
         write_json(self.root / ".govel/project.json", {
-            "schemaVersion": 5, "workflowVersion": "5.0", "projectId": source["projectId"],
+            "schemaVersion": current_schema_version(), "workflowVersion": '6.0', "projectId": source["projectId"],
             "bookName": source["bookName"], "approvalMode": "manual"})
         save_structure(self.root, source)
 
@@ -579,7 +581,7 @@ class CanonImpactAcceptanceTests(unittest.TestCase):
             expectedOldExists=current.get("summary") is not None,
             expectedOldValue=current.get("summary"), newValue="他其实怕高。",
             reason="补一条叙事事实",
-            evidence=[{"fragmentId": "SF-HEIGHT", "quote": "他身高一米九。"}],
+            evidence=[{"fragmentId": "fact-HEIGHT", "quote": "他身高一米九。"}],
             approvalActor="作者", approvalEvidence="当面确认")
         self.assertEqual(preview["operation"], "canon_change_proposal")
         commit_plan(self.root, operation_id=preview["operationId"],
@@ -605,7 +607,7 @@ class CanonImpactAcceptanceTests(unittest.TestCase):
             preview_canon_change(
                 self.root, sessionRef=resolved["sessionRef"], fieldPath="summary",
                 expectedOldExists=True, expectedOldValue="", newValue="新值", reason="改",
-                evidence=[{"fragmentId": "SF-HEIGHT", "quote": "他身高一米九。"}],
+                evidence=[{"fragmentId": "fact-HEIGHT", "quote": "他身高一米九。"}],
                 approvalActor="作者", approvalEvidence="确认")
         self.assertEqual(error.exception.code, "SESSION_REF_STALE")
 

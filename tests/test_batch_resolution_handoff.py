@@ -25,13 +25,13 @@ class BatchResolutionHandoffTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = initialize_project(self.root)
-        self.source['fieldDefinitions'].append({'fieldId': 'FD-PLAN', 'key': 'plot.plan', 'label': 'Plan',
+        self.source['fieldDefinitions'].append({'fieldId': 'field-PLAN', 'key': 'plot.plan', 'label': 'Plan',
                                                 'valueType': 'topic', 'appliesTo': ['project']})
-        self.source['attributes'].append({'attributeId': 'AT-PLAN', 'ownerId': self.source['projectId'],
-                                          'fieldId': 'FD-PLAN', 'values': []})
-        self.ids = ['SF-PLAN-A', 'SF-PLAN-B']
+        self.source['attributes'].append({'attributeId': 'attribute-PLAN', 'ownerId': self.source['projectId'],
+                                          'fieldId': 'field-PLAN', 'values': []})
+        self.ids = ['plan-PLAN-A', 'plan-PLAN-B']
         self.source['fragments'] = [{'fragmentId': rid, 'ownerId': self.source['projectId'], 'order': i,
-                                    'contentRole': 'plan', 'contentBindings': ['AT-PLAN'],
+                                    'contentRole': 'plan', 'contentBindings': ['attribute-PLAN'],
                                     'text': 'Alpha guards the gate.\r\n' + 'Original paragraph.\r\n' * 1200}
                                    for i, rid in enumerate(self.ids)]
         validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
@@ -86,7 +86,7 @@ class BatchResolutionHandoffTests(unittest.TestCase):
             self.preview(reference, requestId='new-request')
 
     def test_unknown_wrong_kind_or_unselected_targets_do_not_gain_bindings(self):
-        result = self.resolve(recordIds=[self.ids[0], 'SF-MISSING'])
+        result = self.resolve(recordIds=[self.ids[0], 'fact-MISSING'])
         self.assertFalse(result['allResolved'])
         self.assertNotIn('recordHash', result['items'][1])
         with self.assertRaises(StructureError):

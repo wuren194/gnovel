@@ -53,16 +53,24 @@ def _edges(source: dict, graph: str = 'registered') -> list[dict]:
                       if row.get('contentRole') == 'fact' and row.get('status') != 'archived'}
     canon_entities = {row['entityId'] for row in source.get('entities', [])
                       if row.get('status') != 'archived'}
+    subjective_ids = {row['fragmentId'] for row in source['fragments'] if row['contentRole'] in {'belief', 'in_world_text'}}
+    subjective_ids.update(row['relationId'] for row in source['relations'] if row.get('perspectiveId') is not None)
     for origin, target, kind in dependency_edges(source):
+        if graph == 'canon' and {origin, target} & subjective_ids:
+            continue
         if graph == 'canon' and not ({origin, target} & fact_fragments or
                                      kind == 'chapter_reference' and origin in canon_entities):
             continue
         payload = {'sourceId': origin, 'targetId': target, 'kind': kind, 'origin': 'registered_source'}
         rows.append({'edgeId': 'SE-' + fingerprint(payload)[:24].upper(), **payload})
     for relation in source.get('relations', []):
+        if graph == 'canon' and relation.get('perspectiveId') is not None:
+            continue
         payload = {'sourceId': relation['fromEntity'], 'targetId': relation['toEntity'],
                    'kind': 'entity_relation', 'relationKind': relation.get('kind'),
-                   'relationId': relation['relationId'], 'origin': relation.get('origin', 'author')}
+                   'relationId': relation['relationId'], 'origin': relation.get('origin', 'author'),
+                   'epistemicRole': 'character_belief' if relation.get('perspectiveId') else 'canon_fact',
+                   **{key: relation[key] for key in ('perspectiveId', 'validDuring', 'basisIds') if key in relation}}
         rows.append({'edgeId': 'SE-' + fingerprint(payload)[:24].upper(), **payload})
     return sorted({row['edgeId']: row for row in rows}.values(),
                   key=lambda row: (row['sourceId'], row['targetId'], row['kind'], row['edgeId']))
@@ -76,8 +84,8 @@ def query_source_links(root: Path, *, recordId: str, direction: str = 'both',
     index = SourceIndex.build(source)
     if graph not in {'registered', 'canon', 'planning'}:
         raise StructureError('SOURCE_GRAPH_INVALID', 'unknown graph view')
-    planning_ids = ({row['candidateId'] for row in source.get('planningCandidates', [])} |
-                    {row['decisionId'] for row in source.get('authorDecisions', [])}) if graph == 'planning' else set()
+    decision_ids = {row['decisionId'] for row in source.get('authorDecisions', [])}
+    planning_ids = (set(index.planning_candidates) | decision_ids) if graph == 'planning' else set()
     if not isinstance(recordId, str) or recordId not in set(index.records) | planning_ids:
         raise StructureError('SOURCE_RECORD_NOT_FOUND', 'link traversal requires a registered source record')
     if direction not in DIRECTIONS:
@@ -112,8 +120,8 @@ def query_source_links(root: Path, *, recordId: str, direction: str = 'both',
                     cycle_edges.add(row['edgeId'])
                 found.setdefault(row['edgeId'], {**row, 'distance': distance,
                                                   'fromTraversalNode': node, 'neighborId': other,
-                                                  'neighborKind': ('planning_candidate' if other.startswith('PC-') else
-                                                      'author_decision' if other.startswith('DR-') else index.owner_types.get(other)) or (
+                                                  'neighborKind': ('planning_candidate' if other in index.planning_candidates else
+                                                      'author_decision' if other in decision_ids else index.owner_types.get(other)) or (
                                                       'field' if other in index.fields else
                                                       'attribute' if other in index.attributes else
                                                       'fragment' if other in index.fragments else

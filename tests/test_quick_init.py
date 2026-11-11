@@ -156,7 +156,7 @@ class WorkflowStateTests(unittest.TestCase):
             root = Path(temp) / "book"
             self._init_with_chapter(root)
             code, result = run_cli(
-                ["project", "workflow", "approve-chapters", "--project-root", str(root), "--chapter-id", "CH-DOESNOTEXIST"]
+                ["project", "workflow", "approve-chapters", "--project-root", str(root), "--chapter-id", "chapter-DOESNOTEXIST"]
             )
             self.assertNotEqual(code, 0)
             self.assertEqual(result["code"], "CHAPTER_NOT_FOUND")
@@ -172,8 +172,8 @@ class StructureTransactionCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         structure_path = root / ".govel" / "structure.json"
         data = json.loads(structure_path.read_text(encoding="utf-8"))
-        data["volumes"].append({"volumeId": "VOL-TX000001", "title": "第一卷", "summary": "", "status": "planned"})
-        data["arcs"].append({"arcId": "ARC-TX000001", "title": "主线", "summary": "", "status": "planned", "volumeIds": ["VOL-TX000001"]})
+        data["volumes"].append({"volumeId": "volume-TX000001", "title": "第一卷", "summary": "", "status": "planned"})
+        data["arcs"].append({"arcId": "arc-TX000001", "title": "主线", "summary": "", "status": "planned", "volumeIds": ["volume-TX000001"]})
         structure_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         return data
 
@@ -183,7 +183,7 @@ class StructureTransactionCliTests(unittest.TestCase):
             self._init_with_structure(root)
             code, preview = run_cli([
                 "project", "structure", "insert-preview", "--project-root", str(root),
-                "--title", "新章", "--volume-id", "VOL-TX000001", "--primary-arc-id", "ARC-TX000001",
+                "--title", "新章", "--volume-id", "volume-TX000001", "--primary-arc-id", "arc-TX000001",
             ])
             self.assertEqual(code, 0, preview)
             self.assertEqual(preview["code"], "SOURCE_CHANGE_PREVIEW")
@@ -205,7 +205,7 @@ class StructureTransactionCliTests(unittest.TestCase):
             self._init_with_structure(root)
             code, preview = run_cli([
                 "project", "structure", "insert-preview", "--project-root", str(root),
-                "--title", "新章", "--volume-id", "VOL-TX000001", "--primary-arc-id", "ARC-TX000001",
+                "--title", "新章", "--volume-id", "volume-TX000001", "--primary-arc-id", "arc-TX000001",
             ])
             self.assertEqual(code, 0, preview)
             code, result = run_cli([
@@ -221,7 +221,7 @@ class StructureTransactionCliTests(unittest.TestCase):
             self._init_with_structure(root)
             code, result = run_cli([
                 "project", "structure", "insert-preview", "--project-root", str(root),
-                "--title", "新章", "--volume-id", "VOL-TX000001", "--primary-arc-id", "ARC-NOPE",
+                "--title", "新章", "--volume-id", "volume-TX000001", "--primary-arc-id", "arc-NOPE",
             ])
             self.assertNotEqual(code, 0)
             self.assertEqual(result["code"], "ARC_NOT_FOUND")

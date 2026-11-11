@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .jsonio import read_json
 from .locks import project_lock_reentrant
+from .source_ids import identity_prefixes
 from .source_model import SourceIndex, snapshot_hash
 from .structure_store import StructureError
 from .write_sets import apply_write_set, digest, json_bytes, safe_project_path
@@ -96,7 +97,7 @@ def register_evidence(root: Path, *, chapterId: str, fileHash: str, sourceHash: 
             if identity in seen:
                 raise StructureError('SOURCE_EVIDENCE_DUPLICATE', 'duplicate citation in batch')
             seen.add(identity)
-            row['evidenceId'] = 'PX-' + identity.upper()
+            row['evidenceId'] = identity_prefixes()['evidence'] + '-' + identity
             row['targetHashes'] = {t: inputs.fingerprint(t) for t in row['targetIds']}
             normalized.append(row)
         state['batches'][batch_id] = {'batchId': batch_id, 'requestHash': request_hash, 'chapterId': chapterId,

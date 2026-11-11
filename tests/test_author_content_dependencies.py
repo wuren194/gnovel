@@ -27,10 +27,10 @@ class AuthorContentDependencyTests(unittest.TestCase):
         self.root = Path(temp.name).resolve(); (self.root/'正文').mkdir()
         self.source = context_source(self.root)
         # Both chapters have an actual plan; BBB does not consume Alpha's facts.
-        self.source['attributes'].append({'attributeId': 'AT-B-PLAN', 'ownerId': 'CH-BBB',
-                                          'fieldId': 'FD-PLAN', 'values': []})
-        self.source['fragments'].append({'fragmentId': 'SF-B-PLAN', 'ownerId': 'CH-BBB',
-            'text': '乙等待回信。', 'order': 1, 'contentRole': 'plan', 'contentBindings': ['AT-B-PLAN'], 'dependsOn': []})
+        self.source['attributes'].append({'attributeId': 'attribute-B-PLAN', 'ownerId': 'chapter-BBB',
+                                          'fieldId': 'field-PLAN', 'values': []})
+        self.source['fragments'].append({'fragmentId': 'plan-B-PLAN', 'ownerId': 'chapter-BBB',
+            'text': '乙等待回信。', 'order': 1, 'contentRole': 'plan', 'contentBindings': ['attribute-B-PLAN'], 'dependsOn': []})
         save_context_source(self.root, self.source)
         from scripts.core.workflow import default_workflow
         write_json(self.root/'.govel/workflow.json', default_workflow())
@@ -58,7 +58,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
     def validity(self, did):
         return query_author_decisions(self.root, decisionId=did)['items'][0]
 
-    def context(self, chapter='CH-AAA'):
+    def context(self, chapter='chapter-AAA'):
         return build_station_context(str(self.root), chapter, task_type='planner', view='station', read_only=True)
 
     def change_plan(self, fid, text):
@@ -71,44 +71,44 @@ class AuthorContentDependencyTests(unittest.TestCase):
         return plan
 
     def test_chapter_scope_tracks_plan_and_explicit_fact_dependency_but_other_chapter_stays_current(self):
-        first, other = self.decision(['CH-AAA']), self.decision(['CH-BBB'])
-        self.commit(attribute_value_proposal(self.root, 'AT-HEIGHT', 185))
+        first, other = self.decision(['chapter-AAA']), self.decision(['chapter-BBB'])
+        self.commit(attribute_value_proposal(self.root, 'attribute-HEIGHT', 185))
         self.assertEqual(self.validity(first)['validity'], 'stale')
         self.assertEqual(self.validity(other)['validity'], 'current')
         context = self.context()
         self.assertIn(first, context['staleDecisionIds']); self.assertFalse(assess_context(context)['ready'])
-        self.assertEqual(self.context('CH-BBB')['staleDecisionIds'], [])
+        self.assertEqual(self.context('chapter-BBB')['staleDecisionIds'], [])
 
     def test_fragment_scope_tracks_its_registered_dependency_values(self):
-        decision = self.decision(['SF-PLAN'])
-        self.commit(attribute_value_proposal(self.root, 'AT-BETA-HEIGHT', 175))
+        decision = self.decision(['plan-PLAN'])
+        self.commit(attribute_value_proposal(self.root, 'attribute-BETA-HEIGHT', 175))
         self.assertEqual(self.validity(decision)['validity'], 'current')
-        self.commit(attribute_value_proposal(self.root, 'AT-HEIGHT', 185))
+        self.commit(attribute_value_proposal(self.root, 'attribute-HEIGHT', 185))
         self.assertEqual(self.validity(decision)['validity'], 'stale',
-                         'SF-PLAN explicitly dependsOn FV-HEIGHT; changed input needs author re-review')
+                         'plan-PLAN explicitly dependsOn value-HEIGHT; changed input needs author re-review')
 
     def test_owner_scope_tracks_its_fragment_explicit_external_dependency(self):
         # Register an actual source edge from Alpha's planning fragment to Beta's value.
         source = load_structure(self.root)
-        source['fieldDefinitions'].append({'fieldId': 'FD-ALPHA-PLAN', 'key': 'story.constraint',
+        source['fieldDefinitions'].append({'fieldId': 'field-ALPHA-PLAN', 'key': 'story.constraint',
             'label': '行动计划', 'valueType': 'topic', 'appliesTo': ['character']})
-        source['attributes'].append({'attributeId': 'AT-ALPHA-PLAN', 'ownerId': 'C-ALPHA',
-                                    'fieldId': 'FD-ALPHA-PLAN', 'values': []})
-        source['fragments'].append({'fragmentId': 'SF-ALPHA-DEPENDENCY', 'ownerId': 'C-ALPHA',
+        source['attributes'].append({'attributeId': 'attribute-ALPHA-PLAN', 'ownerId': 'character-ALPHA',
+                                    'fieldId': 'field-ALPHA-PLAN', 'values': []})
+        source['fragments'].append({'fragmentId': 'plan-ALPHA-DEPENDENCY', 'ownerId': 'character-ALPHA',
             'text': '甲根据乙的现有条件选择行动。', 'order': 10, 'contentRole': 'plan',
-            'contentBindings': ['AT-ALPHA-PLAN'], 'dependsOn': ['FV-BETA-HEIGHT']})
+            'contentBindings': ['attribute-ALPHA-PLAN'], 'dependsOn': ['value-BETA-HEIGHT']})
         save_context_source(self.root, source)
-        decision = self.decision(['C-ALPHA'])
-        self.commit(attribute_value_proposal(self.root, 'AT-BETA-HEIGHT', 175))
+        decision = self.decision(['character-ALPHA'])
+        self.commit(attribute_value_proposal(self.root, 'attribute-BETA-HEIGHT', 175))
         self.assertEqual(self.validity(decision)['validity'], 'stale',
                          'owner-owned fragment has a registered outside dependency')
 
     def test_content_round_trip_does_not_restore_old_author_approval(self):
-        decision = self.decision(['CH-AAA'])
+        decision = self.decision(['chapter-AAA'])
         original = deepcopy(self.validity(decision))
-        self.commit(attribute_value_proposal(self.root, 'AT-HEIGHT', 185))
+        self.commit(attribute_value_proposal(self.root, 'attribute-HEIGHT', 185))
         self.assertEqual(self.validity(decision)['validity'], 'stale')
-        self.commit(attribute_value_proposal(self.root, 'AT-HEIGHT', 190))
+        self.commit(attribute_value_proposal(self.root, 'attribute-HEIGHT', 190))
         returned = self.validity(decision)
         self.assertNotEqual(returned['validity'], 'current',
                             'restoring content is not new approval of an invalidated author decision')
@@ -118,16 +118,16 @@ class AuthorContentDependencyTests(unittest.TestCase):
     def test_scoped_own_content_changes_and_same_calculation_is_pure(self):
         source = load_structure(self.root)
         volume = source['volumes'][0]['volumeId']; arc = source['arcs'][0]['arcId']
-        source['units'] = [{'unitId': 'UN-SCOPE', 'title': '条件单元', 'ordinal': 1, 'status': 'active',
+        source['units'] = [{'unitId': 'unit-SCOPE', 'title': '条件单元', 'ordinal': 1, 'status': 'active',
             'placement': deepcopy(source['chapters'][0]['placement']),
-            'members': [{'memberType': 'chapter', 'memberId': 'CH-AAA', 'order': 1}]}]
-        source['planningCandidates'] = [{'candidateId': 'PC-SCOPE', 'title': '候选', 'summary': '',
+            'members': [{'memberType': 'chapter', 'memberId': 'chapter-AAA', 'order': 1}]}]
+        source['planningCandidates'] = [{'candidateId': 'candidate-SCOPE', 'title': '候选', 'summary': '',
             'placement': deepcopy(source['chapters'][0]['placement']), 'primaryArcId': arc,
             'secondaryArcIds': [], 'beforeChapterId': None, 'status': 'draft'}]
         save_context_source(self.root, source)
-        cases = [(source['projectId'], 'project'), (volume, 'volume'), (arc, 'arc'), ('UN-SCOPE', 'unit'),
-                 ('C-ALPHA', 'entity'), ('SF-PLAN', 'fragment'), ('AT-HEIGHT', 'attribute'),
-                 ('FV-HEIGHT', 'value'), ('PC-SCOPE', 'candidate')]
+        cases = [(source['projectId'], 'project'), (volume, 'volume'), (arc, 'arc'), ('unit-SCOPE', 'unit'),
+                 ('character-ALPHA', 'entity'), ('plan-PLAN', 'fragment'), ('attribute-HEIGHT', 'attribute'),
+                 ('value-HEIGHT', 'value'), ('candidate-SCOPE', 'candidate')]
         decisions = {scope: self.decision([scope]) for scope, _ in cases}
         source = load_structure(self.root); serialized = canonical_json(source)
         for scope, kind in cases:
@@ -144,10 +144,10 @@ class AuthorContentDependencyTests(unittest.TestCase):
                 by_id = {row['decisionId']: row for row in changed['authorDecisions']}
                 self.assertEqual(decision_validity(changed, by_id, decisions[scope])['validity'], 'stale')
         self.assertEqual(canonical_json(source), serialized)
-        self.assertEqual(chapter_plan(source, 'CH-AAA'), chapter_plan(source, 'CH-AAA'))
+        self.assertEqual(chapter_plan(source, 'chapter-AAA'), chapter_plan(source, 'chapter-AAA'))
 
     def test_scope_metadata_missing_unknown_and_wrong_domain_never_gain_credit(self):
-        did = self.decision(['CH-AAA']); source = load_structure(self.root)
+        did = self.decision(['chapter-AAA']); source = load_structure(self.root)
         for basis in (None, 'raw-record', 'author-content-v0', ''):
             changed = deepcopy(source); row = changed['authorDecisions'][0]
             if basis is None: row.pop('scopeSnapshotBasis')
@@ -156,12 +156,12 @@ class AuthorContentDependencyTests(unittest.TestCase):
             self.assertEqual(decision_validity(changed, {did: row}, did)['validity'], 'unproven')
             self.assertEqual(canonical_json(changed), before)
         changed = deepcopy(source); row = changed['authorDecisions'][0]
-        row['scopeSnapshot'] = {'CH-AAA': chapter_plan(source, 'CH-AAA')['sourcePlanHash']}
+        row['scopeSnapshot'] = {'chapter-AAA': chapter_plan(source, 'chapter-AAA')['sourcePlanHash']}
         self.assertEqual(decision_validity(changed, {did: row}, did)['validity'], 'stale')
 
     def test_scope_management_progress_does_not_stale_new_proof(self):
-        did = self.decision(['CH-AAA']); source = load_structure(self.root)
-        expected = chapter_plan(source, 'CH-AAA')['sourcePlanHash']
+        did = self.decision(['chapter-AAA']); source = load_structure(self.root)
+        expected = chapter_plan(source, 'chapter-AAA')['sourcePlanHash']
         for status in ('planning_required', 'planned', 'draft', 'review', 'stable', 'stale'):
             changed = deepcopy(source); changed['revision'] += 4; changed['updatedAt'] = 'later'
             chapter = changed['chapters'][0]
@@ -169,7 +169,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
             chapter['proseBinding']['generation'] += 3
             by_id = {row['decisionId']: row for row in changed['authorDecisions']}
             self.assertEqual(decision_validity(changed, by_id, did)['validity'], 'current', status)
-            self.assertEqual(chapter_plan(changed, 'CH-AAA')['sourcePlanHash'], expected)
+            self.assertEqual(chapter_plan(changed, 'chapter-AAA')['sourcePlanHash'], expected)
         self.assertEqual(source['authorDecisions'][0]['scopeSnapshot'], self.validity(did)['scopeSnapshot'])
 
     def test_actual_lifecycle_finalization_and_locator_move_preserve_decision(self):
@@ -179,34 +179,34 @@ class AuthorContentDependencyTests(unittest.TestCase):
         source = load_structure(self.root)
         source['pairAssessment'] = {'status': 'not_applicable', 'reason': '合成生命周期测试无配对设计'}
         for fragment in source['fragments']:
-            if fragment['contentRole'] == 'plan' and fragment['ownerId'] in {'CH-AAA', 'CH-BBB'}:
+            if fragment['contentRole'] == 'plan' and fragment['ownerId'] in {'chapter-AAA', 'chapter-BBB'}:
                 fragment['chapterContract'] = {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                     'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}
         save_context_source(self.root, source)
-        did = self.decision(['CH-AAA']); initial = self.validity(did)
-        plan_hash = chapter_plan(load_structure(self.root), 'CH-AAA')['sourcePlanHash']
+        did = self.decision(['chapter-AAA']); initial = self.validity(did)
+        plan_hash = chapter_plan(load_structure(self.root), 'chapter-AAA')['sourcePlanHash']
         # Fixture setup is explicit; its planned/draft/review transitions execute
         # the actual gates, diagnostics, registration and approvals.
         review_ready_project(self.root)
         review = load_structure(self.root)
         self.assertEqual(review['chapters'][0]['status'], 'review')
         self.assertEqual(self.validity(did)['validity'], 'current')
-        self.assertEqual(chapter_plan(review, 'CH-AAA')['sourcePlanHash'], plan_hash)
-        finalize_chapter(self.root, 'CH-AAA', skip_title=True,
+        self.assertEqual(chapter_plan(review, 'chapter-AAA')['sourcePlanHash'], plan_hash)
+        finalize_chapter(self.root, 'chapter-AAA', skip_title=True,
                          binding_generation=review['chapters'][0]['proseBinding']['generation'])
         self.assertEqual(self.validity(did)['validity'], 'current')
-        self.commit(preview_relocate_chapter_paths(self.root, chapter_id='CH-AAA', file_path='正文/moved.md'))
+        self.commit(preview_relocate_chapter_paths(self.root, chapter_id='chapter-AAA', file_path='正文/moved.md'))
         current = self.validity(did)
         self.assertEqual(current['validity'], 'current')
         self.assertEqual(current['approval'], initial['approval'])
         self.assertEqual(current['scopeSnapshot'], initial['scopeSnapshot'])
-        self.assertEqual(chapter_plan(load_structure(self.root), 'CH-AAA')['sourcePlanHash'], plan_hash)
+        self.assertEqual(chapter_plan(load_structure(self.root), 'chapter-AAA')['sourcePlanHash'], plan_hash)
         self.assertIn(did, [row['decisionId'] for row in self.context()['authorDecisions']])
 
     def test_depends_on_superseding_and_withdrawal_preserve_old_proof_without_silently_rebinding(self):
-        first = self.decision(['C-ALPHA']); dependent = self.decision(['CH-BBB'], depends=[first])
+        first = self.decision(['character-ALPHA']); dependent = self.decision(['chapter-BBB'], depends=[first])
         old = deepcopy(self.validity(dependent))
-        replacement = self.draft(['C-ALPHA'], supersedes=first); self.approve(replacement)
+        replacement = self.draft(['character-ALPHA'], supersedes=first); self.approve(replacement)
         dependent_row = self.validity(dependent)
         self.assertEqual(dependent_row['validity'], 'stale')
         self.assertEqual(dependent_row['staleDecisionIds'], [first])
@@ -215,7 +215,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
         self.assertEqual(self.validity(replacement)['validity'], 'current')
 
     def test_generic_source_batch_cannot_rewrite_active_decision_content(self):
-        did = self.decision(['C-ALPHA']); row = deepcopy(self.validity(did))
+        did = self.decision(['character-ALPHA']); row = deepcopy(self.validity(did))
         row['statement'] = '另一个未经采用的决定'
         with self.assertRaises(StructureError) as caught:
             preview_source_change(self.root, changes=[{'action': 'put', 'collection': 'authorDecisions', 'record': row}],
@@ -223,12 +223,12 @@ class AuthorContentDependencyTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'SOURCE_CHANGES_INVALID')
 
     def test_active_dependency_is_immutable_through_the_dedicated_public_change_route(self):
-        first = self.decision(['C-ALPHA']); dependent = self.decision(['CH-BBB'], depends=[first])
+        first = self.decision(['character-ALPHA']); dependent = self.decision(['chapter-BBB'], depends=[first])
         before = (self.root/'.govel/structure.json').read_bytes()
         for args in ({'action': 'approve', 'decisionId': first, 'approvalActor': 'synthetic-author',
                       'approvalEvidence': 'cannot reapprove an active version'},
                      {'action': 'create', 'decisionId': first, 'statement': 'new semantics', 'rationale': '',
-                      'scopeIds': ['C-ALPHA'], 'dependsOn': []},
+                      'scopeIds': ['character-ALPHA'], 'dependsOn': []},
                      {'action': 'supersede', 'decisionId': first, 'statement': 'cannot mutate in place'}):
             with self.assertRaises(StructureError):
                 preview_decision_change(self.root, expectedRevision=load_structure(self.root)['revision'],
@@ -247,24 +247,24 @@ class AuthorContentDependencyTests(unittest.TestCase):
                 'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}
         source['pairAssessment'] = {'status': 'not_applicable', 'reason': '合成测试无配对设计'}
         save_context_source(self.root, source)
-        for cid in ('CH-AAA', 'CH-BBB'):
+        for cid in ('chapter-AAA', 'chapter-BBB'):
             register_and_approve(self.root, cid, 'stage_a_review', {'decision': 'adopt', 'activeSeats': list(range(1, 11))})
         before = read_json(self.root/'.govel/workflow.json')
-        did = self.draft(['CH-AAA'])
+        did = self.draft(['chapter-AAA'])
         self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals'], before['approvals'])
         self.approve(did)
         after = read_json(self.root/'.govel/workflow.json')
-        self.assertEqual(after['approvals']['CH-BBB'], before['approvals']['CH-BBB'])
-        self.assertTrue(after['artifacts']['CH-AAA']['stage_a_review']['invalidatedBy'])
-        self.assertEqual(after['artifacts']['CH-BBB'], before['artifacts']['CH-BBB'])
+        self.assertEqual(after['approvals']['chapter-BBB'], before['approvals']['chapter-BBB'])
+        self.assertTrue(after['artifacts']['chapter-AAA']['stage_a_review']['invalidatedBy'])
+        self.assertEqual(after['artifacts']['chapter-BBB'], before['artifacts']['chapter-BBB'])
         scope = preview_decision_change(self.root, action='supersede', expectedRevision=load_structure(self.root)['revision'],
                                        reason='撤回同一范围', decisionId=did)
-        self.assertEqual(scope['impact']['approvalInvalidations'], ['CH-AAA'])
+        self.assertEqual(scope['impact']['approvalInvalidations'], ['chapter-AAA'])
         self.commit(scope)
-        self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals']['CH-BBB'], before['approvals']['CH-BBB'])
+        self.assertEqual(read_json(self.root/'.govel/workflow.json')['approvals']['chapter-BBB'], before['approvals']['chapter-BBB'])
 
     def test_generic_save_cannot_change_approved_dependency_or_drop_invalidation(self):
-        first = self.decision(['C-ALPHA']); dependent = self.decision(['CH-BBB'], depends=[first])
+        first = self.decision(['character-ALPHA']); dependent = self.decision(['chapter-BBB'], depends=[first])
         source = load_structure(self.root)
         changed = deepcopy(source); changed['authorDecisions'][0]['statement'] += '未经新采用的内容'
         with self.assertRaises(StructureError) as error:
@@ -275,7 +275,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
         with self.assertRaises(StructureError) as error:
             save_structure(self.root, changed, expected_revision=source['revision'])
         self.assertEqual(error.exception.code, 'AUTHOR_DECISION_INVALIDATION_REQUIRES_TRANSACTION')
-        self.commit(attribute_value_proposal(self.root, 'AT-HEIGHT', 185))
+        self.commit(attribute_value_proposal(self.root, 'attribute-HEIGHT', 185))
         source = load_structure(self.root); changed = deepcopy(source)
         for row in changed['authorDecisions']: row.pop('scopeInvalidatedBy', None)
         with self.assertRaises(StructureError): save_structure(self.root, changed, expected_revision=source['revision'])
@@ -283,12 +283,12 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_two_undos_preserve_invalidation_and_original_journal_bytes(self):
         from scripts.core.structure_commands import undo_operation
-        did = self.decision(['CH-AAA']); before = deepcopy(self.validity(did))
-        first = attribute_value_proposal(self.root, 'AT-HEIGHT', 185); self.commit(first)
+        did = self.decision(['chapter-AAA']); before = deepcopy(self.validity(did))
+        first = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185); self.commit(first)
         first_journal = self.root/f".govel/operations/{first['operationId']}.json"
         original_journal = first_journal.read_bytes()
         marker = deepcopy(self.validity(did)['scopeInvalidatedBy'])
-        second = self.change_plan('SF-B-PLAN', '乙等到回信后核对署名。')
+        second = self.change_plan('plan-B-PLAN', '乙等到回信后核对署名。')
         undo_operation(self.root, second['operationId'])
         undo_operation(self.root, first['operationId'])
         returned = self.validity(did)
@@ -306,7 +306,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_undo_supersession_does_not_revive_the_restored_active_approval(self):
         from scripts.core.structure_commands import undo_operation
-        did = self.decision(['CH-AAA']); before = deepcopy(self.validity(did))
+        did = self.decision(['chapter-AAA']); before = deepcopy(self.validity(did))
         plan = preview_decision_change(self.root, action='supersede',
             expectedRevision=load_structure(self.root)['revision'], reason='撤回批准', decisionId=did)
         self.commit(plan)
@@ -320,8 +320,8 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_failed_content_transaction_never_leaves_partial_invalidation(self):
         from unittest.mock import patch
-        did = self.decision(['CH-AAA']); before = (self.root/'.govel/structure.json').read_bytes()
-        plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        did = self.decision(['chapter-AAA']); before = (self.root/'.govel/structure.json').read_bytes()
+        plan = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
         def fail(stage, relative=None):
             if stage == 'write' and relative == '.govel/structure.json':
                 raise RuntimeError('interrupted scoped change')
@@ -335,7 +335,7 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_aggregate_context_and_decision_query_share_current_and_unproven_scope(self):
         from scripts.core.aggregate_queries import query_aggregates
-        did = self.decision(['SF-PLAN'])
+        did = self.decision(['plan-PLAN'])
         report = query_aggregates(self.root, kind='decision-plans', decisionId=did)
         self.assertEqual(report['items'][0]['chapterCount'], 1)
         self.assertEqual(report['items'][0]['validity'], self.validity(did)['validity'])
@@ -352,16 +352,16 @@ class AuthorContentDependencyTests(unittest.TestCase):
     def test_mixed_canon_batch_keeps_exact_proposals_and_derives_only_needed_invalidation(self):
         from scripts.core.source_proposal_batch import preview_proposal_batch
         from scripts.core.source_model import snapshot_hash
-        did = self.decision(['CH-AAA'])
+        did = self.decision(['chapter-AAA'])
         source = load_structure(self.root)
         plan = preview_proposal_batch(self.root, sourceHash=snapshot_hash(source), requestId='decision-batch',
             approvalActor='synthetic-author', approvalEvidence='fixture-only explicit batch approval', items=[
-                {'kind': 'attribute', 'recordId': 'AT-HEIGHT',
+                {'kind': 'attribute', 'recordId': 'attribute-HEIGHT',
                  'patch': [{'op': 'set', 'path': ['values', 0, 'value', 'number'], 'value': 185}],
-                 'reason': '校正字段', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]},
-                {'kind': 'fact', 'recordId': 'SF-HEIGHT',
+                 'reason': '校正字段', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]},
+                {'kind': 'fact', 'recordId': 'fact-HEIGHT',
                  'patch': [{'op': 'text', 'path': ['text'], 'original': '一米九', 'replacement': '一米八五'}],
-                 'reason': '对应修改原有表述', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]}])
+                 'reason': '对应修改原有表述', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]}])
         self.commit(plan)
         self.assertEqual(self.validity(did)['validity'], 'stale')
         self.assertEqual(self.validity(did)['scopeInvalidatedBy']['operationId'], plan['operationId'])
@@ -370,11 +370,11 @@ class AuthorContentDependencyTests(unittest.TestCase):
     def test_forged_invalidation_cannot_extend_undo_equivalence(self):
         from scripts.core.author_decisions import undo_content_equivalent
         from scripts.core.structure_commands import undo_operation
-        did = self.decision(['CH-AAA'])
+        did = self.decision(['chapter-AAA'])
         prior_approval = next(path for path in (self.root/'.govel/operations').glob('OP-*.json')
                               if read_json(path).get('operation') == 'author_decision_approve')
         prior = read_json(prior_approval)
-        change = attribute_value_proposal(self.root, 'AT-HEIGHT', 185); self.commit(change)
+        change = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185); self.commit(change)
         undo_operation(self.root, change['operationId'])
         current = load_structure(self.root)
         self.assertTrue(undo_content_equivalent(self.root, current, prior))
@@ -395,8 +395,8 @@ class AuthorContentDependencyTests(unittest.TestCase):
     def test_commit_rederives_invalidation_even_if_caller_rehashes_tampered_plan(self):
         from scripts.core.structure_commands import _plan_hash
         from scripts.core.write_sets import digest, json_bytes
-        did = self.decision(['CH-AAA']); before = (self.root/'.govel/structure.json').read_bytes()
-        report = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        did = self.decision(['chapter-AAA']); before = (self.root/'.govel/structure.json').read_bytes()
+        report = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
         path = self.root/f".govel/plans/{report['operationId']}.json"; plan = read_json(path)
         target = next(row for row in plan['proposedStructure']['authorDecisions'] if row['decisionId'] == did)
         self.assertIn('scopeInvalidatedBy', target); target.pop('scopeInvalidatedBy')
@@ -411,14 +411,14 @@ class AuthorContentDependencyTests(unittest.TestCase):
 
     def test_project_voice_content_is_actual_global_input(self):
         old = load_structure(self.root)
-        base = {cid: chapter_plan(old, cid)['sourcePlanHash'] for cid in ('CH-AAA', 'CH-BBB')}
+        base = {cid: chapter_plan(old, cid)['sourcePlanHash'] for cid in ('chapter-AAA', 'chapter-BBB')}
         self.commit(preview_voice_profile(self.root, action='set', expectedRevision=old['revision'], reason='合成文风',
             axes={key: '保留当前已批准表达要求' for key in AXES}, examples=['句式示例'], applicability='第一章使用的自然语言描述不缩小真实全项目消费者'))
         draft = load_structure(self.root)
         self.assertEqual(source_impact(old, draft)['approvalInvalidations'], [])
         plan = preview_voice_profile(self.root, action='approve', expectedRevision=draft['revision'], reason='合成批准',
             approvalActor='synthetic-author', approvalEvidence='fixture-only authorization')
-        self.assertEqual(plan['impact']['approvalInvalidations'], ['CH-AAA', 'CH-BBB'])
+        self.assertEqual(plan['impact']['approvalInvalidations'], ['chapter-AAA', 'chapter-BBB'])
         self.commit(plan); active = load_structure(self.root)
         for cid in base: self.assertNotEqual(chapter_plan(active, cid)['sourcePlanHash'], base[cid])
 

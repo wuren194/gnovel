@@ -17,6 +17,8 @@ Writer Ready is not" into one red light.
 
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import http.client
 import hashlib
 import json
@@ -169,7 +171,7 @@ class SingleSourceProjectTests(TransportHarness):
         (self.root / ".govel").mkdir()
         source = source_fixture(self.root)
         write_json(self.root / ".govel/project.json", {
-            "schemaVersion": 5, "workflowVersion": "5.0", "projectId": source["projectId"],
+            "schemaVersion": current_schema_version(), "workflowVersion": '6.0', "projectId": source["projectId"],
             "bookName": source["bookName"], "approvalMode": "manual"})
         self.volume = source['volumes'][0]['volumeId']
         self.arc = source['arcs'][0]['arcId']
@@ -230,7 +232,7 @@ class TransportParityTests(SingleSourceProjectTests):
             (self.root / ".govel").mkdir()
             source = source_fixture(self.root)
             write_json(self.root / ".govel/project.json", {
-                "schemaVersion": 5, "workflowVersion": "5.0",
+                "schemaVersion": current_schema_version(), "workflowVersion": '6.0',
                 "projectId": source["projectId"], "bookName": source["bookName"],
                 "approvalMode": "manual"})
             save_structure(self.root, source)
@@ -271,10 +273,10 @@ class TransportParityTests(SingleSourceProjectTests):
 
     def test_error_code_is_shared_not_reworded_per_transport(self):
         """同一失败在三通道必须是同一个 code；措辞可以不同，归属不能不同。"""
-        code, cli_payload = self.cli("doctor", *self._doctor_flags({"chapterId": "CH-DOES-NOT-EXIST"}))
+        code, cli_payload = self.cli("doctor", *self._doctor_flags({"chapterId": "chapter-DOES-NOT-EXIST"}))
         cli_doctor = cli_payload.get("details", cli_payload)
-        _, mcp_payload = self.mcp_report(self.mcp("doctor", {"chapterId": "CH-DOES-NOT-EXIST"}))
-        status, http_payload = self.http("GET", "/api/doctor?chapterId=CH-DOES-NOT-EXIST")
+        _, mcp_payload = self.mcp_report(self.mcp("doctor", {"chapterId": "chapter-DOES-NOT-EXIST"}))
+        status, http_payload = self.http("GET", "/api/doctor?chapterId=chapter-DOES-NOT-EXIST")
         self.assertIn("CHAPTER_NOT_FOUND",
                       {row["code"] for row in cli_doctor["issues"]},
                       "不存在的章必须归到 writerReadiness 的 CHAPTER_NOT_FOUND，而不是笼统失败")
@@ -356,7 +358,7 @@ class DoctorAttributionTests(SingleSourceProjectTests):
     def test_unplaced_candidate_is_an_author_decision_not_a_mechanical_error(self):
         structure = load_structure(self.root)
         structure["planningCandidates"] = [{
-            "candidateId": "PC-UNPLACED", "title": "还没有定位", "summary": "未定卷与弧线",
+            "candidateId": "candidate-UNPLACED", "title": "还没有定位", "summary": "未定卷与弧线",
             "placement": None, "primaryArcId": None, "secondaryArcIds": [],
             "beforeChapterId": None, "status": "draft"}]
         save_structure(self.root, structure)
@@ -365,8 +367,8 @@ class DoctorAttributionTests(SingleSourceProjectTests):
         issue = next(row for row in report["domains"]["planning"]["issues"]
                      if row["code"] == "PLANNING_CANDIDATE_UNPLACED")
         self.assertEqual(issue["status"], "author_decision_required")
-        self.assertEqual(issue["candidateId"], "PC-UNPLACED")
-        self.assertEqual(report["lifecycleObjects"]["planningCandidates"]["unplaced"], ["PC-UNPLACED"])
+        self.assertEqual(issue["candidateId"], "candidate-UNPLACED")
+        self.assertEqual(report["lifecycleObjects"]["planningCandidates"]["unplaced"], ["candidate-UNPLACED"])
         # An unplaced planning candidate does not corrupt the current project source.
         self.assertEqual(report['domains']['project']['issues'], [])
         self.assertNotIn("PLANNING_CANDIDATE_UNPLACED",
@@ -473,13 +475,13 @@ class WriterReadinessConsumesTaskPrepareTests(SingleSourceProjectTests):
                                          reason="声纹", **extra)
             commit_plan(self.root, operation_id=plan["operationId"], plan_hash=plan["planHash"], approved=True)
         structure = load_structure(self.root)
-        structure["fieldDefinitions"].append({"fieldId": "FD-DOC-PLAN", "key": "plot.plan", "label": "剧情计划",
+        structure["fieldDefinitions"].append({"fieldId": "field-DOC-PLAN", "key": "plot.plan", "label": "剧情计划",
                                               "valueType": "topic", "appliesTo": ["chapter"]})
-        structure["attributes"].append({"attributeId": "AT-DOC-PLAN", "ownerId": self.chapter,
-                                        "fieldId": "FD-DOC-PLAN", "values": []})
-        structure["fragments"].append({"fragmentId": "SF-DOC-PLAN", "ownerId": self.chapter, "text": "本章计划。",
-                                       "order": 1, "contentRole": "plan", "contentBindings": ["AT-DOC-PLAN"],
-                                       "dependsOn": ["FV-HEIGHT"]})
+        structure["attributes"].append({"attributeId": "attribute-DOC-PLAN", "ownerId": self.chapter,
+                                        "fieldId": "field-DOC-PLAN", "values": []})
+        structure["fragments"].append({"fragmentId": "plan-DOC-PLAN", "ownerId": self.chapter, "text": "本章计划。",
+                                       "order": 1, "contentRole": "plan", "contentBindings": ["attribute-DOC-PLAN"],
+                                       "dependsOn": ["value-HEIGHT"]})
         save_structure(self.root, structure)
         write_json(self.root / ".govel/workflow.json", {"approvedChapterIds": [self.chapter]})
 
@@ -609,7 +611,7 @@ class CandidateToChapterAcceptanceTests(SingleSourceProjectTests):
                                      "--expected-revision", str(load_structure(self.root)["revision"]), "--reason", "先开一个候选",
                                      "--record", record)
         candidate_id = created["parameters"]["candidateId"]
-        self.assertTrue(candidate_id.startswith("PC-"))
+        self.assertTrue(candidate_id.startswith("candidate-"))
         self.assertNotIn(candidate_id, {row["chapterId"] for row in load_structure(self.root)["chapters"]},
                          "候选 ID 不得提前变成正式章节 ID")
 
@@ -626,7 +628,7 @@ class CandidateToChapterAcceptanceTests(SingleSourceProjectTests):
                                           "--expected-revision", str(structure["revision"]),
                                           "--reason", "物化", "--candidate-id", candidate_id)
         chapter_id = materialized["parameters"]["chapterId"]
-        self.assertTrue(chapter_id.startswith("CH-"))
+        self.assertTrue(chapter_id.startswith("chapter-"))
         after = load_structure(self.root)
         row = next(item for item in after["planningCandidates"] if item["candidateId"] == candidate_id)
         self.assertEqual(row["status"], "materialized")

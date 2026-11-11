@@ -72,7 +72,7 @@ class WorkVoiceProfileContextTests(unittest.TestCase):
         kwargs.setdefault('task_type', 'writer')
         kwargs.setdefault('view', 'station')
         kwargs.setdefault('read_only', True)
-        return build_station_context(str(self.root), 'CH-AAA', **kwargs)
+        return build_station_context(str(self.root), 'chapter-AAA', **kwargs)
 
     def layers(self, context):
         return {row['role']: row for row in context['layers']}

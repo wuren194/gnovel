@@ -30,8 +30,12 @@ def metadata_visible(record: dict, choice: dict) -> bool:
     return any(_explicitly_visible(record, perspective) for perspective in choice['perspectiveIds'])
 
 
-def metadata_label(record: dict, identity: str, choice: dict) -> str:
+def metadata_label(record: dict, identity: str, choice: dict, index: SourceIndex) -> str:
     if not metadata_visible(record, choice):
+        from .source_cognition import designation_label
+        label = designation_label(index, record, choice)
+        if label:
+            return label
         return identity
     return record.get('name') or record.get('title') or record.get('bookName') or identity
 
@@ -211,7 +215,7 @@ def select_content(structure: dict, selection: dict | None = None) -> dict:
                          'sourceHash': snapshot_hash(structure)},
             'selection': choice,
             'owners': [{'id': oid, 'kind': index.owner_types[oid],
-                        'label': metadata_label(index.objects[oid], oid, choice)}
+                        'label': metadata_label(index.objects[oid], oid, choice, index)}
                        for oid in selected_owners],
             'records': records, 'selectedAttributeIds': sorted(selected),
             'coverage': {'registeredSourceSelectionComplete': True, 'proseScanned': False,
@@ -246,14 +250,14 @@ def select_project_content(root, selection: dict | None = None) -> dict:
         record['reviewStatus'] = fragment_review_status(inputs, review, record['id'])
     result['snapshot']['reviewStateHash'] = hashlib.sha256(canonical_json(review).encode()).hexdigest()
     choice = result['selection']
-    result['bookName'] = metadata_label(source, source['projectId'], choice)
+    index = inputs.index
+    result['bookName'] = metadata_label(source, source['projectId'], choice, index)
     result['sourceUpdatedAt'] = source['updatedAt']
     result['fieldLabels'] = {key: field['label'] if metadata_visible(field, choice) else key
                              for field in source['fieldDefinitions'] for key in (field['fieldId'], field['key'])}
-    result['timeLabels'] = {row['entityId']: metadata_label(row, row['entityId'], choice)
+    result['timeLabels'] = {row['entityId']: metadata_label(row, row['entityId'], choice, index)
                             for row in source['entities'] if row['entityType'] in {'event', 'time_anchor'}}
-    index = inputs.index
-    labels = {rid: metadata_label(row, rid, choice)
+    labels = {rid: metadata_label(row, rid, choice, index)
               for rid, row in index.objects.items()}
     for rid in index.records:
         if rid in labels:

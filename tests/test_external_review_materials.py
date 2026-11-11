@@ -15,7 +15,7 @@ from scripts.core.jsonio import read_json, write_json
 from scripts.core.source_requests import query_request_status, renew_request
 from scripts.core.structure_commands import _plan_hash, commit_plan
 from scripts.core.structure_store import StructureError, load_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import review_ready_project
 
 
@@ -67,7 +67,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
         self.assertEqual((self.root/plan['externalReviewMaterials']['H1']['path']).read_bytes(), self.h1)
 
     def test_missing_h1_never_fabricates_diff_or_enables_adoption(self):
-        root = self.root.parent/'synthetic-no-history'; fixture = create_schema5_project(root, chapter_count=1)
+        root = self.root.parent/'synthetic-no-history'; fixture = create_current_project(root, chapter_count=1)
         cid = fixture['chapterIds'][0]; path = root/fixture['structure']['chapters'][0]['filePath']
         path.write_text('external replacement')
         report = preview_accept_external_modification(root, chapter_id=cid, request_id='no-h1')
@@ -116,7 +116,7 @@ class ExternalReviewMaterialsTests(unittest.TestCase):
     def test_same_request_different_chapter_is_rejected(self):
         self.preview()
         with self.assertRaises(StructureError) as caught:
-            preview_accept_external_modification(self.root, chapter_id='CH-OTHER', request_id='external-request')
+            preview_accept_external_modification(self.root, chapter_id='chapter-OTHER', request_id='external-request')
         self.assertEqual(caught.exception.code, 'SOURCE_REQUEST_REUSED')
 
     def test_unknown_result_between_material_freeze_and_plan_reuses_original_h2(self):

@@ -12,7 +12,7 @@ from unittest.mock import patch
 from scripts.core import data_provider as provider
 from scripts.core.prompt_plan import resolve_prompt_plan
 from scripts.core.review_plan import SOURCE_CONTRACT
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class LocalRoundtableTests(unittest.TestCase):
@@ -145,7 +145,7 @@ print(json.dumps({'manualEditApplied': True, 'knowledgeUnchanged': True}))
     def test_source_transitions_invalidate_review_receipts_but_not_writer(self):
         project = self.base / 'project'
         project.mkdir()
-        create_schema5_project(project, chapter_count=1)
+        create_current_project(project, chapter_count=1)
         result = self.fresh('''
 import os, json
 from pathlib import Path

@@ -303,7 +303,7 @@ def preview_create_time_anchor(root: Path, *, name: str, absolute_time: str, sum
     if time_ordinal is not None and not is_time_ordinal(time_ordinal):
         raise StructureError("INVALID_TIME_ORDINAL", "timeOrdinal must be a number (e.g. D-45 → -45、D-Day → 0)")
     proposed = deepcopy(structure)
-    anchor_id = new_id("TA")
+    anchor_id = new_id("time_anchor")
     anchor = {
         "entityId": anchor_id,
         "entityType": "time_anchor",

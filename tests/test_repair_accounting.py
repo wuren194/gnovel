@@ -300,7 +300,7 @@ class RepairAccountingTests(unittest.TestCase):
             if name == 'same chapter round':
                 workflow['repairRounds'][self.cid] += 1
             elif name == 'another chapter round':
-                workflow['repairRounds']['CH-ANOTHER'] = 1
+                workflow['repairRounds']['chapter-ANOTHER'] = 1
             else:
                 workflow['approvedChapterIds'] = []
             write_json(self.root / '.govel/workflow.json', workflow)

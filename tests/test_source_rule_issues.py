@@ -19,10 +19,10 @@ class SourceRuleIssueTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.source, self.chapter = planning_source(self.root); self.cid = self.chapter['chapterId']
-        self.source['entities'].append({'entityId': 'RU-VOICE', 'entityType': 'rule', 'name': '认知边界',
+        self.source['entities'].append({'entityId': 'rule-VOICE', 'entityType': 'rule', 'name': '认知边界',
             'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
                          'scopeIds': [self.source['projectId']], 'actions': ['review', 'publish'],
-                         'inputIds': ['SF-PLAN']}})
+                         'inputIds': ['plan-PLAN']}})
         validate_structure(self.source); self.save()
 
     def save(self):
@@ -33,11 +33,11 @@ class SourceRuleIssueTests(unittest.TestCase):
 
     def submit(self, status, *, request='one', evidence=None, deferred=None):
         row = self.current()
-        return submit_rule_issue(self.root, requestId=request, ruleId='RU-VOICE', chapterId=self.cid,
+        return submit_rule_issue(self.root, requestId=request, ruleId='rule-VOICE', chapterId=self.cid,
             action='publish', inputHash=row['inputHash'], status=status, reason='已逐段核对人物认知来源。',
-            evidence=[{'kind': 'source_quote', 'recordId': 'SF-PLAN', 'start': 0, 'end': 5,
+            evidence=[{'kind': 'source_quote', 'recordId': 'plan-PLAN', 'start': 0, 'end': 5,
                        'text': '甲守城门。'}] if evidence is None else evidence,
-            affectedIds=[self.cid, 'SF-PLAN'], deferredUntilScopeIds=deferred)
+            affectedIds=[self.cid, 'plan-PLAN'], deferredUntilScopeIds=deferred)
 
     def test_resolved_semantic_rule_passes_only_current_inputs(self):
         self.assertTrue(self.current()['blocking'])
@@ -64,7 +64,7 @@ class SourceRuleIssueTests(unittest.TestCase):
         self.source['attributes'][0]['values'][0]['value']['number'] = 185
         self.save()
         self.assertEqual(self.current()['status'], 'pending')
-        for filters in ({}, {'chapterId': self.cid}, {'ruleId': 'RU-VOICE'}):
+        for filters in ({}, {'chapterId': self.cid}, {'ruleId': 'rule-VOICE'}):
             with self.subTest(filters=filters):
                 pending = query_rule_issues(self.root, statuses=['pending'], **filters)
                 publish = next(row for row in pending['items'] if row['action'] == 'publish')
@@ -99,8 +99,8 @@ class SourceRuleIssueTests(unittest.TestCase):
     def test_confirmed_and_deferred_required_issue_stay_blocking(self):
         self.submit('confirmed')
         self.assertEqual(self.current()['status'], 'conflict')
-        self.source['volumes'].append({'volumeId': 'VOL-LATER', 'title': '后卷', 'ordinal': 2, 'status': 'planned'}); self.save()
-        self.submit('deferred', request='defer', deferred=['VOL-LATER'])
+        self.source['volumes'].append({'volumeId': 'volume-LATER', 'title': '后卷', 'ordinal': 2, 'status': 'planned'}); self.save()
+        self.submit('deferred', request='defer', deferred=['volume-LATER'])
         row = self.current()
         self.assertEqual(row['status'], 'deferred')
         self.assertTrue(row['blocking'])
@@ -119,7 +119,7 @@ class SourceRuleIssueTests(unittest.TestCase):
         with self.assertRaises(StructureError) as caught:
             self.submit('resolved', evidence=[])
         self.assertEqual(caught.exception.code, 'SOURCE_RULE_EVIDENCE_REQUIRED')
-        bad = [{'kind': 'source_quote', 'recordId': 'SF-PLAN', 'start': 0, 'end': 1, 'text': '乙'}]
+        bad = [{'kind': 'source_quote', 'recordId': 'plan-PLAN', 'start': 0, 'end': 1, 'text': '乙'}]
         with self.assertRaises(StructureError) as caught:
             self.submit('resolved', evidence=bad)
         self.assertEqual(caught.exception.code, 'SOURCE_RULE_EVIDENCE_STALE')
@@ -152,7 +152,7 @@ class SourceRuleIssueTests(unittest.TestCase):
     def test_source_operation_provenance_must_exist(self):
         row = self.current()
         with self.assertRaises(StructureError):
-            submit_rule_issue(self.root, requestId='bad-op', ruleId='RU-VOICE', chapterId=self.cid,
+            submit_rule_issue(self.root, requestId='bad-op', ruleId='rule-VOICE', chapterId=self.cid,
                 action='publish', inputHash=row['inputHash'], status='pending', reason='等待检查。',
                 evidence=[], affectedIds=[self.cid], sourceOperationId='OP-MISSING')
 
@@ -166,7 +166,7 @@ class SourceRuleIssueTests(unittest.TestCase):
         original = self.source['fragments'][-1]['text']
         self.source['fragments'][-1]['text'] = '甲离开城门。'; self.save()
         row = self.current()
-        submit_rule_issue(self.root, requestId='new', ruleId='RU-VOICE', chapterId=self.cid,
+        submit_rule_issue(self.root, requestId='new', ruleId='rule-VOICE', chapterId=self.cid,
             action='publish', inputHash=row['inputHash'], status='pending', reason='新版本尚未检查。',
             evidence=[], affectedIds=[self.cid])
         self.source['fragments'][-1]['text'] = original; self.save()
@@ -190,7 +190,7 @@ class SourceRuleIssueTests(unittest.TestCase):
         manuscript.write_text('甲守城门。', encoding='utf-8')
         batch = register_evidence(self.root, chapterId=self.cid,
             fileHash=digest(manuscript.read_bytes()), sourceHash=snapshot_hash(self.source), requestId='prose',
-            citations=[{'start': 0, 'end': 5, 'text': '甲守城门。', 'targetIds': ['SF-PLAN'],
+            citations=[{'start': 0, 'end': 5, 'text': '甲守城门。', 'targetIds': ['plan-PLAN'],
                         'kind': 'depends_on', 'reason': '正文直接采用本章计划。'}])
         from scripts.core.source_evidence import read_evidence
         evidence_id = read_evidence(self.root)['batches'][batch['batchId']]['citations'][0]['evidenceId']

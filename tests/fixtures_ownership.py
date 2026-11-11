@@ -18,11 +18,11 @@ from scripts.core.structure_store import (PROJECT_SCHEMA_VERSION, WORKFLOW_VERSI
                                           validate_structure)
 
 PROJECT_ID = 'PRJ-BINDING-1'
-VOLUME_A = 'VOL-BINDING-A'
-ARC_MAIN = 'ARC-BINDING-MAIN'
-CHAPTER_A = 'CH-BINDING-0001'  # managed, prose on disk
-CHAPTER_B = 'CH-BINDING-0002'  # unbound, empty slot
-CHAPTER_C = 'CH-BINDING-0003'  # unresolved, empty slot
+VOLUME_A = 'volume-BINDING-A'
+ARC_MAIN = 'arc-BINDING-MAIN'
+CHAPTER_A = 'chapter-BINDING-0001'  # managed, prose on disk
+CHAPTER_B = 'chapter-BINDING-0002'  # unbound, empty slot
+CHAPTER_C = 'chapter-BINDING-0003'  # unresolved, empty slot
 MANAGED_PROSE = '第一章正文：白塔在雾里塌了一半。\n'
 
 

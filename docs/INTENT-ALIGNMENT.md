@@ -1,5 +1,7 @@
 # 实现与验证
 
+当前源格式的英文类型 ID、片段角色、具体取值与认知分别由 `tests/test_source_ids.py` 和 `tests/test_source_cognition.py` 验证。核验沿既有源预览与明确批准提交，保留目标版本、实际引文和时间；证据变化不自动修改事实或人物记忆。`tests/test_source_profile.py` 验证长期多面资料、固定权重不放回、回执重试、来源漂移拒绝和无场景参数；抽样不替代完整必要资料，也不要求逐项表演。公开操作由 CLI／MCP 共用，任务准备仅提供实际入口。上述工程验证不证明真实写作模型已减少刻板表达。
+
 原稿整理通过 `import.organization-prepare/read/preview` 与原 `source.commit` 接入受控源事务，保存 AI 提供的引文、事实、关系和回溯审阅。`tests/test_import_organization.py` 验证中性原稿从导入到摘要、风格与前章交接的链路，以及未决项、缺证据、原文变化、请求重试和事务失败恢复。回溯采用不生成 A/B 批准。`import.verify` 复核冻结原文覆盖与当前正文，`import.organization-status` 和 doctor 共用实时待办；原导入回执仍是历史记录。
 
 `project tools help` 与 MCP `get_tool_help` 共用实际操作目录，提供分组分页、自然语言发现、参数和 CLI 示例；帮助无需读取小说项目。续写首先进入 `task.prepare(task=continue)`，失败保留错误并给公开恢复查询。口语路由、help 参数、无项目帮助和续写边界由 `tests/test_command_help.py` 与现有发现／工作流回归验证；工程检查不证明外部宿主中的模型一定遵循指引。

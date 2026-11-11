@@ -15,9 +15,9 @@ from scripts import check_voice_lexicon as voice
 
 
 PEOPLE = [
-    {'characterId': 'C-A', 'name': '林舟', 'bannedPhrases': ['随便']},
-    {'characterId': 'C-B', 'name': '顾行', 'bannedPhrases': ['一定']},
-    {'characterId': 'C-C', 'name': '韩师傅', 'bannedPhrases': ['全部']},
+    {'characterId': 'character-A', 'name': '林舟', 'bannedPhrases': ['随便']},
+    {'characterId': 'character-B', 'name': '顾行', 'bannedPhrases': ['一定']},
+    {'characterId': 'character-C', 'name': '韩师傅', 'bannedPhrases': ['全部']},
 ]
 
 
@@ -32,20 +32,20 @@ class SpeakerEvidenceTests(unittest.TestCase):
                 report = self.report(text)
                 self.assertEqual(len(report['findings']), 1)
                 finding = report['findings'][0]
-                self.assertEqual((finding['characterId'], finding['severity']), ('C-A', 'error'))
+                self.assertEqual((finding['characterId'], finding['severity']), ('character-A', 'error'))
                 self.assertTrue(finding['speakerCertain'])
 
     def test_each_quote_on_one_line_has_its_own_speaker(self):
         report = self.report('林舟说：“随便。”顾行答：“一定。”')
         self.assertCountEqual([(r['characterId'], r['phrase']) for r in report['findings']],
-                              [('C-A', '随便'), ('C-B', '一定')])
-        self.assertEqual([r['characterId'] for r in report['coverage']['dialogueAttributions']], ['C-A', 'C-B'])
+                              [('character-A', '随便'), ('character-B', '一定')])
+        self.assertEqual([r['characterId'] for r in report['coverage']['dialogueAttributions']], ['character-A', 'character-B'])
         self.assertTrue(all(r['speakerCertain'] for r in report['findings']))
 
     def test_explicit_phone_speech_is_not_attributed_to_addressee(self):
         report = self.report('电话那头的顾行对林舟说：“一定。”')
         finding = report['findings'][0]
-        self.assertEqual((finding['characterId'], finding['speakerConfidence']), ('C-B', 'line'))
+        self.assertEqual((finding['characterId'], finding['speakerConfidence']), ('character-B', 'line'))
         self.assertTrue(finding['speakerCertain'])
 
     def test_separate_speech_tag_is_certain_but_action_only_is_advisory(self):
@@ -53,7 +53,7 @@ class SpeakerEvidenceTests(unittest.TestCase):
         self.assertEqual(explicit['findings'][0]['speakerConfidence'], 'speech-tag')
         self.assertEqual(explicit['findings'][0]['severity'], 'error')
         action = self.report('林舟把杯子推过去。\n“随便。”')
-        self.assertEqual(action['findings'][0]['characterId'], 'C-A')
+        self.assertEqual(action['findings'][0]['characterId'], 'character-A')
         self.assertFalse(action['findings'][0]['speakerCertain'])
         self.assertEqual(action['findings'][0]['severity'], 'warning')
         self.assertEqual(action['recommendation'], 'review_advisory')
@@ -87,7 +87,7 @@ class SpeakerEvidenceTests(unittest.TestCase):
         text = '林舟问：“检查了吗？”\n顾行答：“检查了。”\n“随便放在哪里？”'
         report = self.report(text)
         finding = report['findings'][0]
-        self.assertEqual((finding['characterId'], finding['speakerConfidence']), ('C-A', 'turn-taking'))
+        self.assertEqual((finding['characterId'], finding['speakerConfidence']), ('character-A', 'turn-taking'))
         self.assertEqual(finding['severity'], 'warning')
         self.assertFalse(finding['speakerCertain'])
         self.assertEqual(report['recommendation'], 'review_advisory')
@@ -96,7 +96,7 @@ class SpeakerEvidenceTests(unittest.TestCase):
         before = '电话那头的顾行说：“检查好了。”\n林舟问：“什么时候取？”\n'
         report = self.report(before + '“一定按时。”')
         self.assertEqual([(r['characterId'], r['speakerConfidence'], r['severity']) for r in report['findings']],
-                         [('C-B', 'turn-taking', 'warning')])
+                         [('character-B', 'turn-taking', 'warning')])
         report = self.report(before + '韩师傅答：“明天。”\n“随便。”')
         self.assertEqual(report['findings'], [])
         self.assertIsNone(report['coverage']['dialogueAttributions'][-1]['characterId'])
@@ -198,7 +198,7 @@ class SpeakerEvidenceTests(unittest.TestCase):
     def test_speech_tag_between_two_fragments_preserves_explicit_speaker(self):
         report = self.report('“随便放着。”林舟说，“随便找个地方。”')
         self.assertEqual(len(report['findings']), 2)
-        self.assertTrue(all(r['speakerCertain'] and r['characterId'] == 'C-A' for r in report['findings']))
+        self.assertTrue(all(r['speakerCertain'] and r['characterId'] == 'character-A' for r in report['findings']))
 
     def test_non_subject_names_do_not_turn_reported_speech_into_direct_speech(self):
         for prefix in ('林舟的同事说', '顾行听见林舟说', '林舟没有说', '并非林舟说'):

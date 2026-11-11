@@ -23,8 +23,8 @@ class AggregateTransportTests(unittest.TestCase):
 
     def test_cli_and_mcp_equal_domain_operations(self):
         for operation, arguments, flags in (
-            ('query.aggregate', {'kind': 'character-reviews', 'characterId': 'C-ALPHA'},
-             ['--kind', 'character-reviews', '--character-id', 'C-ALPHA']),
+            ('query.aggregate', {'kind': 'character-reviews', 'characterId': 'character-ALPHA'},
+             ['--kind', 'character-reviews', '--character-id', 'character-ALPHA']),
             ('history.query', {'kind': 'evidence'}, ['--kind', 'evidence']),
             ('history.index-state', {}, []),
         ):

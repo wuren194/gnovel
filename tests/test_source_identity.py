@@ -24,9 +24,9 @@ class SourceIdentityTests(unittest.TestCase):
         source_fixture(self.root)
         self.sequence = 0
 
-    def fragment(self, identity='SF-ORIGINAL', **changes):
-        return {'fragmentId': identity, 'ownerId': 'C-ALPHA', 'text': '准备整理档案。',
-                'order': 9, 'contentRole': 'plan', 'contentBindings': ['AT-LIFE'], **changes}
+    def fragment(self, identity='plan-ORIGINAL', **changes):
+        return {'fragmentId': identity, 'ownerId': 'character-ALPHA', 'text': '准备整理档案。',
+                'order': 9, 'contentRole': 'plan', 'contentBindings': ['attribute-LIFE'], **changes}
 
     def preview(self, changes, request_id=None):
         self.sequence += 1
@@ -41,7 +41,7 @@ class SourceIdentityTests(unittest.TestCase):
         return commit(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'],
                       approved=True, actor='test')
 
-    def delete(self, identity='SF-ORIGINAL'):
+    def delete(self, identity='plan-ORIGINAL'):
         plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': identity}])
         self.commit(plan)
         return plan
@@ -54,7 +54,7 @@ class SourceIdentityTests(unittest.TestCase):
         return {path.relative_to(self.root).as_posix(): path.read_bytes()
                 for path in self.root.rglob('*') if path.is_file()}
 
-    def assert_retired(self, function, identity='SF-ORIGINAL'):
+    def assert_retired(self, function, identity='plan-ORIGINAL'):
         before = self.snapshot()
         with self.assertRaises(StructureError) as error:
             function()
@@ -65,7 +65,7 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_deleted_fragment_cannot_be_given_to_another_owner(self):
         self.retire()
-        self.assert_retired(lambda: self.put(self.fragment(ownerId='C-BETA', text='另一项无关计划。')))
+        self.assert_retired(lambda: self.put(self.fragment(ownerId='character-BETA', text='另一项无关计划。')))
 
     def test_even_identical_recreation_requires_formal_undo(self):
         self.retire()
@@ -75,26 +75,26 @@ class SourceIdentityTests(unittest.TestCase):
         self.commit(self.put(self.fragment()))
         self.commit(self.put(self.fragment(text='整理档案后归还钥匙。')))
         source = load_structure(self.root)
-        actual = next(row for row in source['fragments'] if row['fragmentId'] == 'SF-ORIGINAL')
+        actual = next(row for row in source['fragments'] if row['fragmentId'] == 'plan-ORIGINAL')
         self.assertEqual(actual['text'], '整理档案后归还钥匙。')
 
     def test_fresh_automatic_identity_is_available_after_deletion(self):
         self.retire()
         plan = self.put(self.fragment('$replacement'))
         identity = plan['parameters']['identityMap']['$replacement']
-        self.assertNotEqual(identity, 'SF-ORIGINAL')
+        self.assertNotEqual(identity, 'plan-ORIGINAL')
         self.commit(plan)
         self.assertIn(identity, {row['fragmentId'] for row in load_structure(self.root)['fragments']})
 
     def test_allocator_collision_with_retired_identity_fails_closed(self):
         self.retire()
-        with patch('scripts.core.source_changes.new_id', return_value='SF-ORIGINAL'):
+        with patch('scripts.core.source_changes.new_id', return_value='plan-ORIGINAL'):
             self.assert_retired(lambda: self.put(self.fragment('$replacement')))
 
     def test_allocator_cannot_turn_creation_into_an_existing_record_update(self):
         self.commit(self.put(self.fragment()))
         before = self.snapshot()
-        with patch('scripts.core.source_changes.new_id', return_value='SF-ORIGINAL'):
+        with patch('scripts.core.source_changes.new_id', return_value='plan-ORIGINAL'):
             with self.assertRaises(StructureError) as error:
                 self.put(self.fragment('$replacement', text='另一项计划。'))
         self.assertEqual(error.exception.code, 'SOURCE_ID_COLLISION')
@@ -104,7 +104,7 @@ class SourceIdentityTests(unittest.TestCase):
         deletion = self.retire()
         undo(self.root, deletion['operationId'], actor='test')
         original = next(row for row in load_structure(self.root)['fragments']
-                        if row['fragmentId'] == 'SF-ORIGINAL')
+                        if row['fragmentId'] == 'plan-ORIGINAL')
         self.assertEqual(original, self.fragment())
         self.commit(self.put(self.fragment(text='复核档案后再归还钥匙。')))
 
@@ -126,7 +126,7 @@ class SourceIdentityTests(unittest.TestCase):
         create_args = {'changes': original, 'requestId': 'create-once', 'baseRevision': 0, 'reason': '核对记录身份'}
         creation = preview_source_change(self.root, **create_args)
         self.commit(creation)
-        delete_args = {'changes': [{'action': 'delete', 'collection': 'fragments', 'id': 'SF-ORIGINAL'}],
+        delete_args = {'changes': [{'action': 'delete', 'collection': 'fragments', 'id': 'plan-ORIGINAL'}],
                        'requestId': 'delete-once', 'baseRevision': 1, 'reason': '核对记录身份'}
         deletion = preview_source_change(self.root, **delete_args)
         self.commit(deletion)
@@ -155,26 +155,26 @@ class SourceIdentityTests(unittest.TestCase):
         self.commit(self.put(self.fragment(text='选定另一项计划。')))
 
     def test_deleted_unused_field_definition_also_retires_its_identity(self):
-        field = {'fieldId': 'FD-UNUSED', 'key': 'unused.topic', 'label': '备用主题',
+        field = {'fieldId': 'field-UNUSED', 'key': 'unused.topic', 'label': '备用主题',
                  'valueType': 'topic', 'appliesTo': ['character']}
         self.commit(self.put(field, collection='fieldDefinitions'))
-        self.commit(self.preview([{'action': 'delete', 'collection': 'fieldDefinitions', 'id': 'FD-UNUSED'}]))
+        self.commit(self.preview([{'action': 'delete', 'collection': 'fieldDefinitions', 'id': 'field-UNUSED'}]))
         self.assert_retired(lambda: self.put({**field, 'key': 'unrelated.topic'}, collection='fieldDefinitions'),
-                            'FD-UNUSED')
+                            'field-UNUSED')
 
     def test_same_batch_delete_and_readd_is_already_rejected(self):
         self.commit(self.put(self.fragment()))
         before = self.snapshot()
         with self.assertRaises(StructureError) as error:
-            self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'SF-ORIGINAL'},
+            self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'plan-ORIGINAL'},
                           {'action': 'put', 'collection': 'fragments',
-                           'record': self.fragment(ownerId='C-BETA')}])
+                           'record': self.fragment(ownerId='character-BETA')}])
         self.assertEqual(error.exception.code, 'SOURCE_CHANGE_DUPLICATE')
         self.assertEqual(before, self.snapshot())
 
     def test_retirement_survives_backup_gc(self):
         deletion = self.retire()
-        self.commit(self.put(self.fragment('SF-NEXT')))
+        self.commit(self.put(self.fragment('plan-NEXT')))
         gc_project(self.root, keep_backups=0)
         self.assertFalse((self.root / '.govel/backups' / deletion['operationId']).exists())
         self.assertTrue((self.root / '.govel/operations' / f"{deletion['operationId']}.json").is_file())
@@ -191,19 +191,19 @@ class SourceIdentityTests(unittest.TestCase):
         path = self.root / '.govel/operations' / f"{deletion['operationId']}.json"
         original = read_json(path)
         invalids = [[], {'operationId': 'wrong'}, {**original, 'impact': {}},
-                    {**original, 'impact': {**original['impact'], 'changedIds': 'SF-ORIGINAL'}}]
+                    {**original, 'impact': {**original['impact'], 'changedIds': 'plan-ORIGINAL'}}]
         for invalid in invalids:
             with self.subTest(invalid=invalid):
                 write_json(path, invalid)
                 before = self.snapshot()
                 with self.assertRaises(StructureError) as error:
-                    self.put(self.fragment('SF-FRESH'))
+                    self.put(self.fragment('plan-FRESH'))
                 self.assertEqual(error.exception.code, 'SOURCE_IDENTITY_HISTORY_INVALID')
                 self.assertEqual(error.exception.details['path'], path.relative_to(self.root).as_posix())
                 self.assertEqual(before, self.snapshot())
         path.write_text('{unreadable', encoding='utf-8')
         with self.assertRaises(StructureError) as error:
-            self.put(self.fragment('SF-FRESH'))
+            self.put(self.fragment('plan-FRESH'))
         self.assertEqual(error.exception.code, 'SOURCE_IDENTITY_HISTORY_INVALID')
 
     def test_existing_record_update_does_not_depend_on_unrelated_history(self):
@@ -214,7 +214,7 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_commit_rechecks_ledger_damage_after_preview(self):
         deletion = self.retire()
-        plan = self.put(self.fragment('SF-FRESH'))
+        plan = self.put(self.fragment('plan-FRESH'))
         path = self.root / '.govel/operations' / f"{deletion['operationId']}.json"
         path.write_text('{unreadable', encoding='utf-8')
         before = self.snapshot()
@@ -224,7 +224,7 @@ class SourceIdentityTests(unittest.TestCase):
         self.assertEqual(before, self.snapshot())
 
     def update_beta_values(self, values):
-        resolved = resolve_content_target(self.root, recordId='AT-BETA-HEIGHT', kind='attribute')
+        resolved = resolve_content_target(self.root, recordId='attribute-BETA-HEIGHT', kind='attribute')
         old = resolved['record']
         return preview_content_change(self.root, sessionRef=resolved['sessionRef'], expectedOldRecord=old,
             newRecord={**old, 'values': values}, reason='核对属性值',
@@ -233,29 +233,29 @@ class SourceIdentityTests(unittest.TestCase):
     def test_nested_value_identity_is_retired_through_reviewed_content_change(self):
         deletion = self.update_beta_values([])
         self.commit(deletion)
-        original = {'valueId': 'FV-BETA-HEIGHT', 'value': {'number': 180, 'unit': 'cm'}}
-        self.assert_retired(lambda: self.update_beta_values([original]), 'FV-BETA-HEIGHT')
-        self.commit(self.update_beta_values([{**original, 'valueId': 'FV-REPLACEMENT'}]))
+        original = {'valueId': 'value-BETA-HEIGHT', 'value': {'number': 180, 'unit': 'cm'}}
+        self.assert_retired(lambda: self.update_beta_values([original]), 'value-BETA-HEIGHT')
+        self.commit(self.update_beta_values([{**original, 'valueId': 'value-REPLACEMENT'}]))
 
     def test_nested_value_cannot_move_to_a_new_attribute_after_retirement(self):
         self.commit(self.update_beta_values([]))
         self.assert_retired(lambda: self.preview([
             {'action': 'put', 'collection': 'fieldDefinitions', 'record': {
-                'fieldId': 'FD-NEW-NUMBER', 'key': 'custom.number', 'label': '编号',
+                'fieldId': 'field-NEW-NUMBER', 'key': 'custom.number', 'label': '编号',
                 'valueType': 'number', 'appliesTo': ['character']}},
             {'action': 'put', 'collection': 'attributes', 'record': {
-                'attributeId': 'AT-NEW-NUMBER', 'ownerId': 'C-ALPHA', 'fieldId': 'FD-NEW-NUMBER',
-                'values': [{'valueId': 'FV-BETA-HEIGHT', 'value': 8}]}}
-        ]), 'FV-BETA-HEIGHT')
+                'attributeId': 'attribute-NEW-NUMBER', 'ownerId': 'character-ALPHA', 'fieldId': 'field-NEW-NUMBER',
+                'values': [{'valueId': 'value-BETA-HEIGHT', 'value': 8}]}}
+        ]), 'value-BETA-HEIGHT')
 
     def test_nested_value_restoration_by_formal_undo_keeps_identity(self):
         deletion = self.update_beta_values([])
         self.commit(deletion)
         undo(self.root, deletion['operationId'], actor='test')
         attribute = next(row for row in load_structure(self.root)['attributes']
-                         if row['attributeId'] == 'AT-BETA-HEIGHT')
-        self.assertEqual(attribute['values'][0]['valueId'], 'FV-BETA-HEIGHT')
-        self.commit(self.update_beta_values([{'valueId': 'FV-BETA-HEIGHT',
+                         if row['attributeId'] == 'attribute-BETA-HEIGHT')
+        self.assertEqual(attribute['values'][0]['valueId'], 'value-BETA-HEIGHT')
+        self.commit(self.update_beta_values([{'valueId': 'value-BETA-HEIGHT',
                                              'value': {'number': 181, 'unit': 'cm'}}]))
 
     def test_shared_boundary_rejects_nested_value_reassignment_in_one_transaction(self):
@@ -263,26 +263,26 @@ class SourceIdentityTests(unittest.TestCase):
         from scripts.core.structure_store import validate_structure
         source = load_structure(self.root)
         proposed = deepcopy(source)
-        source_attribute = next(row for row in proposed['attributes'] if row['attributeId'] == 'AT-BETA-HEIGHT')
+        source_attribute = next(row for row in proposed['attributes'] if row['attributeId'] == 'attribute-BETA-HEIGHT')
         value = source_attribute['values'].pop()
-        proposed['fieldDefinitions'].append({'fieldId': 'FD-OTHER-MEASUREMENT', 'key': 'other.measurement',
+        proposed['fieldDefinitions'].append({'fieldId': 'field-OTHER-MEASUREMENT', 'key': 'other.measurement',
             'label': '另一个尺寸', 'valueType': 'measurement', 'appliesTo': ['character']})
-        proposed['attributes'].append({'attributeId': 'AT-OTHER-MEASUREMENT', 'ownerId': 'C-ALPHA',
-                                      'fieldId': 'FD-OTHER-MEASUREMENT', 'values': [value]})
+        proposed['attributes'].append({'attributeId': 'attribute-OTHER-MEASUREMENT', 'ownerId': 'character-ALPHA',
+                                      'fieldId': 'field-OTHER-MEASUREMENT', 'values': [value]})
         validate_structure(proposed)
         before = self.snapshot()
         with self.assertRaises(StructureError) as error:
             require_fresh_source_identities(self.root, source, proposed)
         self.assertEqual(error.exception.code, 'SOURCE_VALUE_ID_REASSIGNED')
-        self.assertEqual(error.exception.details['changes'], [{'valueId': 'FV-BETA-HEIGHT',
-            'beforeAttributeId': 'AT-BETA-HEIGHT', 'afterAttributeId': 'AT-OTHER-MEASUREMENT'}])
+        self.assertEqual(error.exception.details['changes'], [{'valueId': 'value-BETA-HEIGHT',
+            'beforeAttributeId': 'attribute-BETA-HEIGHT', 'afterAttributeId': 'attribute-OTHER-MEASUREMENT'}])
         self.assertEqual(before, self.snapshot())
 
     def test_existing_planning_fragment_may_keep_id_when_author_changes_owner(self):
         self.commit(self.put(self.fragment()))
-        self.commit(self.put(self.fragment(ownerId='C-BETA')))
-        actual = next(row for row in load_structure(self.root)['fragments'] if row['fragmentId'] == 'SF-ORIGINAL')
-        self.assertEqual(actual['ownerId'], 'C-BETA')
+        self.commit(self.put(self.fragment(ownerId='character-BETA')))
+        actual = next(row for row in load_structure(self.root)['fragments'] if row['fragmentId'] == 'plan-ORIGINAL')
+        self.assertEqual(actual['ownerId'], 'character-BETA')
 
     def rewrite_plan(self, plan, transform):
         path = self.root / '.govel/plans' / f"{plan['operationId']}.json"
@@ -304,13 +304,13 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_rehashed_delete_plan_cannot_omit_initial_record_from_ledger(self):
         source = load_structure(self.root)
-        source['fragments'].append(self.fragment('SF-INITIAL'))
+        source['fragments'].append(self.fragment('plan-INITIAL'))
         write_json(self.root / '.govel/structure.json', source)
-        plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'SF-INITIAL'}])
-        self.assertEqual(plan['impact']['changedIds'], ['SF-INITIAL'])
+        plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'plan-INITIAL'}])
+        self.assertEqual(plan['impact']['changedIds'], ['plan-INITIAL'])
         tampered = self.rewrite_plan(plan, lambda value: value['impact'].update(changedIds=[]))
         self.assert_impact_rejected(tampered, ['changedIds'])
-        self.assertIn('SF-INITIAL', {row['fragmentId'] for row in load_structure(self.root)['fragments']})
+        self.assertIn('plan-INITIAL', {row['fragmentId'] for row in load_structure(self.root)['fragments']})
 
     def test_rehashed_plan_cannot_remove_or_fabricate_any_identity_projection(self):
         plan = self.put(self.fragment())
@@ -335,8 +335,8 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_nested_value_removal_must_be_in_committed_identity_projection(self):
         plan = self.update_beta_values([])
-        self.assertIn('FV-BETA-HEIGHT', plan['impact']['changedIds'])
-        tampered = self.rewrite_plan(plan, lambda value: value['impact']['changedIds'].remove('FV-BETA-HEIGHT'))
+        self.assertIn('value-BETA-HEIGHT', plan['impact']['changedIds'])
+        tampered = self.rewrite_plan(plan, lambda value: value['impact']['changedIds'].remove('value-BETA-HEIGHT'))
         self.assert_impact_rejected(tampered, ['changedIds'])
 
     def test_candidate_and_decision_changes_cannot_be_erased_from_rehashed_plan(self):
@@ -345,7 +345,7 @@ class SourceIdentityTests(unittest.TestCase):
         candidate = preview_candidate_change(self.root, action='create', expectedRevision=0,
             reason='保留未来候选', record={'title': '未来章节', 'summary': '待讨论的安排'})
         decision = preview_decision_change(self.root, action='create', expectedRevision=0,
-            reason='保留作者取舍', statement='先保留线索', rationale='等待比较', scopeIds=['C-ALPHA'])
+            reason='保留作者取舍', statement='先保留线索', rationale='等待比较', scopeIds=['character-ALPHA'])
         for plan, key in ((candidate, 'planningCandidateChanges'), (decision, 'authorDecisionChanges')):
             with self.subTest(key=key):
                 self.assertTrue(plan['impact'][key])
@@ -363,13 +363,13 @@ class SourceIdentityTests(unittest.TestCase):
 
     def test_initial_record_delete_is_recorded_and_blocks_later_reuse(self):
         source = load_structure(self.root)
-        source['fragments'].append(self.fragment('SF-INITIAL'))
+        source['fragments'].append(self.fragment('plan-INITIAL'))
         write_json(self.root / '.govel/structure.json', source)
-        plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'SF-INITIAL'}])
+        plan = self.preview([{'action': 'delete', 'collection': 'fragments', 'id': 'plan-INITIAL'}])
         self.commit(plan)
         journal = read_json(self.root / '.govel/operations' / f"{plan['operationId']}.json")
-        self.assertEqual(journal['impact']['changedIds'], ['SF-INITIAL'])
-        self.assert_retired(lambda: self.put(self.fragment('SF-INITIAL', ownerId='C-BETA')), 'SF-INITIAL')
+        self.assertEqual(journal['impact']['changedIds'], ['plan-INITIAL'])
+        self.assert_retired(lambda: self.put(self.fragment('plan-INITIAL', ownerId='character-BETA')), 'plan-INITIAL')
 
 
 if __name__ == '__main__':

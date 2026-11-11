@@ -14,20 +14,20 @@ from scripts.core.structure_store import (PROJECT_SCHEMA_VERSION, WORKFLOW_VERSI
                                           validate_structure)
 from scripts.core.source_placement import placement_from_volume
 
-VOLUME_A = 'VOL-REFACTOR-A'
-VOLUME_B = 'VOL-REFACTOR-B'
-ARC_MAIN = 'ARC-REFACTOR-MAIN'
-ARC_SIDE = 'ARC-REFACTOR-SIDE'
-UNIT_ONE = 'UN-REFACTOR-ONE'
-CHAPTER_ONE = 'CH-REFACTOR-0001'
-CHAPTER_TWO = 'CH-REFACTOR-0002'
-CHAPTER_THREE = 'CH-REFACTOR-0003'
-CHARACTER = 'C-REFACTOR-A'
-PROP = 'P-REFACTOR-KEY'
-LOCATION = 'L-REFACTOR-ROOM'
-CANDIDATE = 'PC-REFACTOR-0001'
-DECISION = 'DR-REFACTOR-0001'
-RELATION = 'REL-REFACTOR-0001'
+VOLUME_A = 'volume-REFACTOR-A'
+VOLUME_B = 'volume-REFACTOR-B'
+ARC_MAIN = 'arc-REFACTOR-MAIN'
+ARC_SIDE = 'arc-REFACTOR-SIDE'
+UNIT_ONE = 'unit-REFACTOR-ONE'
+CHAPTER_ONE = 'chapter-REFACTOR-0001'
+CHAPTER_TWO = 'chapter-REFACTOR-0002'
+CHAPTER_THREE = 'chapter-REFACTOR-0003'
+CHARACTER = 'character-REFACTOR-A'
+PROP = 'prop-REFACTOR-KEY'
+LOCATION = 'location-REFACTOR-ROOM'
+CANDIDATE = 'candidate-REFACTOR-0001'
+DECISION = 'decision-REFACTOR-0001'
+RELATION = 'relation-REFACTOR-0001'
 
 
 def refactor_project(root: Path, *, book_name: str = '山城旧事') -> dict:
@@ -116,10 +116,10 @@ def refactor_project(root: Path, *, book_name: str = '山城旧事') -> dict:
     for chapter in structure['chapters']:
         chapter['proseBinding'] = seal_binding(structure['projectId'], chapter['chapterId'], chapter['filePath'],
             state='managed', generation=1, expected_content_digest='sha256:'+sha256_text(bodies[chapter['chapterId']]))
-    structure['fieldDefinitions'] = [{'fieldId': 'FD-REFACTOR-PLAN', 'key': 'plot.plan', 'label': '章节计划', 'valueType': 'topic', 'appliesTo': ['chapter']}]
+    structure['fieldDefinitions'] = [{'fieldId': 'field-REFACTOR-PLAN', 'key': 'plot.plan', 'label': '章节计划', 'valueType': 'topic', 'appliesTo': ['chapter']}]
     for i, chapter in enumerate(structure['chapters']):
-        aid, fid = f'AT-REFACTOR-PLAN-{i}', f'SF-REFACTOR-PLAN-{i}'
-        structure['attributes'].append({'attributeId': aid, 'ownerId': chapter['chapterId'], 'fieldId': 'FD-REFACTOR-PLAN', 'values': []})
+        aid, fid = f'attribute-REFACTOR-PLAN-{i}', f'plan-REFACTOR-PLAN-{i}'
+        structure['attributes'].append({'attributeId': aid, 'ownerId': chapter['chapterId'], 'fieldId': 'field-REFACTOR-PLAN', 'values': []})
         structure['fragments'].append({'fragmentId': fid, 'ownerId': chapter['chapterId'], 'order': 1, 'text': '确认门口的钥匙。',
             'contentRole': 'plan', 'contentBindings': [aid], 'chapterContract': {'targetRange': [1, 1000], 'mode': 'plot', 'intensityLevel': 1}})
     validate_structure(structure)

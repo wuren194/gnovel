@@ -28,15 +28,15 @@ from tests.fixtures_current import initialize_project
 
 def batch_items():
     return [
-        {'kind': 'entity', 'recordId': 'C-ALPHA', 'patch': [{'op': 'set', 'path': ['summary'], 'value': '守门人'}],
-         'reason': '核对人物摘要', 'evidence': [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}]},
-        {'kind': 'attribute', 'recordId': 'AT-HEIGHT',
+        {'kind': 'entity', 'recordId': 'character-ALPHA', 'patch': [{'op': 'set', 'path': ['summary'], 'value': '守门人'}],
+         'reason': '核对人物摘要', 'evidence': [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}]},
+        {'kind': 'attribute', 'recordId': 'attribute-HEIGHT',
          'patch': [{'op': 'set', 'path': ['values', 0, 'value', 'number'], 'value': 185}],
-         'reason': '核对属性', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '他身高一米九。'}]},
-        {'kind': 'fact', 'recordId': 'SF-HEIGHT',
+         'reason': '核对属性', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '他身高一米九。'}]},
+        {'kind': 'fact', 'recordId': 'fact-HEIGHT',
          'patch': [{'op': 'text', 'path': ['text'], 'original': '一米九', 'replacement': '一米八五'}],
-         'reason': '统一事实表述', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]},
-        {'kind': 'relation', 'recordId': 'REL-AB', 'patch': [{'op': 'set', 'path': ['kind'], 'value': 'trusts'}],
+         'reason': '统一事实表述', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]},
+        {'kind': 'relation', 'recordId': 'relation-AB', 'patch': [{'op': 'set', 'path': ['kind'], 'value': 'trusts'}],
          'reason': '确认关系', 'evidenceMode': 'author_declaration', 'evidence': []},
     ]
 
@@ -47,8 +47,8 @@ class SourceProposalBatchTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = source_fixture(self.root)
-        self.source['relations'] = [{'relationId': 'REL-AB', 'fromEntity': 'C-ALPHA',
-                                     'toEntity': 'C-BETA', 'kind': 'protects'}]
+        self.source['relations'] = [{'relationId': 'relation-AB', 'fromEntity': 'character-ALPHA',
+                                     'toEntity': 'character-BETA', 'kind': 'protects'}]
         save_structure(self.root, self.source)
         self.source = load_structure(self.root)
         with project_lock(self.root):
@@ -171,7 +171,7 @@ class SourceProposalBatchTests(unittest.TestCase):
         for change, code in (
             (lambda items: items[-1].update(evidenceMode='source'), 'RELATION_EVIDENCE_REQUIRED'),
             (lambda items: items.append(deepcopy(items[0])), 'CANON_BATCH_DUPLICATE'),
-            (lambda items: items[-1].update(recordId='REL-MISSING'), 'SOURCE_RECORD_NOT_FOUND'),
+            (lambda items: items[-1].update(recordId='relation-MISSING'), 'SOURCE_RECORD_NOT_FOUND'),
             (lambda items: items[-1].update(kind='fact'), 'ARGUMENTS_INVALID'),
         ):
             items = batch_items()
@@ -186,12 +186,12 @@ class SourceProposalBatchTests(unittest.TestCase):
 
     def test_original_field_owner_relation_endpoint_and_evidence_guards_remain(self):
         cases = [
-            (0, [{'op': 'set', 'path': ['entityId'], 'value': 'C-OTHER'}], 'CANON_FIELD_INVALID'),
+            (0, [{'op': 'set', 'path': ['entityId'], 'value': 'character-OTHER'}], 'CANON_FIELD_INVALID'),
             (0, [{'op': 'set', 'path': ['status'], 'value': []}], 'CANON_VALUE_INVALID'),
             (0, [{'op': 'set', 'path': ['summary'], 'value': 'x'}, {'op': 'set', 'path': ['aliases'], 'value': ['x']}], 'RECORD_PATCH_INVALID'),
-            (1, [{'op': 'set', 'path': ['ownerId'], 'value': 'C-BETA'}], 'CONTENT_PROPOSAL_INVALID'),
+            (1, [{'op': 'set', 'path': ['ownerId'], 'value': 'character-BETA'}], 'CONTENT_PROPOSAL_INVALID'),
             (2, [{'op': 'set', 'path': ['contentRole'], 'value': 'plan'}], 'CONTENT_PROPOSAL_INVALID'),
-            (3, [{'op': 'set', 'path': ['toEntity'], 'value': 'C-ALPHA'}], 'RELATION_PROPOSAL_INVALID'),
+            (3, [{'op': 'set', 'path': ['toEntity'], 'value': 'character-ALPHA'}], 'RELATION_PROPOSAL_INVALID'),
         ]
         for index, patch_value, code in cases:
             items = batch_items()
@@ -209,17 +209,17 @@ class SourceProposalBatchTests(unittest.TestCase):
 
     def test_display_chapter_scope_is_resolved_once_without_bypassing_registered_references(self):
         source = load_structure(self.root)
-        chapter = single_source_chapter(source, 'CH-SCOPE', volume_id=source['volumes'][0]['volumeId'])
+        chapter = single_source_chapter(source, 'chapter-SCOPE', volume_id=source['volumes'][0]['volumeId'])
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-        source['references'].append({'sourceId': chapter['chapterId'], 'targetId': 'C-ALPHA', 'kind': 'uses'})
+        source['references'].append({'sourceId': chapter['chapterId'], 'targetId': 'character-ALPHA', 'kind': 'uses'})
         write_json(self.root/'.govel/structure.json', source)
         source = load_structure(self.root)
         item = {**batch_items()[0], 'chapterId': 'CH001'}
         preview = self.preview(sourceHash=snapshot_hash(source), items=[item])
         plan = read_json(self.plan_file(preview))
-        self.assertEqual(plan['parameters']['proposals'][0]['proposal']['sourceChapterId'], 'CH-SCOPE')
-        item['recordId'] = 'C-BETA'
+        self.assertEqual(plan['parameters']['proposals'][0]['proposal']['sourceChapterId'], 'chapter-SCOPE')
+        item['recordId'] = 'character-BETA'
         with self.assertRaises(StructureError) as caught:
             self.preview(sourceHash=snapshot_hash(source), items=[item], requestId='out-of-scope')
         self.assertEqual(caught.exception.code, 'SESSION_REF_INVALID')
@@ -227,16 +227,16 @@ class SourceProposalBatchTests(unittest.TestCase):
 
     def test_relation_source_evidence_keeps_both_endpoint_requirements(self):
         source = load_structure(self.root)
-        source['fragments'].append({'fragmentId': 'SF-RELATION', 'ownerId': 'C-ALPHA', 'text': '甲和乙有约定。',
-                                    'order': 90, 'contentRole': 'fact', 'contentBindings': ['AT-LIFE'], 'dependsOn': ['C-BETA']})
+        source['fragments'].append({'fragmentId': 'fact-RELATION', 'ownerId': 'character-ALPHA', 'text': '甲和乙有约定。',
+                                    'order': 90, 'contentRole': 'fact', 'contentBindings': ['attribute-LIFE'], 'dependsOn': ['character-BETA']})
         save_structure(self.root, source)
         source = load_structure(self.root)
         item = {**batch_items()[3], 'evidenceMode': 'source',
-                'evidence': [{'fragmentId': 'SF-RELATION', 'quote': '甲和乙有约定。'}]}
+                'evidence': [{'fragmentId': 'fact-RELATION', 'quote': '甲和乙有约定。'}]}
         preview = self.preview(sourceHash=snapshot_hash(source), items=[item])
         plan = read_json(self.plan_file(preview))
         self.assertEqual(plan['parameters']['proposals'][0]['proposal']['evidenceMode'], 'source')
-        item['evidence'] = [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}]
+        item['evidence'] = [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}]
         with self.assertRaises(StructureError) as caught:
             self.preview(sourceHash=snapshot_hash(source), items=[item], requestId='unrelated-evidence')
         self.assertEqual(caught.exception.code, 'RELATION_EVIDENCE_SCOPE_INVALID')
@@ -342,8 +342,8 @@ class SourceProposalBatchTests(unittest.TestCase):
     def test_single_entity_and_relation_proposals_also_link_maintenance(self):
         reference = self.checklist()
         for index, resolver, arguments, operation in (
-            (0, 'source.canon-resolve', {'selector': 'C-ALPHA'}, 'source.canon-proposal-preview'),
-            (3, 'source.relation-resolve', {'relationId': 'REL-AB'}, 'source.relation-proposal-preview'),
+            (0, 'source.canon-resolve', {'selector': 'character-ALPHA'}, 'source.canon-proposal-preview'),
+            (3, 'source.relation-resolve', {'relationId': 'relation-AB'}, 'source.relation-proposal-preview'),
         ):
             item = batch_items()[index]
             resolved = call_operation(resolver, self.root, arguments)

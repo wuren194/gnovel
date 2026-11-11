@@ -947,7 +947,7 @@ def build_parser() -> argparse.ArgumentParser:
     graph_cmd.add_argument("--format", choices=["json", "mermaid"], default="json")
     graph_cmd.add_argument("--output", default=None, help="把 mermaid 视图写入项目内文件（带 GENERATED 标记；不带标记的既有文件拒写）")
     preview = structure_sub.add_parser("insert-preview", description="预览新建章节，明确卷与主弧后提交；不推断下一章是否已获批准。")
-    preview.set_defaults(operation_examples=({'title': '工作标题', 'volumeId': 'VOL-EXAMPLE', 'primaryArcId': 'ARC-EXAMPLE'},))
+    preview.set_defaults(operation_examples=({'title': '工作标题', 'volumeId': 'volume-EXAMPLE', 'primaryArcId': 'arc-EXAMPLE'},))
     preview.add_argument("--project-root", default=".")
     preview.add_argument("--title", required=True)
     preview.add_argument("--volume-id", required=True)

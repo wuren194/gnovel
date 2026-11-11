@@ -10,7 +10,7 @@ from pathlib import Path
 from scripts.core.project import toolbox_manifest
 from scripts.core.prompt_plan import PromptPlanError, resolve_prompt_plan
 from scripts.core.structure_store import save_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,7 +20,7 @@ class ChapterPromptContextTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         self.chapter_id = self.fixture["chapterIds"][0]
         self.entry = toolbox_manifest()["promptPlan"]["govel-editor"]["conditional"][0]
 
@@ -48,7 +48,7 @@ class ChapterPromptContextTests(unittest.TestCase):
 
     def test_unknown_chapter_fails_closed(self):
         with self.assertRaises(PromptPlanError) as caught:
-            resolve_prompt_plan(self.root, "govel-editor", chapter_id="CH-NOTFOUND")
+            resolve_prompt_plan(self.root, "govel-editor", chapter_id="chapter-NOTFOUND")
         self.assertEqual(caught.exception.code, "CHAPTER_NOT_FOUND")
 
     def test_cli_accepts_chapter_id(self):

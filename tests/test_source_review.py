@@ -24,14 +24,14 @@ class SourceReviewTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.source = source_fixture(self.root)
 
-    def review(self, rid='SF-HEIGHT', decision='compatible'):
+    def review(self, rid='fact-HEIGHT', decision='compatible'):
         row = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == rid)
         text = read_fragment(self.root, **row['locator'])['text']
         return {k: row[k] for k in ('recordId', 'inputHash', 'contentHash')} | {
             'decision': decision, 'reason': '逐项核对该片段的登记依据。',
             'evidence': [{'start': 0, 'end': len(text), 'text': text}]}
 
-    def change(self, *, target='AT-HEIGHT', value=185):
+    def change(self, *, target='attribute-HEIGHT', value=185):
         plan = attribute_value_proposal(self.root, target, value)
         commit(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True, actor='test')
 
@@ -46,10 +46,10 @@ class SourceReviewTests(unittest.TestCase):
     def test_registered_input_change_invalidates_only_related_review(self):
         old = self.review()
         submit_review(self.root, requestId='checked', reviews=[old])
-        self.change(target='AT-BETA-HEIGHT', value=175)
-        self.assertEqual(next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')['status'], 'compatible')
+        self.change(target='attribute-BETA-HEIGHT', value=175)
+        self.assertEqual(next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'fact-HEIGHT')['status'], 'compatible')
         self.change()
-        row = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')
+        row = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'fact-HEIGHT')
         self.assertEqual(row['status'], 'pending')
         with self.assertRaises(StructureError) as error:
             submit_review(self.root, requestId='old-inputs', reviews=[old])
@@ -101,12 +101,12 @@ class SourceReviewTests(unittest.TestCase):
         submit_review(self.root, requestId='checked', reviews=[self.review()])
         self.source['attributes'][0]['values'][0]['value']['number'] = 185
         write_json(self.root / '.govel/structure.json', self.source)
-        self.assertEqual(next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')['status'], 'stale')
+        self.assertEqual(next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'fact-HEIGHT')['status'], 'stale')
 
     def test_compatible_state_without_matching_receipt_cannot_pass(self):
         row = self.review()
-        write_json(self.root / REVIEW_PATH, {'items': {'SF-HEIGHT': {
-            'recordId': 'SF-HEIGHT', 'inputHash': row['inputHash'], 'status': 'compatible'}}})
+        write_json(self.root / REVIEW_PATH, {'items': {'fact-HEIGHT': {
+            'recordId': 'fact-HEIGHT', 'inputHash': row['inputHash'], 'status': 'compatible'}}})
         with self.assertRaises(StructureError) as error: render_source(self.root, requireReviewed=True)
         self.assertEqual(error.exception.code, 'SOURCE_REVIEW_INVALID')
 
@@ -137,12 +137,12 @@ class SourceReviewTests(unittest.TestCase):
             receipt = submit_review(self.root, requestId=decision, reviews=[review])
             self.change(value=185)
             self.change(value=190)
-            row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'SF-HEIGHT')
+            row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'fact-HEIGHT')
             self.assertEqual((row['status'], row['receiptId']), (decision, receipt['receiptId']))
-            self.assertIn('SF-HEIGHT', [row['recordId'] for row in triage_reviews(self.root)['items']])
-            self.assertIn('SF-HEIGHT', [row['recordId'] for row in triage_reviews(self.root, statuses=[decision])['items']])
+            self.assertIn('fact-HEIGHT', [row['recordId'] for row in triage_reviews(self.root)['items']])
+            self.assertIn('fact-HEIGHT', [row['recordId'] for row in triage_reviews(self.root, statuses=[decision])['items']])
             with self.assertRaises(StructureError):
-                render_source(self.root, selection={'includeAttributes': ['AT-HEIGHT']}, requireReviewed=True)
+                render_source(self.root, selection={'includeAttributes': ['attribute-HEIGHT']}, requireReviewed=True)
 
     def test_latest_matching_receipt_with_bad_content_or_quote_cannot_resurrect_old_pass(self):
         from scripts.core.source_review import fingerprint, query_receipt
@@ -156,7 +156,7 @@ class SourceReviewTests(unittest.TestCase):
             review[field] = '0' * 64 if field == 'contentHash' else [{'start': 0, 'end': 1, 'text': '错'}]
             receipt['requestHash'] = fingerprint({'actor': receipt['actor'], 'reviews': receipt['reviews']})
             write_json(self.root / RECEIPTS_PATH, history)
-            row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'SF-HEIGHT')
+            row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'fact-HEIGHT')
             self.assertEqual(row['status'], 'pending')
             self.assertNotEqual(row['receiptId'], first['receiptId'])
             self.assertFalse(query_receipt(self.root, receiptId=latest['receiptId'])['items'][0]['inputsStillCurrent'])
@@ -180,10 +180,10 @@ class SourceReviewTests(unittest.TestCase):
         register_and_approve(self.root, cid, 'stage_b_review', {
             'verdict': 'POLISH_READY', 'sourcePlanHash': plan_hash,
             'finalProseSha256': sha256_text(text), 'slots': evidenced_slots(text), 'findings': []})
-        submit_review(self.root, requestId='plan-reviewed', reviews=[self.review('SF-PLAN')])
+        submit_review(self.root, requestId='plan-reviewed', reviews=[self.review('plan-PLAN')])
         self.change(value=185)
         self.change(value=190)
-        row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'SF-PLAN')
+        row = next(row for row in query_reviews(self.root)['items'] if row['recordId'] == 'plan-PLAN')
         self.assertEqual(row['status'], 'compatible')
         current = read_json(self.root / '.govel/workflow.json')
         self.assertFalse(current['approvals'][cid]['approved'])

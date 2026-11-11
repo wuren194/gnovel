@@ -24,7 +24,7 @@ from scripts.core.structure_store import load_structure, validate_structure, Str
 from scripts.core.structure_transaction import commit
 from scripts.core.workflow import approve_artifacts, default_workflow, WorkflowError
 from scripts.novelctl import main
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import (evidenced_slots, register_and_approve,
                                      review_ready_project, run_and_approve_diagnostics)
 from tests.test_time_dependency_closure import time_plan_source, move_anchor
@@ -35,11 +35,11 @@ class InvalidatedArtifactApprovalTests(unittest.TestCase):
         for kind in ('stage_a_review', 'stage_b_review', 'candidate_prose', 'diagnostics', 'state_candidate'):
             with self.subTest(kind=kind):
                 workflow = default_workflow()
-                workflow['artifacts']['CH-TEST'] = {kind: {
+                workflow['artifacts']['chapter-TEST'] = {kind: {
                     'artifactSha256': 'old', 'invalidatedBy': 'source_dependencies_changed'}}
                 before = deepcopy(workflow)
                 with self.assertRaises(WorkflowError) as caught:
-                    approve_artifacts(workflow, 'CH-TEST', artifact_hashes={kind: 'old'}, approval_mode='manual')
+                    approve_artifacts(workflow, 'chapter-TEST', artifact_hashes={kind: 'old'}, approval_mode='manual')
                 self.assertEqual(caught.exception.code, 'ARTIFACT_SOURCE_CHANGED')
                 self.assertEqual(workflow, before)
 
@@ -47,28 +47,28 @@ class InvalidatedArtifactApprovalTests(unittest.TestCase):
         for previously_approved in (True, False):
             with self.subTest(previously_approved=previously_approved):
                 workflow = default_workflow()
-                workflow['artifacts']['CH-TEST'] = {
+                workflow['artifacts']['chapter-TEST'] = {
                     'stage_a_review': {'artifactSha256': 'a'},
                     'stage_b_review': {'artifactSha256': 'b', 'invalidatedBy': 'source_dependencies_changed'},
                     'diagnostics': {'artifactSha256': 'new-d'},
                     'state_candidate': {'artifactSha256': 'state'},
                 }
-                workflow['approvals']['CH-TEST'] = {'approved': previously_approved,
+                workflow['approvals']['chapter-TEST'] = {'approved': previously_approved,
                     'artifactHashes': {'stage_a_review': 'a', 'stage_b_review': 'b',
                                        'diagnostics': 'old-d', 'title_candidates': 'removed'}}
-                approve_artifacts(workflow, 'CH-TEST', artifact_hashes={'state_candidate': 'state'},
+                approve_artifacts(workflow, 'chapter-TEST', artifact_hashes={'state_candidate': 'state'},
                                   approval_mode='manual')
-                self.assertEqual(workflow['approvals']['CH-TEST']['artifactHashes'],
+                self.assertEqual(workflow['approvals']['chapter-TEST']['artifactHashes'],
                                  {'state_candidate': 'state', **({'stage_a_review': 'a'} if previously_approved else {})})
 
     def test_source_invalidation_rejects_malformed_history_without_writes(self):
         before = time_plan_source()
-        after = move_anchor(before, 'TA-START', 2)
+        after = move_anchor(before, 'time-START', 2)
         for history in (None, {}, ['not a record']):
             with self.subTest(history=history), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
                 workflow = default_workflow()
-                workflow['artifacts']['CH-TIME'] = {'stage_b_review': {
+                workflow['artifacts']['chapter-TIME'] = {'stage_b_review': {
                     'artifactSha256': 'prior', 'repairHistory': history}}
                 path = root / '.govel/workflow.json'
                 write_json(path, workflow)
@@ -82,20 +82,20 @@ class InvalidatedArtifactApprovalTests(unittest.TestCase):
     def test_time_change_cannot_reapprove_or_rebind_old_review_but_new_review_can_finalize(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
-            fixture = create_schema5_project(root, chapter_count=2)
+            fixture = create_current_project(root, chapter_count=2)
             source, chapter_id, other_id = fixture['structure'], *fixture['chapterIds']
             source['entities'].extend([
-                {'entityId': 'TA-REVIEW', 'entityType': 'time_anchor', 'name': '行程起点', 'timeOrdinal': 0},
-                {'entityId': 'E-REVIEW', 'entityType': 'event', 'name': '出发',
-                 'timeSpec': {'kind': 'relative', 'anchorId': 'TA-REVIEW', 'offset': 3}},
+                {'entityId': 'time-REVIEW', 'entityType': 'time_anchor', 'name': '行程起点', 'timeOrdinal': 0},
+                {'entityId': 'event-REVIEW', 'entityType': 'event', 'name': '出发',
+                 'timeSpec': {'kind': 'relative', 'anchorId': 'time-REVIEW', 'offset': 3}},
             ])
-            source['fragments'][0]['dependsOn'] = ['E-REVIEW']
-            source['fieldDefinitions'].append({'fieldId': 'FD-TIME-EVIDENCE', 'key': 'time.evidence',
+            source['fragments'][0]['dependsOn'] = ['event-REVIEW']
+            source['fieldDefinitions'].append({'fieldId': 'field-TIME-EVIDENCE', 'key': 'time.evidence',
                 'label': '时间依据', 'valueType': 'topic', 'appliesTo': ['time_anchor']})
-            source['attributes'].append({'attributeId': 'AT-TIME-EVIDENCE', 'ownerId': 'TA-REVIEW',
-                'fieldId': 'FD-TIME-EVIDENCE', 'values': []})
-            source['fragments'].append({'fragmentId': 'SF-TIME-EVIDENCE', 'ownerId': 'TA-REVIEW',
-                'text': '已核对日期。', 'order': 1, 'contentRole': 'fact', 'contentBindings': ['AT-TIME-EVIDENCE']})
+            source['attributes'].append({'attributeId': 'attribute-TIME-EVIDENCE', 'ownerId': 'time-REVIEW',
+                'fieldId': 'field-TIME-EVIDENCE', 'values': []})
+            source['fragments'].append({'fragmentId': 'fact-TIME-EVIDENCE', 'ownerId': 'time-REVIEW',
+                'text': '已核对日期。', 'order': 1, 'contentRole': 'fact', 'contentBindings': ['attribute-TIME-EVIDENCE']})
             validate_structure(source)
             write_json(root / '.govel/structure.json', source)
             review_ready_project(root)
@@ -154,9 +154,9 @@ class InvalidatedArtifactApprovalTests(unittest.TestCase):
             source = load_structure(root)
             unrelated_hash = chapter_plan(source, other_id)['sourcePlanHash']
             proposal = preview_proposal_batch(root, sourceHash=snapshot_hash(source), items=[{
-                'kind': 'entity', 'recordId': 'TA-REVIEW',
+                'kind': 'entity', 'recordId': 'time-REVIEW',
                 'patch': [{'op': 'set', 'path': ['timeOrdinal'], 'value': 2}], 'reason': '核对日期',
-                'evidence': [{'fragmentId': 'SF-TIME-EVIDENCE', 'quote': '已核对日期。'}],
+                'evidence': [{'fragmentId': 'fact-TIME-EVIDENCE', 'quote': '已核对日期。'}],
             }], requestId='move-time', approvalActor='test', approvalEvidence='中性夹具批准')
             receipt = commit(root, operation_id=proposal['operationId'], plan_hash=proposal['planHash'],
                              approved=True, actor='test')

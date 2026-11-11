@@ -426,7 +426,7 @@ class ChapterCreationFlowTests(unittest.TestCase):
     def test_source_field_and_dependency_errors_leave_canon_untouched(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve(); source = self.make_project(root, True)
-            for bad in ({'planField': '不存在'}, {'dependsOn': ['SF-MISSING']},
+            for bad in ({'planField': '不存在'}, {'dependsOn': ['fact-MISSING']},
                         {'chapterContract': {'targetRange': [0, 10]}}):
                 before = inventory(root)
                 with self.subTest(bad=bad), self.assertRaises(ValueError):
@@ -440,7 +440,7 @@ class ChapterCreationFlowTests(unittest.TestCase):
             args = {**self.chapter_args(source, True), 'outlineText': '完整章节计划。\n' * 4000}
             preview = call_operation('workflow.chapter-preview', root, args)
             self.assertTrue(preview['responseCompacted'])
-            self.assertTrue(preview['identities']['chapterId'].startswith('CH-'))
+            self.assertTrue(preview['identities']['chapterId'].startswith('chapter-'))
             self.assertLessEqual(len(json.dumps(preview, ensure_ascii=False, separators=(',', ':')).encode()),
                                  query_policy()['maxBytes']['detail'])
             commit(root, preview)

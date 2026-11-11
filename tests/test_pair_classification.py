@@ -21,15 +21,15 @@ from scripts.core.source_plan import chapter_plan
 from scripts.core.structure_store import StructureError, load_structure, validate_structure
 from scripts.core.workflow import approve_artifacts, WorkflowError
 from scripts.mcp_server import handle
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import register_and_approve, review_ready_project
 
 CONDITION = {'field': 'design.pairs[].visualPolarity', 'op': 'eq', 'value': '角色乙强势'}
 ASSESSED = {'status': 'assessed', 'reason': '测试作者已逐项盘点当前配对。'}
 
 
-def pair(rid='PAIR-AB', *, value='角色乙强势', members=None, scope=None):
-    row = {'pairId': rid, 'characterIds': members or ['C-TEST-ALPHA', 'C-BETA'],
+def pair(rid='pair-AB', *, value='角色乙强势', members=None, scope=None):
+    row = {'pairId': rid, 'characterIds': members or ['character-TEST-ALPHA', 'character-BETA'],
            'visualPolarityState': 'known', 'visualPolarity': value}
     if scope is not None:
         row['scopeIds'] = scope
@@ -40,11 +40,11 @@ class PairClassificationTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
-        fixture = create_schema5_project(self.root, chapter_count=2)
+        fixture = create_current_project(self.root, chapter_count=2)
         self.source = fixture['structure']; self.cid, self.other = fixture['chapterIds']
         self.source['pairAssessment'] = {'status': 'unassessed'}
         self.source['entities'].extend({'entityId': rid, 'entityType': 'character', 'name': name}
-            for rid, name in [('C-BETA', '人物乙'), ('C-GAMMA', '人物丙'), ('C-DELTA', '人物丁')])
+            for rid, name in [('character-BETA', '人物乙'), ('character-GAMMA', '人物丙'), ('character-DELTA', '人物丁')])
         self.save()
 
     def save(self):
@@ -56,7 +56,7 @@ class PairClassificationTests(unittest.TestCase):
 
     def declared(self):
         self.source['pairAssessment'] = deepcopy(ASSESSED)
-        self.source['pairs'] = [pair(scope=[self.cid]), pair('PAIR-CD', members=['C-GAMMA', 'C-DELTA'],
+        self.source['pairs'] = [pair(scope=[self.cid]), pair('pair-CD', members=['character-GAMMA', 'character-DELTA'],
                                                            value='角色甲强势', scope=[self.other])]
         self.save()
 
@@ -99,29 +99,29 @@ class PairClassificationTests(unittest.TestCase):
         self.assertFalse(result['complete'])
         self.assertTrue(result['conditional'][0]['matched'])
         self.assertEqual(result['conditional'][0]['evidence']['status'], 'unresolved')
-        self.assertEqual(result['warnings'][0]['unresolvedInputs'][0]['pairId'], 'PAIR-CD')
+        self.assertEqual(result['warnings'][0]['unresolvedInputs'][0]['pairId'], 'pair-CD')
         self.assertTrue(any(row['kind'] == 'conditional' for row in result['contracts']))
 
     def test_missing_classification_is_unassessed_not_negative(self):
         self.source['pairAssessment'] = deepcopy(ASSESSED)
-        self.source['pairs'] = [{'pairId': 'PAIR-AB', 'characterIds': ['C-TEST-ALPHA', 'C-BETA']}]
+        self.source['pairs'] = [{'pairId': 'pair-AB', 'characterIds': ['character-TEST-ALPHA', 'character-BETA']}]
         self.save()
         matched, evidence = evaluate_condition(self.source, CONDITION)
         self.assertIsNone(matched); self.assertEqual(evidence['status'], 'unresolved')
 
     def test_pair_explicit_not_applicable_is_distinct_from_unknown(self):
         self.source['pairAssessment'] = deepcopy(ASSESSED)
-        self.source['pairs'] = [{'pairId': 'PAIR-AB', 'characterIds': ['C-TEST-ALPHA', 'C-BETA'],
+        self.source['pairs'] = [{'pairId': 'pair-AB', 'characterIds': ['character-TEST-ALPHA', 'character-BETA'],
                                 'visualPolarityState': 'not_applicable', 'reason': '作者未以双方角色外形分类。'}]
         self.save()
         matched, evidence = evaluate_condition(self.source, CONDITION)
         self.assertFalse(matched); self.assertEqual(evidence['status'], 'not_matched')
 
     def test_invalid_records_fail_closed_without_writes(self):
-        bad = [{}, {**pair(), 'visualPolarity': '无效角色分类'}, {**pair(), 'characterIds': ['C-BETA', 'C-BETA']},
-               {**pair(), 'characterIds': ['C-BETA', 'P-TEST-KEY']}, {**pair(), 'pairId': 'wrong'},
-               {**pair(), 'visualPolarityState': []}, {**pair(), 'scopeIds': ['CH-MISSING']},
-               {**pair(), 'dominantRole': 'typo'}, {**pair(), 'visibleTo': 'C-BETA'}]
+        bad = [{}, {**pair(), 'visualPolarity': '无效角色分类'}, {**pair(), 'characterIds': ['character-BETA', 'character-BETA']},
+               {**pair(), 'characterIds': ['character-BETA', 'prop-TEST-KEY']}, {**pair(), 'pairId': 'wrong'},
+               {**pair(), 'visualPolarityState': []}, {**pair(), 'scopeIds': ['chapter-MISSING']},
+               {**pair(), 'dominantRole': 'typo'}, {**pair(), 'visibleTo': 'character-BETA'}]
         for row in bad:
             with self.subTest(row=row):
                 before = self.snapshot()
@@ -146,29 +146,29 @@ class PairClassificationTests(unittest.TestCase):
 
     def test_assessment_conflicts_and_duplicate_endpoint_records_are_rejected(self):
         for rows, status in (([], 'assessed'), ([pair()], 'not_applicable'),
-                              ([pair(), pair('PAIR-BA')], 'assessed')):
+                              ([pair(), pair('pair-BA')], 'assessed')):
             source = {**self.source, 'pairs': rows, 'pairAssessment': {'status': status, 'reason': '测试'}}
             with self.assertRaises(StructureError): validate_structure(source)
 
     def test_pair_identity_is_indexed_and_available_to_dependencies(self):
         self.declared()
-        self.source['fragments'][0]['dependsOn'].append('PAIR-AB')
+        self.source['fragments'][0]['dependsOn'].append('pair-AB')
         validate_structure(self.source)
         index = SourceIndex.build(self.source)
-        self.assertEqual(index.owner_types['PAIR-AB'], 'pair')
-        self.assertIn('PAIR-AB', index.records)
+        self.assertEqual(index.owner_types['pair-AB'], 'pair')
+        self.assertIn('pair-AB', index.records)
         self.assertIn('pairs', source_schema()['mutableCollections'])
 
     def test_pair_dependency_outside_declared_scope_is_rejected_instead_of_hidden(self):
         self.declared()
         changed = deepcopy(self.source)
-        changed['fragments'][1]['dependsOn'] = ['PAIR-AB']
+        changed['fragments'][1]['dependsOn'] = ['pair-AB']
         with self.assertRaises(StructureError) as caught:
             validate_structure(changed)
         self.assertIn('PAIR_DEPENDENCY_SCOPE_CONFLICT', [row['code'] for row in caught.exception.details['errors']])
         # Transitive dependencies through another fragment must not bypass scope.
         changed = deepcopy(self.source)
-        changed['fragments'][0]['dependsOn'] = ['PAIR-AB']
+        changed['fragments'][0]['dependsOn'] = ['pair-AB']
         changed['fragments'][1]['dependsOn'] = [changed['fragments'][0]['fragmentId']]
         with self.assertRaises(StructureError): validate_structure(changed)
         changed['pairs'][0]['scopeIds'].append(self.other)
@@ -177,18 +177,18 @@ class PairClassificationTests(unittest.TestCase):
     def test_ancestor_plan_and_character_reference_cannot_hide_out_of_scope_pair(self):
         self.declared()
         changed = deepcopy(self.source)
-        changed['fragments'].append({**deepcopy(changed['fragments'][0]), 'fragmentId': 'SF-GLOBAL',
-            'ownerId': changed['projectId'], 'dependsOn': ['PAIR-AB']})
+        changed['fragments'].append({**deepcopy(changed['fragments'][0]), 'fragmentId': 'plan-GLOBAL',
+            'ownerId': changed['projectId'], 'dependsOn': ['pair-AB']})
         changed['fragments'][-1].pop('chapterContract')
         with self.assertRaises(StructureError) as caught:
             validate_structure(changed)
         self.assertIn('PAIR_DEPENDENCY_SCOPE_CONFLICT', [r['code'] for r in caught.exception.details['errors']])
         changed = deepcopy(self.source)
-        changed['fieldDefinitions'].append({'fieldId': 'FD-PAIRREF', 'key': 'pair.reference', 'label': '配对引用',
+        changed['fieldDefinitions'].append({'fieldId': 'field-PAIRREF', 'key': 'pair.reference', 'label': '配对引用',
             'valueType': 'reference', 'appliesTo': ['character']})
-        changed['attributes'].append({'attributeId': 'AT-PAIRREF', 'ownerId': 'C-GAMMA', 'fieldId': 'FD-PAIRREF',
-            'values': [{'valueId': 'FV-PAIRREF', 'value': 'PAIR-AB'}]})
-        changed['references'].append({'sourceId': self.other, 'targetId': 'C-GAMMA', 'kind': 'character'})
+        changed['attributes'].append({'attributeId': 'attribute-PAIRREF', 'ownerId': 'character-GAMMA', 'fieldId': 'field-PAIRREF',
+            'values': [{'valueId': 'value-PAIRREF', 'value': 'pair-AB'}]})
+        changed['references'].append({'sourceId': self.other, 'targetId': 'character-GAMMA', 'kind': 'character'})
         with self.assertRaises(StructureError) as caught:
             validate_structure(changed)
         self.assertIn('PAIR_DEPENDENCY_SCOPE_CONFLICT', [r['code'] for r in caught.exception.details['errors']])
@@ -236,7 +236,7 @@ class PairClassificationTests(unittest.TestCase):
         self.assertTrue(call_operation('source.change-preview', self.root, args)['alreadyCommitted'])
         source = load_structure(self.root)
         self.assertEqual(source['revision'], self.source['revision'] + 1)
-        self.assertTrue(source['pairs'][0]['pairId'].startswith('PAIR-'))
+        self.assertTrue(source['pairs'][0]['pairId'].startswith('pair-'))
         before = self.snapshot()
         page = query_pairs(self.root, limit=1)
         self.assertEqual(page['items'], source['pairs']); self.assertEqual(self.snapshot(), before)
@@ -244,7 +244,7 @@ class PairClassificationTests(unittest.TestCase):
     def test_new_pair_and_endpoints_can_use_handles_in_one_batch(self):
         changes = [{'action': 'put', 'collection': 'entities', 'record': {
             'entityId': '$new', 'entityType': 'character', 'name': '新人物'}},
-            {'action': 'put', 'collection': 'pairs', 'record': pair('$pair', members=['$new', 'C-BETA'])}]
+            {'action': 'put', 'collection': 'pairs', 'record': pair('$pair', members=['$new', 'character-BETA'])}]
         proposed, identities = apply_changes(self.source, changes, pair_assessment=ASSESSED)
         self.assertEqual(proposed['pairs'][0]['characterIds'][0], identities['$new'])
         self.assertEqual(proposed['pairs'][0]['pairId'], identities['$pair'])
@@ -252,7 +252,7 @@ class PairClassificationTests(unittest.TestCase):
     def test_two_scoped_pairs_query_is_read_only_and_cursor_bound(self):
         self.declared(); before = self.snapshot()
         first = query_pairs(self.root, limit=1); second = query_pairs(self.root, limit=1, cursor=first['nextCursor'])
-        self.assertEqual([r['pairId'] for r in first['items'] + second['items']], ['PAIR-AB', 'PAIR-CD'])
+        self.assertEqual([r['pairId'] for r in first['items'] + second['items']], ['pair-AB', 'pair-CD'])
         self.assertEqual(self.snapshot(), before)
         self.source['pairs'][0]['visualPolarity'] = '双方强势'; self.save()
         with self.assertRaises(StructureError) as caught:
@@ -292,20 +292,20 @@ class PairClassificationTests(unittest.TestCase):
     def test_prepared_pov_pair_read_preserves_explicit_visibility_without_private_inventory(self):
         self.source['pairAssessment'] = {'status': 'assessed', 'reason': '库存秘密：隐藏的配对理由不能进入视角读取。'}
         self.source['pairs'] = [
-            {**pair('PAIR-PUBLIC'), 'visibility': 'public', 'reason': '公开配对资料。'},
-            {**pair('PAIR-PERMITTED', members=['C-GAMMA', 'C-DELTA']),
-             'visibleTo': ['C-TEST-ALPHA'], 'reason': '仅向甲公开的配对资料。'},
-            {**pair('PAIR-PRIVATE', members=['C-TEST-ALPHA', 'C-GAMMA']),
+            {**pair('pair-PUBLIC'), 'visibility': 'public', 'reason': '公开配对资料。'},
+            {**pair('pair-PERMITTED', members=['character-GAMMA', 'character-DELTA']),
+             'visibleTo': ['character-TEST-ALPHA'], 'reason': '仅向甲公开的配对资料。'},
+            {**pair('pair-PRIVATE', members=['character-TEST-ALPHA', 'character-GAMMA']),
              'visibility': 'private', 'reason': '私密配对字段不得泄漏。'},
-            {**pair('PAIR-OTHER', members=['C-BETA', 'C-GAMMA']),
-             'visibleTo': ['C-BETA'], 'reason': '仅对乙开放的秘密。'},
-            {**pair('PAIR-UNDECLARED', members=['C-BETA', 'C-DELTA']), 'reason': '没有可见性不等于可见。'},
-            {**pair('PAIR-OVERRIDE', members=['C-TEST-ALPHA', 'C-DELTA']),
+            {**pair('pair-OTHER', members=['character-BETA', 'character-GAMMA']),
+             'visibleTo': ['character-BETA'], 'reason': '仅对乙开放的秘密。'},
+            {**pair('pair-UNDECLARED', members=['character-BETA', 'character-DELTA']), 'reason': '没有可见性不等于可见。'},
+            {**pair('pair-OVERRIDE', members=['character-TEST-ALPHA', 'character-DELTA']),
              'visibility': 'public', 'visibleTo': [], 'reason': '显式空受众优先于public。'}]
         self.save()
         before = self.snapshot()
-        pages, records = self.read_prepared_pairs(pov='C-TEST-ALPHA')
-        self.assertEqual({row['id'] for row in records}, {'PAIR-PUBLIC', 'PAIR-PERMITTED'})
+        pages, records = self.read_prepared_pairs(pov='character-TEST-ALPHA')
+        self.assertEqual({row['id'] for row in records}, {'pair-PUBLIC', 'pair-PERMITTED'})
         serialized = json.dumps(pages, ensure_ascii=False)
         for pair_row in self.source['pairs'][2:]:
             self.assertNotIn(pair_row['pairId'], serialized)
@@ -324,7 +324,7 @@ class PairClassificationTests(unittest.TestCase):
         for row in self.source['pairs']:
             row['visibility'] = 'private'
         self.save()
-        pages, records = self.read_prepared_pairs(pov='C-TEST-ALPHA')
+        pages, records = self.read_prepared_pairs(pov='character-TEST-ALPHA')
         self.assertEqual(records, [])
         self.assertTrue(pages[0]['coverage']['sourceSelections'][0]['warnings'])
 
@@ -359,7 +359,7 @@ class PairClassificationTests(unittest.TestCase):
     def test_arc_ancestor_condition_and_pair_scope_use_same_inputs(self):
         parent = self.source['arcs'][0]
         parent['tags'] = ['强者跌落']
-        leaf = {**deepcopy(parent), 'arcId': 'ARC-LEAF', 'parentArcId': parent['arcId'], 'tags': [], 'title': '子弧线'}
+        leaf = {**deepcopy(parent), 'arcId': 'arc-LEAF', 'parentArcId': parent['arcId'], 'tags': [], 'title': '子弧线'}
         self.source['arcs'].append(leaf)
         self.source['chapterArcLinks'][0]['arcId'] = leaf['arcId']
         self.source['pairAssessment'] = deepcopy(ASSESSED)

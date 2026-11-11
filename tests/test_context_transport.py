@@ -59,10 +59,10 @@ class ContextTransportTests(unittest.TestCase):
     def test_cli_and_mcp_context_read_agree_with_direct_builder(self):
         before = self.inventory()
         cli = run_cli('task', 'context', '--project-root', str(self.root),
-                      '--chapter-id', 'CH-AAA', '--task-type', 'planner', '--chapter-goal', '关系推进', process=True)
-        mcp = run_mcp('read_continuation_context', {'projectRoot': str(self.root), 'chapterId': 'CH-AAA',
+                      '--chapter-id', 'chapter-AAA', '--task-type', 'planner', '--chapter-goal', '关系推进', process=True)
+        mcp = run_mcp('read_continuation_context', {'projectRoot': str(self.root), 'chapterId': 'chapter-AAA',
                                                    'taskType': 'planner', 'chapterGoal': '关系推进'}, process=True)
-        direct = build_station_context(str(self.root), 'CH-AAA', task_type='planner',
+        direct = build_station_context(str(self.root), 'chapter-AAA', task_type='planner',
                                        chapter_goal='关系推进', view='station', read_only=True)
         for payload in (cli, mcp):
             self.assertTrue(payload['ok'])
@@ -79,8 +79,8 @@ class ContextTransportTests(unittest.TestCase):
 
     def test_cli_and_mcp_context_health_agree(self):
         cli = run_cli('source', 'context-health', '--project-root', str(self.root),
-                      '--chapter-id', 'CH-AAA', '--task', 'planner', '--chapter-goal', '关系推进')
-        mcp = run_mcp('query_source_context_health', {'projectRoot': str(self.root), 'chapterId': 'CH-AAA',
+                      '--chapter-id', 'chapter-AAA', '--task', 'planner', '--chapter-goal', '关系推进')
+        mcp = run_mcp('query_source_context_health', {'projectRoot': str(self.root), 'chapterId': 'chapter-AAA',
                                                      'task': 'planner', 'chapterGoal': '关系推进'})
         self.assertEqual(cli, mcp)
         self.assertEqual(cli['code'], 'CONTEXT_HEALTH')
@@ -90,10 +90,10 @@ class ContextTransportTests(unittest.TestCase):
     def test_cli_and_mcp_context_preheat_agree_and_cache_nothing(self):
         before = self.inventory()
         cli = run_cli('source', 'context-preheat', '--project-root', str(self.root),
-                      '--after-chapter-id', 'CH-AAA')
-        mcp = run_mcp('preheat_source_next_chapter', {'projectRoot': str(self.root), 'afterChapterId': 'CH-AAA'})
+                      '--after-chapter-id', 'chapter-AAA')
+        mcp = run_mcp('preheat_source_next_chapter', {'projectRoot': str(self.root), 'afterChapterId': 'chapter-AAA'})
         self.assertEqual(cli, mcp)
-        self.assertEqual(cli['metadata']['nextChapterId'], 'CH-BBB')
+        self.assertEqual(cli['metadata']['nextChapterId'], 'chapter-BBB')
         self.assertFalse(cli['coverage']['futurePlotGenerated'])
         self.assertFalse(cli['coverage']['proseRead'])
         self.assertFalse(cli['coverage']['contextPackCached'])
@@ -107,20 +107,20 @@ class ContextTransportTests(unittest.TestCase):
         """
         before = self.inventory()
         legacy = subprocess.run([sys.executable, str(ROOT / 'scripts/continuation_context.py'),
-                                 '--project-root', str(self.root), '--chapter-id', 'CH-AAA',
+                                 '--project-root', str(self.root), '--chapter-id', 'chapter-AAA',
                                  '--task-type', 'planner', '--view', 'station'],
                                 cwd=ROOT, capture_output=True, text=True, timeout=60)
         self.assertEqual(legacy.returncode, 0, legacy.stdout + legacy.stderr)
-        direct = run_cli('context', '--project-root', str(self.root), '--chapter-id', 'CH-AAA',
+        direct = run_cli('context', '--project-root', str(self.root), '--chapter-id', 'chapter-AAA',
                          '--task-type', 'planner', '--view', 'station')
-        task = run_cli('task', 'context', '--project-root', str(self.root), '--chapter-id', 'CH-AAA',
+        task = run_cli('task', 'context', '--project-root', str(self.root), '--chapter-id', 'chapter-AAA',
                        '--task-type', 'planner')
-        mcp = run_mcp('read_continuation_context', {'projectRoot': str(self.root), 'chapterId': 'CH-AAA',
+        mcp = run_mcp('read_continuation_context', {'projectRoot': str(self.root), 'chapterId': 'chapter-AAA',
                                                     'taskType': 'planner'})
         prepare = run_cli('prepare', '--project-root', str(self.root), '--task', 'planner',
-                          '--chapter-id', 'CH-AAA')
+                          '--chapter-id', 'chapter-AAA')
         health = run_cli('source', 'context-health', '--project-root', str(self.root),
-                         '--chapter-id', 'CH-AAA', '--task', 'writer')
+                         '--chapter-id', 'chapter-AAA', '--task', 'writer')
         self.assertEqual(self.inventory(), before, 'Context read 入口不得写任何项目文件（含派生缓存）')
         self.assertFalse([key for key in self.inventory() if '.govel/cache' in key],
                          '只读入口不得发布派生缓存')
@@ -144,7 +144,7 @@ class ContextTransportTests(unittest.TestCase):
         self.assertTrue([key for key in self.inventory() if '.govel/cache' in key],
                         'state rebuild 仍应发布派生缓存')
         after = self.inventory()
-        read = run_cli('context', '--project-root', str(self.root), '--chapter-id', 'CH-AAA', '--view', 'station')
+        read = run_cli('context', '--project-root', str(self.root), '--chapter-id', 'chapter-AAA', '--view', 'station')
         self.assertTrue(read['ok'])
         self.assertEqual(after, self.inventory(), 'rebuild 之后的 context read 不得再写')
 

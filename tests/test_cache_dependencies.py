@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts import state_cache
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ class CacheDependencyTests(unittest.TestCase):
     def test_declared_dependency_change_invalidates_cache(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            create_schema5_project(root, chapter_count=1)
+            create_current_project(root, chapter_count=1)
             self.assertTrue(state_cache.is_fresh(root))
             dependency = ROOT / "scripts/core/prompt_plan.py"
             dependency.write_bytes(dependency.read_bytes() + b"\n")

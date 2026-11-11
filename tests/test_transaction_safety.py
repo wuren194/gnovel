@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts import state_cache
-from tests.fixtures_current import initialize_project, create_schema5_project
+from tests.fixtures_current import initialize_project, create_current_project
 from tests.fixtures_transaction import interrupted_write_set
 from scripts.core import finalization, locks
 from scripts.core import structure_commands as commands
@@ -42,7 +42,7 @@ class TransactionSafetyTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
         self.root = self.base / "book"
-        fixture = create_schema5_project(self.root, book_name='safety', chapter_count=1)
+        fixture = create_current_project(self.root, book_name='safety', chapter_count=1)
         self.cid = fixture['chapterIds'][0]
         self.tokens = {}
 

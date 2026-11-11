@@ -34,7 +34,7 @@ def placement_volume_id(placement) -> str | None:
 def placement_error(placement) -> str | None:
     """Return an error code if ``placement`` is not one of the two legal shapes.
 
-    Only ``{"scope": "volume", "volumeId": "VOL-..."}`` and ``{"scope": "project"}``
+    Only ``{"scope": "volume", "volumeId": "volume-..."}`` and ``{"scope": "project"}``
     are accepted. A volume placement without ``volumeId`` and a project placement
     that still carries ``volumeId`` are both rejected: no third shape, and never a
     ``volumeId`` sitting beside the placement to become a second source of truth.

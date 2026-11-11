@@ -143,8 +143,8 @@ class PostFinalizationApprovalTests(unittest.TestCase):
 
     def test_project_integrity_reports_each_finding_once_without_collapsing_codes(self):
         workflow = self.workflow()
-        workflow['approvals']['CH-UNKNOWN'] = {}
-        workflow['artifacts']['CH-UNKNOWN'] = {}
+        workflow['approvals']['chapter-UNKNOWN'] = {}
+        workflow['artifacts']['chapter-UNKNOWN'] = {}
         write_json(self.workflow_path, workflow)
         report = self.doctor()
         rows = [r for r in report['issues'] if r['code'] == 'WORKFLOW_UNKNOWN_CHAPTER']

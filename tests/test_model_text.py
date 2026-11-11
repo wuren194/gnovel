@@ -78,7 +78,7 @@ class ModelTextTests(unittest.TestCase):
     def test_recovery_keeps_exact_tokens_conditions_and_prose(self):
         quote = '原句含有"引号"、\\路径\n以及第二行。'
         action = {'operation': 'workflow.closeout', 'arguments': {'projectRoot': '/tmp/有 空格',
-                  'chapterId': 'CH-EXAMPLE', 'prepareRef': 'gn:prepare:exact',
+                  'chapterId': 'chapter-EXAMPLE', 'prepareRef': 'gn:prepare:exact',
                   'requestId': 'retry-exact', 'bindingGeneration': 19, 'cursor': 'next:=+/'},
                   'needsApproval': True, 'executable': False, 'when': 'after_author_review'}
         payload = {'ok': False, 'code': 'CLOSEOUT_INPUT_REQUIRED', 'readyToFinalize': False,
@@ -94,7 +94,7 @@ class ModelTextTests(unittest.TestCase):
         self.assertEqual(payload, before)
 
     def test_uniform_rows_preserve_all_columns_and_nonuniform_rows_keep_json(self):
-        rows = [{'chapterId': f'CH-{i}', 'title': '含\n换行和|竖线', 'unknownExtension': {'x': None}}
+        rows = [{'chapterId': f'chapter-{i}', 'title': '含\n换行和|竖线', 'unknownExtension': {'x': None}}
                 for i in range(5)]
         text = render_model_text('project.overview', {'chapters': rows, 'bookName': '测试书'})
         self.assertIn('列' + compact(list(rows[0])), text)

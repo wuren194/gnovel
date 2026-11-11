@@ -9,7 +9,7 @@ from unittest.mock import patch
 from scripts.core.artifacts import sha256_text
 from scripts.core.prompt_plan import PromptPlanError, _read_ranges, resolve_prompt_plan
 from scripts.core.structure_store import load_structure, save_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,7 +19,7 @@ class PromptViewTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         self.chapter_id = self.fixture["chapterIds"][0]
 
     def plan(self, station="govel-planner", **kwargs):

@@ -28,21 +28,21 @@ def context_source(root: Path, *, fragments: tuple = (), candidates: tuple = (),
     source = source_fixture()
     volume = source['volumes'][0]['volumeId']
     arc = source['arcs'][0]['arcId']
-    source['chapters'] = [single_source_chapter(source, 'CH-AAA', volume_id=volume, ordinal=1)]
-    source['chapterArcLinks'] = [{'chapterId': 'CH-AAA', 'arcId': arc, 'role': 'primary'}]
+    source['chapters'] = [single_source_chapter(source, 'chapter-AAA', volume_id=volume, ordinal=1)]
+    source['chapterArcLinks'] = [{'chapterId': 'chapter-AAA', 'arcId': arc, 'role': 'primary'}]
     if chapters > 1:
-        source['chapters'].append(single_source_chapter(source, 'CH-BBB', volume_id=volume, ordinal=2))
-        source['chapterArcLinks'].append({'chapterId': 'CH-BBB', 'arcId': arc, 'role': 'primary'})
-    source['references'] = [{'sourceId': 'CH-AAA', 'targetId': 'C-ALPHA', 'kind': 'uses'}]
-    source['fieldDefinitions'].append({'fieldId': 'FD-PLAN', 'key': 'plot.plan', 'label': '剧情计划',
+        source['chapters'].append(single_source_chapter(source, 'chapter-BBB', volume_id=volume, ordinal=2))
+        source['chapterArcLinks'].append({'chapterId': 'chapter-BBB', 'arcId': arc, 'role': 'primary'})
+    source['references'] = [{'sourceId': 'chapter-AAA', 'targetId': 'character-ALPHA', 'kind': 'uses'}]
+    source['fieldDefinitions'].append({'fieldId': 'field-PLAN', 'key': 'plot.plan', 'label': '剧情计划',
                                       'valueType': 'topic', 'appliesTo': ['chapter']})
-    source['attributes'].append({'attributeId': 'AT-PLAN', 'ownerId': 'CH-AAA', 'fieldId': 'FD-PLAN', 'values': []})
-    source['fragments'].append({'fragmentId': 'SF-PLAN', 'ownerId': 'CH-AAA', 'text': '甲守城门。', 'order': 1,
-                                'contentRole': 'plan', 'contentBindings': ['AT-PLAN'], 'dependsOn': ['FV-HEIGHT']})
-    source['fragments'].append({'fragmentId': 'SF-BELIEF', 'ownerId': 'CH-AAA', 'text': '甲认为乙已死。', 'order': 2,
-                                'contentRole': 'belief', 'perspectiveId': 'C-ALPHA', 'contentBindings': ['AT-PLAN']})
-    source['fragments'].append({'fragmentId': 'SF-TEXT', 'ownerId': 'CH-AAA', 'text': '信上写着他将离开。', 'order': 3,
-                                'contentRole': 'in_world_text', 'perspectiveId': 'C-BETA', 'contentBindings': ['AT-PLAN']})
+    source['attributes'].append({'attributeId': 'attribute-PLAN', 'ownerId': 'chapter-AAA', 'fieldId': 'field-PLAN', 'values': []})
+    source['fragments'].append({'fragmentId': 'plan-PLAN', 'ownerId': 'chapter-AAA', 'text': '甲守城门。', 'order': 1,
+                                'contentRole': 'plan', 'contentBindings': ['attribute-PLAN'], 'dependsOn': ['value-HEIGHT']})
+    source['fragments'].append({'fragmentId': 'belief-BELIEF', 'ownerId': 'chapter-AAA', 'text': '甲认为乙已死。', 'order': 2,
+                                'contentRole': 'belief', 'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-PLAN']})
+    source['fragments'].append({'fragmentId': 'text-TEXT', 'ownerId': 'chapter-AAA', 'text': '信上写着他将离开。', 'order': 3,
+                                'contentRole': 'in_world_text', 'perspectiveId': 'character-BETA', 'contentBindings': ['attribute-PLAN']})
     source['fragments'].extend(fragments)
     source['planningCandidates'] = list(candidates)
     source['authorDecisions'] = list(decisions)
@@ -60,7 +60,7 @@ def save_context_source(root: Path, source: dict) -> None:
                                                  'projectId': source['projectId']})
 
 
-def build(root: Path, *, chapter: str = 'CH-AAA', **kwargs) -> dict:
+def build(root: Path, *, chapter: str = 'chapter-AAA', **kwargs) -> dict:
     kwargs.setdefault('task_type', 'planner')
     kwargs.setdefault('view', 'station')
     kwargs.setdefault('read_only', True)
@@ -120,16 +120,16 @@ class ContextBuilderTests(unittest.TestCase):
         from scripts.core.source_rules import evaluate_rules
 
         self.source['entities'].append({
-            'entityId': 'RU-CONTEXT', 'entityType': 'rule', 'name': '守门安排需审阅',
+            'entityId': 'rule-CONTEXT', 'entityType': 'rule', 'name': '守门安排需审阅',
             'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
                          'scopeIds': [self.source['projectId']], 'actions': ['prepare'],
-                         'inputIds': ['C-ALPHA']}})
+                         'inputIds': ['character-ALPHA']}})
         self.save()
-        for chapter_id in ('CH-AAA', 'CH-BBB'):
+        for chapter_id in ('chapter-AAA', 'chapter-BBB'):
             with self.subTest(chapter=chapter_id):
                 plan = chapter_plan(self.source, chapter_id)
                 rules = evaluate_rules(self.source, chapter_id, 'prepare', root=self.root)
-                preheat = None if chapter_id == 'CH-AAA' else preheat_fingerprint(self.source, 'CH-AAA')
+                preheat = None if chapter_id == 'chapter-AAA' else preheat_fingerprint(self.source, 'chapter-AAA')
                 with patch('scripts.core.source_impact.dependency_edges', wraps=dependency_edges) as graph:
                     context = build(self.root, chapter=chapter_id)
                 self.assertEqual(graph.call_count, 1, 'one build must share one source dependency graph')
@@ -144,11 +144,11 @@ class ContextBuilderTests(unittest.TestCase):
 
     def test_pov_change_changes_context_hash(self):
         plain = build(self.root)['contextHash']
-        alpha = build(self.root, pov_character='C-ALPHA')['contextHash']
-        beta = build(self.root, pov_character='C-BETA')['contextHash']
+        alpha = build(self.root, pov_character='character-ALPHA')['contextHash']
+        beta = build(self.root, pov_character='character-BETA')['contextHash']
         self.assertEqual(len({plain, alpha, beta}), 3)
-        manifest = build(self.root, pov_character='C-ALPHA')['dependencyManifest']
-        self.assertEqual(manifest['povCharacter'], 'C-ALPHA')
+        manifest = build(self.root, pov_character='character-ALPHA')['dependencyManifest']
+        self.assertEqual(manifest['povCharacter'], 'character-ALPHA')
 
     def test_chapter_goal_changes_knowledge_and_context_hash(self):
         related = build(self.root, chapter_goal='关系推进')
@@ -180,7 +180,7 @@ class ContextBuilderTests(unittest.TestCase):
 
     def test_source_plan_change_invalidates_old_context(self):
         before = build(self.root)
-        plan_fragment = next(row for row in self.source['fragments'] if row['fragmentId'] == 'SF-PLAN')
+        plan_fragment = next(row for row in self.source['fragments'] if row['fragmentId'] == 'plan-PLAN')
         plan_fragment['text'] = '甲弃门而去。'
         self.save()
         after = build(self.root)
@@ -195,7 +195,7 @@ class ContextBuilderTests(unittest.TestCase):
         """
         before = build(self.root)
         self.approve_decision(statement='只约束人物乙', rationale='与本章无关',
-                              scopeIds=['C-BETA'], dependsOn=[])
+                              scopeIds=['character-BETA'], dependsOn=[])
         after = build(self.root)
         # 没被注入：决定不在闭包内，层与记忆包完全不变。
         self.assertEqual(after['authorDecisions'], [])
@@ -218,22 +218,22 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertTrue(coverage['conservativeInvalidation'])
 
     def test_recent_prose_change_changes_dependency_snapshot(self):
-        prose = self.root / '正文/CH-AAA.md'
+        prose = self.root / '正文/chapter-AAA.md'
         prose.write_text('第一章正文。', encoding='utf-8')
-        before = build(self.root, chapter='CH-BBB')
+        before = build(self.root, chapter='chapter-BBB')
         row = next(item for item in before['dependencyManifest']['recentChapters']
-                   if item['chapterId'] == 'CH-AAA')
+                   if item['chapterId'] == 'chapter-AAA')
         self.assertIsNotNone(row['sha256'])
         prose.write_text('第一章正文，已改写。', encoding='utf-8')
-        after = build(self.root, chapter='CH-BBB')
+        after = build(self.root, chapter='chapter-BBB')
         changed = next(item for item in after['dependencyManifest']['recentChapters']
-                       if item['chapterId'] == 'CH-AAA')
+                       if item['chapterId'] == 'chapter-AAA')
         self.assertNotEqual(row['sha256'], changed['sha256'])
         self.assertNotEqual(before['contextHash'], after['contextHash'])
         prose.unlink()
-        missing = build(self.root, chapter='CH-BBB')
+        missing = build(self.root, chapter='chapter-BBB')
         self.assertIsNone(next(item for item in missing['dependencyManifest']['recentChapters']
-                               if item['chapterId'] == 'CH-AAA')['sha256'])
+                               if item['chapterId'] == 'chapter-AAA')['sha256'])
 
     # --- 认识层 ---
 
@@ -252,7 +252,7 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertEqual(contract['epistemicRole'], 'canon_semantic_contract')
         self.assertTrue(contract['authoritative'])
         self.assertFalse(contract['contentInjected'])
-        self.assertIn('FD-PLAN', [row['id'] for row in contract['items']])
+        self.assertIn('field-PLAN', [row['id'] for row in contract['items']])
         # 语义契约绝不混进事实、计划、参考知识或信念层。
         contract_ids = {row['id'] for row in contract['items']}
         for role in ('CANON FACTS', 'APPROVED PLAN', 'REFERENCE KNOWLEDGE',
@@ -264,19 +264,19 @@ class ContextBuilderTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         root = Path(temp.name).resolve()
         (root / '正文').mkdir()
-        context_source(root, fragments=[{'fragmentId': 'SF-FACT-HERE', 'ownerId': 'CH-AAA',
+        context_source(root, fragments=[{'fragmentId': 'fact-FACT-HERE', 'ownerId': 'chapter-AAA',
                                          'text': '甲守着城门，未曾退开半步。', 'order': 5,
-                                         'contentRole': 'fact', 'contentBindings': ['AT-PLAN']}])
+                                         'contentRole': 'fact', 'contentBindings': ['attribute-PLAN']}])
         roles = layers_by_role(build(root))
         canon = {row['id'] for row in roles['CANON FACTS']['items']}
-        self.assertIn('AT-PLAN', canon)        # Attribute 仍是 Canon fact
-        self.assertIn('FV-HEIGHT', canon)      # Value 仍是 Canon fact
-        self.assertIn('SF-FACT-HERE', canon)   # fact 片段仍是 Canon fact
-        self.assertNotIn('FD-PLAN', canon)
+        self.assertIn('attribute-PLAN', canon)        # Attribute 仍是 Canon fact
+        self.assertIn('value-HEIGHT', canon)      # Value 仍是 Canon fact
+        self.assertIn('fact-FACT-HERE', canon)   # fact 片段仍是 Canon fact
+        self.assertNotIn('field-PLAN', canon)
         # belief / in_world_text / plan 三层不受新层影响。
-        self.assertIn('SF-BELIEF', {row['id'] for row in roles['CURRENT BELIEFS']['items']})
-        self.assertIn('SF-TEXT', {row['id'] for row in roles['IN-WORLD TEXT']['items']})
-        self.assertIn('SF-PLAN', {row['id'] for row in roles['APPROVED PLAN']['items']})
+        self.assertIn('belief-BELIEF', {row['id'] for row in roles['CURRENT BELIEFS']['items']})
+        self.assertIn('text-TEXT', {row['id'] for row in roles['IN-WORLD TEXT']['items']})
+        self.assertIn('plan-PLAN', {row['id'] for row in roles['APPROVED PLAN']['items']})
         health = assess_context(build(root))
         self.assertTrue(health['ready'], health['issues'])
 
@@ -292,15 +292,15 @@ class ContextBuilderTests(unittest.TestCase):
 
     def test_fact_belief_and_in_world_text_have_distinct_roles(self):
         roles = layers_by_role(build(self.root))
-        self.assertIn('SF-PLAN', [row['id'] for row in roles['APPROVED PLAN']['items']])
-        self.assertIn('SF-BELIEF', [row['id'] for row in roles['CURRENT BELIEFS']['items']])
-        self.assertIn('SF-TEXT', [row['id'] for row in roles['IN-WORLD TEXT']['items']])
+        self.assertIn('plan-PLAN', [row['id'] for row in roles['APPROVED PLAN']['items']])
+        self.assertIn('belief-BELIEF', [row['id'] for row in roles['CURRENT BELIEFS']['items']])
+        self.assertIn('text-TEXT', [row['id'] for row in roles['IN-WORLD TEXT']['items']])
         self.assertTrue(roles['CANON FACTS']['authoritative'])
         self.assertFalse(roles['CURRENT BELIEFS']['authoritative'])
         self.assertFalse(roles['IN-WORLD TEXT']['authoritative'])
         # 一个角色相信 X 不等于 Canon 说 X；两者绝不互串。
         canon_ids = {row['id'] for row in roles['CANON FACTS']['items']}
-        self.assertFalse({'SF-BELIEF', 'SF-TEXT', 'SF-PLAN'} & canon_ids)
+        self.assertFalse({'belief-BELIEF', 'text-TEXT', 'plan-PLAN'} & canon_ids)
         for row in roles['CANON FACTS']['items']:
             self.assertNotIn(row.get('contentRole'), {'belief', 'in_world_text', 'plan'})
 
@@ -312,7 +312,7 @@ class ContextBuilderTests(unittest.TestCase):
 
     def test_approved_plan_layer_carries_source_plan_hash_and_active_decisions(self):
         decision_id = self.approve_decision(statement='秘密不得过早公开', rationale='延迟揭示',
-                                            scopeIds=['CH-AAA'], dependsOn=[])
+                                            scopeIds=['chapter-AAA'], dependsOn=[])
         context = build(self.root)
         plan_layer = layers_by_role(context)['APPROVED PLAN']
         self.assertEqual(plan_layer['sourcePlanHash'], context['sourceContext']['sourcePlanHash'])
@@ -320,13 +320,13 @@ class ContextBuilderTests(unittest.TestCase):
 
     def test_unapproved_candidate_is_not_approved_plan(self):
         self.source['planningCandidates'] = [{
-            'candidateId': 'PC-DRAFT-ONE', 'title': '待定未来章', 'summary': '',
+            'candidateId': 'candidate-DRAFT-ONE', 'title': '待定未来章', 'summary': '',
             'placement': None, 'primaryArcId': None, 'secondaryArcIds': [],
             'beforeChapterId': None, 'status': 'draft'}]
         self.save()
         planner = layers_by_role(build(self.root, task_type='planner'))
-        self.assertIn('PC-DRAFT-ONE', [row['id'] for row in planner['UNAPPROVED CANDIDATES']['items']])
-        self.assertNotIn('PC-DRAFT-ONE', [row['id'] for row in planner['APPROVED PLAN']['items']])
+        self.assertIn('candidate-DRAFT-ONE', [row['id'] for row in planner['UNAPPROVED CANDIDATES']['items']])
+        self.assertNotIn('candidate-DRAFT-ONE', [row['id'] for row in planner['APPROVED PLAN']['items']])
         writer = layers_by_role(build(self.root, task_type='writer'))
         self.assertEqual(writer['UNAPPROVED CANDIDATES']['items'], [])
         self.assertTrue(writer['UNAPPROVED CANDIDATES']['withheldForStation'])
@@ -383,7 +383,7 @@ class ContextBuilderTests(unittest.TestCase):
     def test_builder_does_not_write_project_files(self):
         before = inventory(self.root)
         build(self.root, chapter_goal='关系推进', view='full')
-        build(self.root, task_type='writer', pov_character='C-ALPHA')
+        build(self.root, task_type='writer', pov_character='character-ALPHA')
         self.assertEqual(before, inventory(self.root))
 
 

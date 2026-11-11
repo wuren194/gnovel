@@ -22,7 +22,7 @@ from scripts.core.mechanical_evidence import evidence_current
 from scripts.core.prose_binding import seal_binding
 from scripts.core.structure_store import load_structure
 from scripts.core.workflow import approve_artifacts, default_workflow
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import evidenced_slots, assessed_review_payload
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +35,7 @@ class CandidateBatchTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix='candidate-batch-')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
-        fixture = create_schema5_project(self.root, chapter_count=4)
+        fixture = create_current_project(self.root, chapter_count=4)
         self.ids = fixture['chapterIds']
         source = fixture['structure']
         for chapter in source['chapters']:
@@ -465,13 +465,13 @@ closeout_chapter(root,requestId='killed-closeout',prepareRef=sys.argv[2],
 
     def test_reviewed_fact_change_invalidates_dependent_candidates_not_unrelated_chapter(self):
         source = load_structure(self.root)
-        source['fieldDefinitions'].append({'fieldId': 'FD-KEY-STATE', 'key': 'key.state', 'label': '钥匙位置',
+        source['fieldDefinitions'].append({'fieldId': 'field-KEY-STATE', 'key': 'key.state', 'label': '钥匙位置',
                                           'valueType': 'topic', 'appliesTo': ['prop']})
-        source['attributes'].append({'attributeId': 'AT-KEY-STATE', 'ownerId': 'P-TEST-KEY', 'fieldId': 'FD-KEY-STATE', 'values': []})
-        fact = {'fragmentId': 'SF-KEY-STATE', 'ownerId': 'P-TEST-KEY', 'text': '钥匙此前位于柜中。', 'order': 1,
-                'contentRole': 'fact', 'contentBindings': ['AT-KEY-STATE'], 'dependsOn': []}
+        source['attributes'].append({'attributeId': 'attribute-KEY-STATE', 'ownerId': 'prop-TEST-KEY', 'fieldId': 'field-KEY-STATE', 'values': []})
+        fact = {'fragmentId': 'fact-KEY-STATE', 'ownerId': 'prop-TEST-KEY', 'text': '钥匙此前位于柜中。', 'order': 1,
+                'contentRole': 'fact', 'contentBindings': ['attribute-KEY-STATE'], 'dependsOn': []}
         source['fragments'].append(fact)
-        next(f for f in source['fragments'] if f['ownerId'] == self.ids[0] and f['contentRole'] == 'plan')['dependsOn'] = ['SF-KEY-STATE']
+        next(f for f in source['fragments'] if f['ownerId'] == self.ids[0] and f['contentRole'] == 'plan')['dependsOn'] = ['fact-KEY-STATE']
         from scripts.core.structure_store import validate_structure
         validate_structure(source); write_json(self.root / '.govel/structure.json', source)
         self.batch = prepare_candidate_batch(self.root, requestId='fact-dependent-batch', chapterIds=self.ids[:3])['batchRef']

@@ -12,7 +12,7 @@ from scripts import novelctl, state_cache
 from scripts.core.locks import project_lock, current_thread_owns_lock, project_lock_observation
 from scripts.core.structure_commands import commit_plan, list_operations, preview_insert_chapter, undo_operation
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_transaction import interrupted_write_set
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ class CliMutationLockTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         self.chapter_id = self.fixture["chapterIds"][0]
 
     def args(self, *argv):

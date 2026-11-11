@@ -23,7 +23,7 @@ from scripts.core.review_artifacts import ReviewArtifactError
 from scripts.core.source_plan import chapter_plan
 from scripts.core.structure_store import StructureError, validate_structure
 from scripts.core.workflow import default_workflow, record_artifact, approve_artifacts
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import evidenced_slots, register_and_approve, run_and_approve_diagnostics
 
 
@@ -32,12 +32,12 @@ class CognitionReviewTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
-        fixture = create_schema5_project(self.root, chapter_count=3)
+        fixture = create_current_project(self.root, chapter_count=3)
         self.prior, self.cid, self.later = fixture['chapterIds']
         source = fixture['structure']
         source['entities'][0].update(name='林舟', aliases=['小林'])
         self.actor = source['entities'][0]['entityId']
-        self.person = 'C-GU'
+        self.person = 'character-GU'
         source['entities'].append({'entityId': self.person, 'entityType': 'character',
                                    'name': '顾行', 'aliases': ['老顾'], 'status': 'active'})
         chapter = source['chapters'][1]
@@ -104,11 +104,11 @@ class CognitionReviewTests(unittest.TestCase):
 
     def test_scan_only_locates_names_and_keeps_attribution_uncertainty(self):
         source = self.source()
-        source['entities'].append({'entityId': 'C-SAME', 'entityType': 'character', 'name': '顾行', 'status': 'active'})
+        source['entities'].append({'entityId': 'character-SAME', 'entityType': 'character', 'name': '顾行', 'status': 'active'})
         text = '顾行到了。\n林舟说：“顾行，请坐。”\n林舟说：“顾行，喝茶。”\n“老顾到了？”\n“老顾到了？”'
         rows = scan_candidates(source, self.cid, text)
         self.assertEqual(len(rows), 4)
-        self.assertEqual(rows[0]['mentions'][0]['entityIds'], ['C-GU', 'C-SAME'])
+        self.assertEqual(rows[0]['mentions'][0]['entityIds'], ['character-GU', 'character-SAME'])
         self.assertTrue(rows[0]['speakerHint']['certain'])
         self.assertTrue(all(row['characterId'] is None and row['disposition'] == 'unassessed' for row in rows))
         self.assertTrue(all(not row['speakerHint']['certain'] for row in rows[2:]))
@@ -368,20 +368,20 @@ class CognitionReviewTests(unittest.TestCase):
         self.prior_body('顾行向林舟作了自我介绍。')
         baseline = self.source()
         cases = [
-            [{'entityId': 'TA-USE', 'entityType': 'time_anchor', 'name': '使用', 'status': 'active', 'timeOrdinal': 5},
-             {'entityId': 'TA-END', 'entityType': 'time_anchor', 'name': '上界', 'status': 'active', 'timeOrdinal': 10},
-             {'entityId': 'TA-LEARN', 'entityType': 'time_anchor', 'name': '获知', 'status': 'active',
-              'timeSpec': {'kind': 'range', 'afterId': 'TA-USE', 'beforeId': 'TA-END'}}],
-            [{'entityId': 'TA-USE', 'entityType': 'time_anchor', 'name': '使用', 'status': 'active', 'timeSpec': {'kind': 'unknown'}},
-             {'entityId': 'TA-LEARN', 'entityType': 'time_anchor', 'name': '获知', 'status': 'active',
-              'timeSpec': {'kind': 'relative', 'anchorId': 'TA-USE', 'offset': 1}}],
+            [{'entityId': 'time-USE', 'entityType': 'time_anchor', 'name': '使用', 'status': 'active', 'timeOrdinal': 5},
+             {'entityId': 'time-END', 'entityType': 'time_anchor', 'name': '上界', 'status': 'active', 'timeOrdinal': 10},
+             {'entityId': 'time-LEARN', 'entityType': 'time_anchor', 'name': '获知', 'status': 'active',
+              'timeSpec': {'kind': 'range', 'afterId': 'time-USE', 'beforeId': 'time-END'}}],
+            [{'entityId': 'time-USE', 'entityType': 'time_anchor', 'name': '使用', 'status': 'active', 'timeSpec': {'kind': 'unknown'}},
+             {'entityId': 'time-LEARN', 'entityType': 'time_anchor', 'name': '获知', 'status': 'active',
+              'timeSpec': {'kind': 'relative', 'anchorId': 'time-USE', 'offset': 1}}],
         ]
         for entities in cases:
             with self.subTest(time=entities[-1]['timeSpec']):
                 source = deepcopy(baseline)
                 source['entities'].extend(entities)
-                source['chapters'][0]['storyTimeStartId'] = 'TA-LEARN'
-                source['chapters'][1]['storyTimeEndId'] = 'TA-USE'
+                source['chapters'][0]['storyTimeStartId'] = 'time-LEARN'
+                source['chapters'][1]['storyTimeEndId'] = 'time-USE'
                 self.save(source)
                 register_and_approve(self.root, self.cid, 'stage_a_review', {
                     'decision': 'adopt', 'activeSeats': list(range(1, 11)), 'consensus': [], 'disagreements': [], 'openItems': []})
@@ -536,13 +536,13 @@ class CognitionReviewTests(unittest.TestCase):
     def test_source_fragment_requires_perspective_current_time_and_plan_dependency(self):
         source = self.source()
         source['entities'].extend([
-            {'entityId': 'TA-NOW', 'entityType': 'time_anchor', 'name': '现在', 'status': 'active', 'timeOrdinal': 1},
-            {'entityId': 'TA-LATER', 'entityType': 'time_anchor', 'name': '之后', 'status': 'active', 'timeOrdinal': 2}])
-        source['chapters'][1]['storyTimeStartId'] = 'TA-NOW'
+            {'entityId': 'time-NOW', 'entityType': 'time_anchor', 'name': '现在', 'status': 'active', 'timeOrdinal': 1},
+            {'entityId': 'time-LATER', 'entityType': 'time_anchor', 'name': '之后', 'status': 'active', 'timeOrdinal': 2}])
+        source['chapters'][1]['storyTimeStartId'] = 'time-NOW'
         plan = next(f for f in source['fragments'] if f['ownerId'] == self.cid)
-        belief = {'fragmentId': 'SF-NAME', 'ownerId': self.cid, 'order': 2, 'text': '林舟此前得知来客自称顾行。',
+        belief = {'fragmentId': 'belief-NAME', 'ownerId': self.cid, 'order': 2, 'text': '林舟此前得知来客自称顾行。',
                   'contentRole': 'belief', 'perspectiveId': self.actor, 'contentBindings': plan['contentBindings'],
-                  'validDuring': {'fromId': 'TA-NOW'}}
+                  'validDuring': {'fromId': 'time-NOW'}}
         source['fragments'].append(belief)
         self.save(source)
         # Reapprove synthetic A against the changed source; no runtime auto-review.
@@ -550,15 +550,15 @@ class CognitionReviewTests(unittest.TestCase):
             'decision': 'adopt', 'activeSeats': list(range(1, 11)), 'consensus': [], 'disagreements': [], 'openItems': []})
         self.set_candidate('林舟说：“顾行，请坐。”')
         payload = self.completed()
-        row = self.support(payload['cognitionReviews'][0], {'kind': 'source_fragment', 'fragmentId': 'SF-NAME',
+        row = self.support(payload['cognitionReviews'][0], {'kind': 'source_fragment', 'fragmentId': 'belief-NAME',
                                                          'quote': {'text': belief['text']}})
         self.assertTrue(self.pack(payload)['registered'])
         for field, value, code in [('perspectiveId', self.person, 'COGNITION_SOURCE_PERSPECTIVE'),
                                    ('contentRole', 'fact', 'COGNITION_SOURCE_PERSPECTIVE'),
-                                   ('validDuring', {'fromId': 'TA-LATER'}, 'COGNITION_SOURCE_TIME_UNKNOWN')]:
+                                   ('validDuring', {'fromId': 'time-LATER'}, 'COGNITION_SOURCE_TIME_UNKNOWN')]:
             with self.subTest(field=field):
                 modified = deepcopy(source)
-                target = next(f for f in modified['fragments'] if f['fragmentId'] == 'SF-NAME')
+                target = next(f for f in modified['fragments'] if f['fragmentId'] == 'belief-NAME')
                 target[field] = value
                 if field == 'contentRole':
                     target.pop('perspectiveId')
@@ -566,7 +566,7 @@ class CognitionReviewTests(unittest.TestCase):
                 changed['sourcePlanHash'] = chapter_plan(modified, self.cid)['sourcePlanHash']
                 self.assert_code(code, lambda: validate_review(self.root, modified, self.workflow(), self.cid, changed, self.text))
         unbounded = deepcopy(source)
-        next(f for f in unbounded['fragments'] if f['fragmentId'] == 'SF-NAME')['validDuring'] = {'fromId': None, 'toId': None}
+        next(f for f in unbounded['fragments'] if f['fragmentId'] == 'belief-NAME')['validDuring'] = {'fromId': None, 'toId': None}
         unbounded['chapters'][1]['storyTimeStartId'] = None
         changed = deepcopy(payload)
         changed['sourcePlanHash'] = chapter_plan(unbounded, self.cid)['sourcePlanHash']

@@ -1,7 +1,7 @@
 ---
 id: TENSION-AND-EMOTION
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 场景压力、人物情绪和对白潜台词的判断依据。
 ---
 

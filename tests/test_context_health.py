@@ -58,7 +58,7 @@ class ContextHealthContractTests(unittest.TestCase):
         kwargs.setdefault('task_type', 'planner')
         kwargs.setdefault('view', 'station')
         kwargs.setdefault('read_only', True)
-        return build_station_context(str(self.root), 'CH-AAA', **kwargs)
+        return build_station_context(str(self.root), 'chapter-AAA', **kwargs)
 
     def save(self, source):
         from tests.test_context_builder import save_context_source
@@ -140,7 +140,7 @@ class ContextHealthContractTests(unittest.TestCase):
         conflict['memoryPack'][source_layer].append(row)
         self.assertEqual(self.status(assess_context(conflict), 'CONTEXT_VALUE_CONFLICT'),
                          {'semantic_review_required'})
-        pov = self.build(pov_character='C-ALPHA')
+        pov = self.build(pov_character='character-ALPHA')
         pov.pop('filterProvenance')
         self.assertEqual(self.status(assess_context(pov), 'CONTEXT_POV_PROVENANCE_MISSING'),
                          {'mechanical_error'})
@@ -224,7 +224,7 @@ class ContextHealthContractTests(unittest.TestCase):
         plan = preview_decision_change(self.root, action='create',
                                        expectedRevision=load_structure(self.root)['revision'],
                                        reason='规划控制', statement='秘密不得过早公开', rationale='延迟揭示',
-                                       scopeIds=['CH-AAA'], dependsOn=[])
+                                       scopeIds=['chapter-AAA'], dependsOn=[])
         decision_id = plan['parameters']['decisionId']
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         plan = preview_decision_change(self.root, action='approve',
@@ -268,7 +268,7 @@ class ContextHealthContractTests(unittest.TestCase):
         plan = preview_decision_change(self.root, action='create',
                                        expectedRevision=load_structure(self.root)['revision'],
                                        reason='规划控制', statement='依赖人物甲', rationale='规划',
-                                       scopeIds=['CH-AAA', 'C-ALPHA'], dependsOn=[])
+                                       scopeIds=['chapter-AAA', 'character-ALPHA'], dependsOn=[])
         decision_id = plan['parameters']['decisionId']
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         plan = preview_decision_change(self.root, action='approve',
@@ -289,7 +289,7 @@ class ContextHealthContractTests(unittest.TestCase):
         self.assertEqual(context['unavailableDecisions'][0]['statement'], '依赖人物甲')
 
     def test_pov_provenance_missing_is_blocking(self):
-        context = self.build(pov_character='C-ALPHA')
+        context = self.build(pov_character='character-ALPHA')
         self.assertTrue(assess_context(context)['ready'], '带视角的上下文本身应带过滤证据')
         context.pop('filterProvenance')
         health = assess_context(context)
@@ -340,11 +340,11 @@ class ContextHealthContractTests(unittest.TestCase):
 
     def test_query_health_builds_current_snapshot_and_reports_stale(self):
         stale_hash = 'old-hash'
-        result = query_context_health(self.root, chapterId='CH-AAA', task='writer', expectedHash=stale_hash)
+        result = query_context_health(self.root, chapterId='chapter-AAA', task='writer', expectedHash=stale_hash)
         self.assertFalse(result['ready'])
         self.assertEqual(self.severity(result, 'CONTEXT_SNAPSHOT_STALE'), {'blocking'})
         self.assertEqual(result['expectedHash'], stale_hash)
-        fresh = query_context_health(self.root, chapterId='CH-AAA', task='writer')
+        fresh = query_context_health(self.root, chapterId='chapter-AAA', task='writer')
         self.assertTrue(fresh['ready'], fresh['issues'])
 
     def _staged_asset(self):

@@ -16,25 +16,25 @@ class SourceLinkTraversalTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         source = source_fixture()
         source['relations'] = [
-            {'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA', 'toEntity': 'C-BETA', 'kind': 'protects'},
-            {'relationId': 'REL-BETA-ALPHA', 'fromEntity': 'C-BETA', 'toEntity': 'C-ALPHA', 'kind': 'trusts'},
+            {'relationId': 'relation-ALPHA-BETA', 'fromEntity': 'character-ALPHA', 'toEntity': 'character-BETA', 'kind': 'protects'},
+            {'relationId': 'relation-BETA-ALPHA', 'fromEntity': 'character-BETA', 'toEntity': 'character-ALPHA', 'kind': 'trusts'},
         ]
         validate_structure(source); write_json(self.root / '.govel/structure.json', source)
 
     def test_typed_dependencies_and_entity_relations_are_distinct(self):
-        result = query_source_links(self.root, recordId='AT-HEIGHT', direction='out', depth=1)
+        result = query_source_links(self.root, recordId='attribute-HEIGHT', direction='out', depth=1)
         self.assertEqual({row['kind'] for row in result['items']}, {'content_binding'})
-        self.assertEqual({row['neighborId'] for row in result['items']}, {'SF-HEIGHT', 'SF-LOOK', 'SF-MIXED'})
-        relations = query_source_links(self.root, recordId='C-ALPHA', edgeKinds=['entity_relation'], depth=2)
+        self.assertEqual({row['neighborId'] for row in result['items']}, {'fact-HEIGHT', 'fact-LOOK', 'fact-MIXED'})
+        relations = query_source_links(self.root, recordId='character-ALPHA', edgeKinds=['entity_relation'], depth=2)
         self.assertEqual({row['relationKind'] for row in relations['items']}, {'protects', 'trusts'})
         self.assertGreater(relations['coverage']['cycleEdgeCount'], 0)
 
     def test_depth_boundary_and_pagination_are_explicit(self):
-        first = query_source_links(self.root, recordId='FD-HEIGHT', direction='out', depth=1, limit=1)
+        first = query_source_links(self.root, recordId='field-HEIGHT', direction='out', depth=1, limit=1)
         self.assertTrue(first['hasMore'])
         self.assertTrue(first['coverage']['truncatedByDepth'])
         self.assertEqual(first['coverage']['nextTraversal']['depth'], 2)
-        second = query_source_links(self.root, recordId='FD-HEIGHT', direction='out', depth=1,
+        second = query_source_links(self.root, recordId='field-HEIGHT', direction='out', depth=1,
                                     limit=1, cursor=first['nextCursor'])
         self.assertNotEqual(first['items'][0]['edgeId'], second['items'][0]['edgeId'])
 
@@ -42,7 +42,7 @@ class SourceLinkTraversalTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             query_source_links(self.root, recordId='MISSING')
         with self.assertRaises(StructureError) as caught:
-            query_source_links(self.root, recordId='AT-HEIGHT', depth=999)
+            query_source_links(self.root, recordId='attribute-HEIGHT', depth=999)
         self.assertEqual(caught.exception.code, 'QUERY_BUDGET_INVALID')
 
 

@@ -16,6 +16,7 @@ from .jsonio import read_json
 from .locks import project_lock_reentrant
 from .project import query_policy
 from .query import _cursor, _cursor_decode, _page, _size
+from .source_ids import identity_pattern
 from .static_cache import signature
 from .structure_store import StructureError, load_structure
 from .write_sets import safe_project_path
@@ -155,9 +156,10 @@ def _extract(root, relative, kind, project_id):
                 raise ValueError('invalid operation impact')
             changed = impact.get('changedIds', [])
             chapters = set(impact.get('staleCandidates', [])) | set(impact.get('approvalInvalidations', []))
-            chapters.update(rid for rid in changed if isinstance(rid, str) and rid.startswith('CH-'))
+            chapter_pattern = identity_pattern('chapter')
+            chapters.update(rid for rid in changed if isinstance(rid, str) and chapter_pattern.fullmatch(rid))
             for key in ('chapterId', 'anchorId'):
-                if isinstance(impact.get(key), str) and impact[key].startswith('CH-'):
+                if isinstance(impact.get(key), str) and chapter_pattern.fullmatch(impact[key]):
                     chapters.add(impact[key])
             requests = [data['requestId']] if isinstance(data.get('requestId'), str) else []
             return [_row('operation', data['operationId'], relative, chapters=chapters, records=changed,

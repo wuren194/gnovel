@@ -27,12 +27,12 @@ class RelationProposalTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         source = source_fixture(self.root)
-        source['relations'] = [{'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA',
-                                'toEntity': 'C-BETA', 'kind': 'protects'}]
+        source['relations'] = [{'relationId': 'relation-ALPHA-BETA', 'fromEntity': 'character-ALPHA',
+                                'toEntity': 'character-BETA', 'kind': 'protects'}]
         save_structure(self.root, source)
 
     def resolve(self):
-        return resolve_relation_target(self.root, relationId='REL-ALPHA-BETA')
+        return resolve_relation_target(self.root, relationId='relation-ALPHA-BETA')
 
     def propose(self, *, new_record='updated', evidence=None, evidence_mode='author_declaration',
                 old=None, session=None):
@@ -50,10 +50,10 @@ class RelationProposalTests(unittest.TestCase):
         self.assertEqual(resolved['status'], 'resolved')
         self.assertEqual(resolved['recordHash'], __import__('scripts.core.source_review', fromlist=['fingerprint']).fingerprint(resolved['record']))
         source = load_structure(self.root)
-        source['relations'].append({'relationId': 'REL-SECOND', 'fromEntity': 'C-ALPHA',
-                                    'toEntity': 'C-BETA', 'kind': 'protects'})
+        source['relations'].append({'relationId': 'relation-SECOND', 'fromEntity': 'character-ALPHA',
+                                    'toEntity': 'character-BETA', 'kind': 'protects'})
         save_structure(self.root, source)
-        ambiguous = resolve_relation_target(self.root, fromEntity='C-ALPHA', toEntity='C-BETA', kind='protects')
+        ambiguous = resolve_relation_target(self.root, fromEntity='character-ALPHA', toEntity='character-BETA', kind='protects')
         self.assertEqual(ambiguous['status'], 'ambiguous')
         self.assertNotIn('sessionRef', ambiguous)
 
@@ -64,7 +64,7 @@ class RelationProposalTests(unittest.TestCase):
             self.propose(old=wrong)
         self.assertEqual(caught.exception.code, 'EXPECTED_OLD_VALUE_CONFLICT')
         with self.assertRaises(StructureError) as caught:
-            self.propose(evidence_mode='source', evidence=[{'fragmentId': 'SF-LIFE',
+            self.propose(evidence_mode='source', evidence=[{'fragmentId': 'fact-LIFE',
                                                            'quote': '他独自守过城门。'}])
         self.assertEqual(caught.exception.code, 'RELATION_EVIDENCE_SCOPE_INVALID')
         plan = self.propose()
@@ -85,11 +85,11 @@ class RelationProposalTests(unittest.TestCase):
 
     def test_source_evidence_requires_both_registered_endpoints(self):
         source = load_structure(self.root)
-        source['fragments'].append({'fragmentId': 'SF-RELATION', 'ownerId': 'C-ALPHA',
+        source['fragments'].append({'fragmentId': 'fact-RELATION', 'ownerId': 'character-ALPHA',
                                     'text': '甲和乙有约定。', 'order': 5, 'contentRole': 'fact',
-                                    'contentBindings': ['AT-LIFE'], 'dependsOn': ['C-BETA']})
+                                    'contentBindings': ['attribute-LIFE'], 'dependsOn': ['character-BETA']})
         save_structure(self.root, source)
-        plan = self.propose(evidence_mode='source', evidence=[{'fragmentId': 'SF-RELATION',
+        plan = self.propose(evidence_mode='source', evidence=[{'fragmentId': 'fact-RELATION',
                                                                'quote': '甲和乙有约定。'}])
         self.assertEqual(plan['parameters']['relationProposal']['evidenceMode'], 'source')
 
@@ -97,7 +97,7 @@ class RelationProposalTests(unittest.TestCase):
         source = load_structure(self.root)
         for change in ({'action': 'put', 'collection': 'relations',
                         'record': {**source['relations'][0], 'kind': 'trusts'}},
-                       {'action': 'delete', 'collection': 'relations', 'id': 'REL-ALPHA-BETA'}):
+                       {'action': 'delete', 'collection': 'relations', 'id': 'relation-ALPHA-BETA'}):
             with self.assertRaises(StructureError) as caught:
                 preview_source_change(self.root, changes=[change], requestId='bypass',
                                       baseRevision=source['revision'], reason='bypass')
@@ -113,13 +113,13 @@ class RelationProposalTests(unittest.TestCase):
         commit_plan(self.root, operation_id=deleted['operationId'], plan_hash=deleted['planHash'], approved=True)
         self.assertEqual(load_structure(self.root)['relations'], [])
         undo(self.root, deleted['operationId'], actor='test')
-        self.assertEqual(load_structure(self.root)['relations'][0]['relationId'], 'REL-ALPHA-BETA')
+        self.assertEqual(load_structure(self.root)['relations'][0]['relationId'], 'relation-ALPHA-BETA')
         self.assertEqual(load_structure(self.root)['relations'][0]['kind'], 'trusts')
 
     def test_relation_identity_and_second_record_are_immutable(self):
         resolved = self.resolve()
         with self.assertRaises(StructureError) as caught:
-            self.propose(new_record={**resolved['record'], 'toEntity': 'C-ALPHA'})
+            self.propose(new_record={**resolved['record'], 'toEntity': 'character-ALPHA'})
         self.assertEqual(caught.exception.code, 'RELATION_PROPOSAL_INVALID')
         with self.assertRaises(StructureError) as caught:
             self.propose(new_record={**resolved['record'], 'kind': 'trusts', 'extra': 'hidden'})
@@ -136,8 +136,8 @@ class RelationProposalTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'CANON_PROPOSAL_REQUIRED')
         for collection, edit in (('attributes', lambda s: s['attributes'][0]['values'][0]['value'].update(number=185)),
                                  ('relations', lambda s: s['relations'].append({
-                                     'relationId': 'REL-SECOND', 'fromEntity': 'C-BETA',
-                                     'toEntity': 'C-ALPHA', 'kind': 'trusts'}))):
+                                     'relationId': 'relation-SECOND', 'fromEntity': 'character-BETA',
+                                     'toEntity': 'character-ALPHA', 'kind': 'trusts'}))):
             with self.subTest(collection=collection):
                 extra = deepcopy(source)
                 extra['relations'][0]['kind'] = 'trusts'
@@ -152,17 +152,17 @@ class RelationProposalTests(unittest.TestCase):
 
     def test_relation_impact_uses_registered_chapter_and_prose_evidence(self):
         source = load_structure(self.root)
-        chapter = {'chapterId': 'CH-RELATION', 'title': '关系章', 'displayOrdinal': 1,
+        chapter = {'chapterId': 'chapter-RELATION', 'title': '关系章', 'displayOrdinal': 1,
                    'placement': {'scope': 'volume', 'volumeId': source['volumes'][0]['volumeId']},
                    'status': 'stable', 'filePath': '正文/关系章.md'}
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'],
                                           'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-        source['references'].append({'sourceId': chapter['chapterId'], 'targetId': 'C-ALPHA', 'kind': 'uses'})
-        source['fragments'].append({'fragmentId': 'SF-REL-DEPENDENT', 'ownerId': 'C-ALPHA',
+        source['references'].append({'sourceId': chapter['chapterId'], 'targetId': 'character-ALPHA', 'kind': 'uses'})
+        source['fragments'].append({'fragmentId': 'fact-REL-DEPENDENT', 'ownerId': 'character-ALPHA',
                                     'text': '甲乙维系约定。', 'order': 6, 'contentRole': 'fact',
-                                    'contentBindings': ['AT-LIFE'],
-                                    'dependsOn': ['REL-ALPHA-BETA']})
+                                    'contentBindings': ['attribute-LIFE'],
+                                    'dependsOn': ['relation-ALPHA-BETA']})
         from scripts.core.prose_binding import seal_binding
         source['revision'] = max(1, source['revision'])
         chapter['proseBinding'] = seal_binding(source['projectId'], chapter['chapterId'], chapter['filePath'],
@@ -176,13 +176,13 @@ class RelationProposalTests(unittest.TestCase):
         register_evidence(self.root, chapterId=chapter['chapterId'], fileHash=digest(prose.read_bytes()),
                           sourceHash=snapshot_hash(load_structure(self.root)), requestId='relation-evidence',
                           citations=[{'start': 0, 'end': 5, 'text': '甲守护乙。',
-                                      'targetIds': ['REL-ALPHA-BETA'], 'kind': 'depends_on',
+                                      'targetIds': ['relation-ALPHA-BETA'], 'kind': 'depends_on',
                                       'reason': '句子依赖关系类型。'}])
         historical_evidence = (self.root / '.govel/source-prose-evidence.json').read_bytes()
         plan = self.propose()
         self.assertIn(chapter['chapterId'], plan['impact']['approvalInvalidations'])
-        self.assertIn('SF-REL-DEPENDENT', plan['impact']['reviewFragmentIds'])
-        self.assertEqual(plan['impact']['proseEvidence'][0]['matchedTargetIds'], ['REL-ALPHA-BETA'])
+        self.assertIn('fact-REL-DEPENDENT', plan['impact']['reviewFragmentIds'])
+        self.assertEqual(plan['impact']['proseEvidence'][0]['matchedTargetIds'], ['relation-ALPHA-BETA'])
         original = prose.read_bytes()
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(prose.read_bytes(), original)
@@ -208,11 +208,11 @@ class RelationProposalTests(unittest.TestCase):
         before = (self.root / '.govel/structure.json').read_bytes()
         cli = subprocess.run([sys.executable, str(repo / 'scripts/novelctl.py'), 'project', 'source',
                               'relation-resolve', '--project-root', str(self.root),
-                              '--relation-id', 'REL-ALPHA-BETA'], cwd=repo, capture_output=True, text=True)
+                              '--relation-id', 'relation-ALPHA-BETA'], cwd=repo, capture_output=True, text=True)
         self.assertEqual(cli.returncode, 0, cli.stdout + cli.stderr)
         request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {
             'name': 'resolve_source_relation_target', 'arguments': {
-                'projectRoot': str(self.root), 'relationId': 'REL-ALPHA-BETA'}}}
+                'projectRoot': str(self.root), 'relationId': 'relation-ALPHA-BETA'}}}
         mcp = subprocess.run([sys.executable, str(repo / 'scripts/mcp_server.py')],
                              input=json.dumps(request) + '\n', cwd=repo, capture_output=True, text=True)
         self.assertEqual(mcp.returncode, 0, mcp.stderr)

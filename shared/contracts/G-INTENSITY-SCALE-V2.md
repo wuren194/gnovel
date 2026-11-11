@@ -1,7 +1,7 @@
 ---
 id: G-INTENSITY-SCALE-V2
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 场景强度规则的责任与判断边界。
 ---
 
