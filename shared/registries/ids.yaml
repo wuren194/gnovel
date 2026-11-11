@@ -130,7 +130,7 @@ rules:
     modes: [plot, buildUp, mixed, peakScene]
     checker: check_prose_quality
     source: shared/contracts/G-WRITING-BANS.md
-    note: 100分制扣分（抽象心理/模板过渡/解释腔/库存神态/升华结尾/空洞修饰）+感官加分；通过阈值取 text-patterns.json diagnosticPolicy.proseQuality.minScore，评级阈值独立
+    note: 词面启发式指标，默认 info，不证明文学质量；严重度和阈值取 text-patterns.json diagnosticPolicy.proseQuality，数值不要求正文凑分
   - id: S-11
     name: 句式节奏
     code: "[句式节奏]"

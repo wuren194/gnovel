@@ -45,7 +45,9 @@ Govel 本身不提供独立的图形写作界面，而是作为一组本地工�
 
 ## 安装与接入
 
-本地运行环境为 macOS 或 Linux、Python 3.11 或更新版本。Python 代码只使用标准库；Linux 写入需要 libc 提供 `renameat2`，项目所在文件系统支持 `RENAME_NOREPLACE`。原生 Windows 暂不支持，可在 WSL2 的 Linux 环境中运行并执行完整验证。平台验收口径见 [LOCAL-CI.md](docs/LOCAL-CI.md)。
+支持 macOS 和 Linux，要求 Python 3.11 或更新版本；Python 代码只使用标准库。macOS 15 与 Ubuntu 24.04 已在 GitHub Actions 上通过完整工程门禁，具体提交、运行环境和跳过项见 [平台验证记录](docs/LOCAL-CI.md#已验证的平台基线)。
+
+Linux 写入需要 libc 提供 `renameat2`，项目所在文件系统支持 `RENAME_NOREPLACE`；其他发行版和挂载文件系统需在实际环境验证。原生 Windows 暂不支持。WSL2 可作为 Linux 运行方式，但尚未单独完成验收，使用前请在该环境及实际项目文件系统上执行完整检查。
 
 Claude Code 安装插件：
 

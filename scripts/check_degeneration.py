@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Model degeneration detection for govel long-form prose.
 
-Detects four classes of model degeneration that the model itself cannot notice:
+Reports four classes of possible generation defects:
 - Verbatim repetition / near-duplicate sentences
 - Truncated output (no terminal punctuation at file end)
 - Placeholder refusals / AI self-reference
 - Engineering term leakage (payload/outline vocabulary leaking into prose)
 
-Blocking hits mean "go back to the generator and rewrite", not "de-slop this".
+Short repetitions are contextual review candidates. A finding does not prove
+that a model authored the prose or prescribe rewriting the entire chapter.
 """
 
 from __future__ import annotations
@@ -21,8 +22,12 @@ from typing import NamedTuple
 
 try:
     from core.exit_codes import exit_code_for_recommendation, FailClosedArgumentParser
+    from text.ai_patterns import load_text_patterns
+    from text.prose_spans import mask_prose
 except ImportError:  # 作为 scripts 包模块被导入（如 tests）时走包路径
     from scripts.core.exit_codes import exit_code_for_recommendation, FailClosedArgumentParser
+    from scripts.text.ai_patterns import load_text_patterns
+    from scripts.text.prose_spans import mask_prose
 
 
 class DegenMatch(NamedTuple):
@@ -34,12 +39,7 @@ class DegenMatch(NamedTuple):
     tier: int  # 1 = blocking engineering leak, 2 = advisory chapter ref
 
 
-# ---- Repetition detection ----
-# Verbatim repeat: same sentence (>= 20 chars) appears >= 3 times
-# Adjacent line repeat: two consecutive non-dialogue lines are near-identical
-REPETITION_MIN_LEN = 20
-REPETITION_MIN_COUNT = 3
-ADJACENT_SIMILARITY_THRESHOLD = 0.75  # Jaccard on character bigrams
+# Repetition thresholds: text-patterns.diagnosticPolicy.degeneration.
 
 # ---- Truncation detection ----
 TERMINAL_PUNCTUATION = re.compile(
@@ -68,14 +68,13 @@ ENGINEERING_TIER2_PATTERNS = [
 
 # ---- AI self-reference / refusal / placeholder ----
 AI_SELF_REFERENCE = re.compile(
-    r"(?:作为(?:一个)?AI|我不能|我无法|很抱歉|我理解|根据\S*的(?:训练|知识|数据))"
+    r"(?:作为(?:一个|一名)?\s*(?:AI(?:语言模型|助手|模型)?|人工智能(?:助手)?|(?:大型?|大)?语言模型)"
+    r"(?=[，,。；;：:！!？?\s]|我|无法|不能|$)"
+    r"|我(?:无法|不能)(?:再|继续)?(?:生成|创作|撰写|续写)(?:这(?:段|类|些)|该|相关|所请求的)?(?:内容|文本|正文|故事)"
+    r"|让我们(?:来)?看(?:一下)?(?:接下来|下面)的(?:情节|故事|章节)(?:发展)?)"
 )
 PLACEHOLDER_PATTERNS = [r"\[待(?:补|填|写)\]", r"\{[A-Z_]+\}", r"\[此处.*?\]"]
 
-# ---- Dialogue exemption ----
-# 开引号（中文弯引号/直角引号/英文引号）——行首是引号即视为对白行，豁免退化检查
-DIALOGUE_LINE = re.compile(r'^[「」『』“”‘’\'"]')
-DIALOGUE_PATTERN = re.compile(r'[「『“‘\'"][^」』”’\'"]*[」』”’\'"]')
 
 
 def _char_bigrams(text: str) -> set[str]:
@@ -91,16 +90,6 @@ def _jaccard(a: set, b: set) -> float:
     return len(a & b) / len(a | b)
 
 
-def _is_dialogue_line(line: str) -> bool:
-    stripped = line.strip()
-    return bool(DIALOGUE_LINE.match(stripped))
-
-
-def _is_dialogue_heavy_paragraph(paragraph: str) -> bool:
-    """Return True if paragraph is mostly dialogue (e.g. a dialogue exchange)."""
-    dialogue_chars = sum(len(m.group()) for m in DIALOGUE_PATTERN.finditer(paragraph))
-    total_chars = max(len(re.sub(r"\s+", "", paragraph)), 1)
-    return dialogue_chars / total_chars > 0.6
 
 
 def _normalize_for_comparison(text: str) -> str:
@@ -109,137 +98,90 @@ def _normalize_for_comparison(text: str) -> str:
 
 
 def detect_repetitions(text: str) -> list[DegenMatch]:
-    """Detect verbatim and near-adjacent line repetition."""
+    """Inspect actual sentences and adjacent lines, not just whole-line copies."""
     matches: list[DegenMatch] = []
-    lines = text.splitlines()
-
-    # Verbatim sentence-level repetition
+    policy = load_text_patterns()['diagnosticPolicy']['degeneration']
+    narrative = mask_prose(text)
+    lines = narrative.splitlines()
+    originals = text.splitlines()
     sentences: list[tuple[int, str]] = []
-    for i, line in enumerate(lines, 1):
-        stripped = line.strip()
-        if not stripped or stripped.startswith(("#", "```", "|", ">")):
-            continue
-        if _is_dialogue_line(stripped):
-            continue  # dialogue repetition is legitimate
-        norm = _normalize_for_comparison(stripped)
-        if len(norm) >= REPETITION_MIN_LEN:
-            sentences.append((i, norm))
+    for found in re.finditer(r'[^。！？!?\n]+(?:[。！？!?]+|$)', narrative, re.MULTILINE):
+        norm = _normalize_for_comparison(found[0])
+        if norm:
+            start = found.start() + len(found[0]) - len(found[0].lstrip())
+            sentences.append((text.count('\n', 0, start) + 1, norm))
 
-    counter = Counter(s for _, s in sentences)
+    counter = Counter(s for _, s in sentences if len(s) >= policy['verbatimMinChars'])
     for sentence, count in counter.items():
-        if count >= REPETITION_MIN_COUNT:
-            first_occurrence = next(ln for ln, s in sentences if s == sentence)
-            matches.append(DegenMatch(
-                first_occurrence,
-                "逐字复读",
-                sentence[:60] + ("…" if len(sentence) > 60 else ""),
-                "",
-                "blocking",
-                1,
-            ))
+        if count >= policy['verbatimMinCount']:
+            first_line = next(line for line, value in sentences if value == sentence)
+            matches.append(DegenMatch(first_line, '逐字复读', sentence[:60] + ('…' if len(sentence) > 60 else ''),
+                                      originals[first_line - 1], 'blocking', 1))
 
-    # Adjacent non-dialogue line repetition
+    # A short refrain may be intentional; it does not veto the prose.
+    cursor = 0
+    while cursor < len(sentences):
+        line_num, sentence = sentences[cursor]
+        stop = cursor + 1
+        while stop < len(sentences) and sentences[stop][1] == sentence:
+            stop += 1
+        if (policy['shortRepeatMinChars'] <= len(sentence) < policy['verbatimMinChars']
+                and stop - cursor >= policy['shortRepeatMinCount']):
+            matches.append(DegenMatch(line_num, '短句连续复读', sentence,
+                                      originals[line_num - 1], 'advisory', 2))
+        cursor = stop
+
     for i in range(len(lines) - 1):
-        a, b = lines[i].strip(), lines[i+1].strip()
+        a, b = lines[i].strip(), lines[i + 1].strip()
         if not a or not b:
             continue
-        if _is_dialogue_line(a) or _is_dialogue_line(b):
-            continue
         a_norm, b_norm = _normalize_for_comparison(a), _normalize_for_comparison(b)
-        if len(a_norm) < 15 or len(b_norm) < 15:
+        if len(a_norm) < policy['adjacentMinChars'] or len(b_norm) < policy['adjacentMinChars']:
             continue
         sim = _jaccard(_char_bigrams(a_norm), _char_bigrams(b_norm))
-        if sim >= ADJACENT_SIMILARITY_THRESHOLD:
-            matches.append(DegenMatch(
-                i + 1,
-                "紧邻复读(相似度={:.2f})".format(sim),
-                a[:40],
-                a,
-                "advisory",
-                2,
-            ))
-
+        if sim >= policy['adjacentSimilarity']:
+            matches.append(DegenMatch(i + 1, '紧邻复读(相似度={:.2f})'.format(sim),
+                                      a[:40], originals[i], 'advisory', 2))
     return matches
-
 
 def detect_truncation(text: str) -> list[DegenMatch]:
-    """Detect truncated output: file ends without terminal punctuation."""
-    matches: list[DegenMatch] = []
-    stripped = text.rstrip()
+    """Check the last prose character, excluding trailing document metadata."""
+    stripped = mask_prose(text, include_dialogue=True).rstrip()
     if stripped and not TERMINAL_PUNCTUATION.search(stripped[-1]):
-        last_line_num = len(text.splitlines())
-        matches.append(DegenMatch(
-            last_line_num,
-            "末尾截断",
-            stripped[-80:] if len(stripped) > 80 else stripped,
-            "",
-            "blocking",
-            1,
-        ))
-    return matches
-
+        return [DegenMatch(text.count('\n', 0, len(stripped)) + 1, '末尾截断',
+                           stripped[-80:], '', 'blocking', 1)]
+    return []
 
 def detect_ai_self_reference(text: str) -> list[DegenMatch]:
-    """Detect AI self-reference, refusal language, or placeholders."""
+    """Require an explicit assistant/generation context, not ordinary first person."""
     matches: list[DegenMatch] = []
-    for line_num, line in enumerate(text.splitlines(), 1):
+    originals = text.splitlines()
+    for line_num, line in enumerate(mask_prose(text).splitlines(), 1):
         stripped = line.strip()
-        if not stripped or stripped.startswith(("#", "```", "|", ">")):
+        if not stripped:
             continue
-        if _is_dialogue_line(stripped):
-            continue  # "我不能" in character dialogue is legitimate
-
-        # A narration prefix does not turn the character's quoted words into
-        # assistant speech. Preserve offsets and still inspect text outside quotes.
-        narrative = DIALOGUE_PATTERN.sub(lambda m: ' ' * len(m.group()), stripped)
-        if AI_SELF_REFERENCE.search(narrative):
-            matches.append(DegenMatch(
-                line_num,
-                "AI自指/拒绝语",
-                AI_SELF_REFERENCE.search(narrative).group(),
-                stripped,
-                "blocking",
-                1,
-            ))
-
+        found = AI_SELF_REFERENCE.search(stripped)
+        if found:
+            matches.append(DegenMatch(line_num, 'AI自指/拒绝语', found.group(),
+                                      originals[line_num - 1], 'blocking', 1))
         for pattern in PLACEHOLDER_PATTERNS:
             for found in re.finditer(pattern, stripped):
-                matches.append(DegenMatch(
-                    line_num,
-                    "占位符",
-                    found.group(),
-                    stripped,
-                    "blocking",
-                    1,
-                ))
-
+                matches.append(DegenMatch(line_num, '占位符', found.group(),
+                                          originals[line_num - 1], 'blocking', 1))
     return matches
-
 
 def detect_engineering_terms(text: str) -> list[DegenMatch]:
-    """Detect engineering vocabulary leaking into prose."""
+    """Report pipeline vocabulary outside quoted speech and document metadata."""
     matches: list[DegenMatch] = []
-    for line_num, line in enumerate(text.splitlines(), 1):
-        stripped = line.strip()
-        if not stripped or stripped.startswith(("#", "```", "|", ">")):
-            continue
-        if _is_dialogue_line(stripped):
-            continue
-
-        for pattern, rule_id, name in ENGINEERING_TIER1_PATTERNS:
-            for found in re.finditer(pattern, stripped):
-                matches.append(DegenMatch(
-                    line_num, name, found.group(), stripped, "blocking", 1,
-                ))
-
-        for pattern, rule_id, name in ENGINEERING_TIER2_PATTERNS:
-            for found in re.finditer(pattern, stripped):
-                matches.append(DegenMatch(
-                    line_num, name, found.group(), stripped, "advisory", 2,
-                ))
-
+    originals = text.splitlines()
+    for line_num, line in enumerate(mask_prose(text).splitlines(), 1):
+        for patterns, severity, tier in ((ENGINEERING_TIER1_PATTERNS, 'blocking', 1),
+                                         (ENGINEERING_TIER2_PATTERNS, 'advisory', 2)):
+            for pattern, rule_id, name in patterns:
+                for found in re.finditer(pattern, line):
+                    matches.append(DegenMatch(line_num, name, found.group(),
+                                              originals[line_num - 1], severity, tier))
     return matches
-
 
 def scan(text: str, file_label: str = "") -> dict:
     """Run all degeneration checks. Return a report dict."""
@@ -264,6 +206,7 @@ def scan(text: str, file_label: str = "") -> dict:
                 "pattern": m.pattern_name,
                 "matched": m.matched_text,
                 "severity": m.severity,
+                "review": "mechanical" if m.severity == "blocking" else "semantic",
             }
             for m in blocking
         ],
@@ -273,6 +216,7 @@ def scan(text: str, file_label: str = "") -> dict:
                 "pattern": m.pattern_name,
                 "matched": m.matched_text,
                 "severity": m.severity,
+                "review": "mechanical" if m.severity == "blocking" else "semantic",
             }
             for m in advisory
         ],

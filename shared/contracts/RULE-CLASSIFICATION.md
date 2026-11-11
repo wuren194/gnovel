@@ -1,6 +1,6 @@
 ---
 id: RULE-CLASSIFICATION
-version: 1.1.0
+version: 1.2.0
 compatibilityVersion: 5
 description: 规则责任标签与证据边界。
 ---
@@ -23,5 +23,7 @@ description: 规则责任标签与证据边界。
 - 已成立阻断失去定位仍待定位，不能因报告省略或改严重度消失；显式处置和有效性核验遵循 `CHAPTER-PIPELINE.md` 的返修闭环。S3/info 的可选建议继续随稿可见，不因继承历史而升成必修。
 - `[H]` 不得由模型、脚本或自动模式代替。
 - `[P]` 必须在 Writer 执行前冻结，正文阶段不得静默改写。
+
+文本诊断把 `severity` 与 `review` 分开记录。`review=mechanical` 表示当前规则可按明确形式约束处理；`review=semantic` 表示须结合正文判断。风格扫描产生的 `[M]` 定位可以交给 `[S]` 使用，但检测方式是正则并不使文学结论成为机械事实。语义候选保持非阻断；已由 Editor 确认的缺陷仍遵循既有审查和返修闭环。
 
 规则同时跨层时拆开标注。例如：`[P]` Planner 声明张力等级，`[M]` linter 校验上下限，`[H]` 作者批准 Level 10。

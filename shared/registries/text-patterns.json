@@ -5,73 +5,91 @@
         "name": "不是……而是……",
         "pattern": "不是[^。\\n]{0,40}而是",
         "ruleId": "NOT-A-BUT-B",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对对照是否澄清了真实区别；若只是重复强调，删去重复部分，保留有信息的判断。"
       },
       {
         "name": "与其说……不如说……",
         "pattern": "与其说[^。\\n]{0,40}不如说",
         "ruleId": "RATHER-THAN",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对两个说法的区别是否必要；有实质修正可保留，不为消除句式而改动事实。"
       },
       {
         "name": "重要的不是……而是",
         "pattern": "重要的不是[^。\\n]{0,40}而是",
         "ruleId": "IMPORTANT-NOT-BUT",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "检查强调是否已由场景表达；只删重复的评语，保留必要的比较条件。"
       },
       {
         "name": "假坦诚开场",
         "pattern": "(?:说实话|老实讲|讲真)[，,]",
         "ruleId": "HONEST-OPEN",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "检查口语开场是否属于叙述声纹；没有语气或信息作用时可直接进入原句。"
       },
       {
         "name": "自问自答",
         "pattern": "[。？]\\s*(?:结果呢|然后呢|为什么呢|怎么办呢)",
         "ruleId": "SELF-QA",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对设问是否承担犹疑、反讽或叙述交流；只撤掉重复引路的问答。"
       },
       {
         "name": "元提问绕路",
         "pattern": "(?:你是不是一直想知道|你有没有想过|你知道这意味着什么吗)",
         "ruleId": "META-QUESTION",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "先确认叙述者是否有意与读者交流；无此文风依据时改为当前人物能够观察到的信息。"
       },
       {
         "name": "上帝解释腔",
         "pattern": "(?:他不知道的是|殊不知|这意味着|之所以[^。\\n]{0,30}是因为)",
         "ruleId": "POV-OMNISCIENT",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "依据作品视角检查信息来源；全知叙述、必要解释和真实因果可以保留。"
       },
       {
-        "name": "抽象心理直说",
-        "pattern": "他(?:感到|意识到|明白了|内心)[^。\\n]{1,24}",
+        "name": "心理概括候选",
+        "pattern": "(?:感到|觉得|心中(?:涌起|升起)|内心充满)(?:了)?(?:一阵|一种|一股|莫名的?|深深的?|强烈的?)?(?:羞耻|屈辱|恐惧|绝望|痛苦|悲伤|喜悦|愤怒|不安|复杂的?情绪)",
         "ruleId": "ABSTRACT-EMOTION",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "判断这句心理概括是否补充人物判断或经历；若与前文重复才删减，不强行补身体反应。"
       },
       {
         "name": "语气表情库存类比",
         "pattern": "(?:语气|声音|表情)[^。！？\\n]{0,12}(?:(?:跟|像)[^。！？\\n]{1,12}(?:一样|一般|似的)|仿佛[^。！？\\n]{1,12}(?:一样|一般))",
         "ruleId": "VOICE-SIMILE",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对比喻是否准确区分声音或表情；泛用比较可删，已有场景作用的比喻保留。"
       },
       {
         "name": "身体陈词",
@@ -80,16 +98,19 @@
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "具体动作可保留；仅在同段重复或与库存动作成串时改写",
-        "ruleId": "BODY-CLICHE"
+        "rewriteHint": "检查连续动作是否各有结果；重复的反应可以合并，不要换一个身体部位继续堆叠。",
+        "ruleId": "BODY-CLICHE",
+        "review": "semantic"
       },
       {
         "name": "镜头化套话",
         "pattern": "(?:每一帧|像慢镜头|画面定格)",
         "ruleId": "CAMERA-CLICHE",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "确认镜头词是否属于作品媒介和文风；仅作空泛强调时删去，保留实际观察。"
       },
       {
         "name": "那是引导解释腔",
@@ -99,15 +120,18 @@
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "普通指代句保留；仅收窄为解释关系时复核"
+        "rewriteHint": "核对指代和解释是否提供新信息；必要说明保留，重复总结可以删减。",
+        "review": "semantic"
       },
       {
         "name": "抽象情绪包",
         "pattern": "某种[^。\\n]{0,12}复杂情绪",
         "ruleId": "ABSTRACT-EMOTION-PACK",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对情绪是否确实不可分辨；若已经交代原因，删去重复的情绪包装。"
       },
       {
         "name": "机械 ordinal 计数",
@@ -116,7 +140,9 @@
         "severity": "advisory",
         "gate": false,
         "scope": "narrative",
-        "perParagraphLimit": 2
+        "perParagraphLimit": 2,
+        "review": "semantic",
+        "rewriteHint": "保留有时间或次数意义的数字；只有机械重复的计次需要调整。"
       },
       {
         "name": "密集数字数值",
@@ -125,86 +151,93 @@
         "severity": "advisory",
         "gate": false,
         "scope": "narrative",
-        "perParagraphLimit": 2
+        "perParagraphLimit": 2,
+        "review": "semantic",
+        "rewriteHint": "先核对计量、日程或记录的实际用途；精确信息不能为降低密度而删去。"
       },
       {
         "name": "库存受惊生理",
         "pattern": "(?:倒抽(?:了)?一口?凉气|倒吸(?:了)?一口?凉气|吸(?:了)?口冷气|(?:后背|背后)?(?:瞬间|一下|唰地)?(?:浸出|渗出|冒出|洇出)(?:一层)?冷汗|惊出(?:一身|一层)冷汗|冷汗(?:涔涔|直冒|浸湿了?(?:后背|衣衫)))",
         "ruleId": "SHOCK-PHYSIOLOGY",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对受惊反应是否符合当前处境，并检查相邻段是否重复使用；单次真实反应可保留。",
+        "perParagraphLimit": 1
       },
       {
         "name": "肤浅分析收尾",
         "pattern": "(?:彰显|折射出|映照出|预示着|昭示着|诉说着|见证着)[^。\\n]{0,20}",
         "ruleId": "ENDING-ANALYSIS",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "核对总结是否新增必要信息；事件已表达的判断不必再解释，不能删掉必要因果。"
       },
       {
         "name": "格言化旁白",
         "pattern": "(?:权力|人性|命运|时间|爱情|动机|真相|尊严)(?:从不|从来不|总是|永远|向来)[^。\\n]{0,20}",
         "ruleId": "APHORISM-NARRATION",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "检查概括是否属于人物判断或叙述声纹；缺少当前经历支持的泛论可收窄。"
       },
       {
         "name": "正文出现emoji",
         "pattern": "[\\U0001F300-\\U0001FAFF\\u2600-\\u27BF]",
         "ruleId": "EMOJI",
-        "severity": "blocking",
-        "gate": true,
-        "scope": "narrative"
+        "severity": "advisory",
+        "gate": false,
+        "scope": "narrative",
+        "review": "semantic",
+        "rewriteHint": "确认符号是否来自故事中的消息、屏幕或作者声明的文风；不得仅凭符号判定模型生成。"
       },
       {
         "ruleId": "ENDING-SUMMARY",
         "name": "总结升华",
         "pattern": "(?:这一刻|在此刻|到了此时)[，,]?他(?:终于)?(?:懂得|明白|意识到|体悟到)",
-        "severity": "blocking",
-        "gate": true,
+        "severity": "advisory",
+        "gate": false,
         "scope": "narrative",
-        "rewriteHint": "ending-summary"
-      },
-      {
-        "ruleId": "TITLE-LABEL",
-        "name": "标签口号化",
-        "pattern": "(?:我是|变成|作为)(?:雨水)?(?:容器|玩物|性奴)",
-        "severity": "error",
-        "gate": true,
-        "scope": "narrative"
+        "rewriteHint": "核对认知变化是否发生且需要交代；只删重复结论，不要求所有结尾都停在动作上。",
+        "review": "semantic"
       },
       {
         "ruleId": "ABSTRACT-NOUN",
         "name": "抽象名词意义夸大",
-        "pattern": "(?:见证了|标志着|为……奠定.{0,12}基础|证明.{0,4}了.{0,4}的|持久(?:的)?渴望|宝贵的|不可磨灭的|命运的齿轮|这一夜注定|持续?不断的演变|深刻(?:的)?而(?:持久|深远))",
+        "pattern": "(?:见证了|标志着|为……奠定.{0,12}基础|证明.{0,4}了.{0,4}的|持久(?:的)?渴望|宝贵的|不可磨灭的|这一夜注定|持续?不断的演变|深刻(?:的)?而(?:持久|深远))",
         "severity": "advisory",
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "abstract-nouns"
+        "rewriteHint": "核对抽象判断有无当前事件支持；保留有依据的概括，收窄无依据的意义拔高。",
+        "review": "semantic"
       },
       {
         "ruleId": "CLICHE-EYES",
         "name": "眼神套句",
-        "pattern": "(?:眼神|眼底)(?:一暗|深邃|闪过|划过|微沉|一凝|陡变|暗了暗|染上)",
+        "pattern": "(?:眼神|眼底|眼中|眸中)(?:一暗|深邃|闪过|划过|微沉|一凝|陡变|暗了暗|染上)",
         "severity": "advisory",
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "ai-vocab"
+        "rewriteHint": "比较这些目光描写是否传递不同信息；重复时合并，单次观察可以保留。",
+        "review": "semantic"
       },
       {
         "ruleId": "CLICHE-MOUTH",
         "name": "嘴角套句",
-        "pattern": "(?:嘴角(?:微微|轻轻)?上扬|勾起(?:一抹|一道)?(?:弧度|笑意|冷笑))",
+        "pattern": "(?:嘴角(?:微微|轻轻)?(?:上扬|勾起(?:一抹|一道)?(?:弧度|笑意|冷笑))|勾起(?:一抹|一道)?(?:弧度|笑意|冷笑))",
         "severity": "advisory",
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "ai-vocab"
+        "rewriteHint": "检查笑容是否影响交流或选择；重复姿态可删，不以同义词轮换代替修订。",
+        "review": "semantic"
       },
       {
         "ruleId": "CLICHE-AIR",
@@ -214,7 +247,8 @@
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "ai-vocab"
+        "rewriteHint": "检查环境变化是否有可感知依据；若只是情绪重述，可保留事件而删去泛化氛围。",
+        "review": "semantic"
       },
       {
         "ruleId": "CLICHE-HEART",
@@ -224,7 +258,8 @@
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "ai-vocab"
+        "rewriteHint": "核对每次反应的原因和后果；无新信息的重复可删，真实感受不必回避。",
+        "review": "semantic"
       },
       {
         "ruleId": "SIMILE-LINK",
@@ -234,7 +269,8 @@
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 1,
-        "rewriteHint": "ai-vocab"
+        "rewriteHint": "通读连续比喻的对象和用途；保留准确且必要的比较，不按连接词逐个替换。",
+        "review": "semantic"
       },
       {
         "ruleId": "INANIMATE-AGENCY",
@@ -244,14 +280,109 @@
         "gate": false,
         "scope": "narrative",
         "perParagraphLimit": 0,
-        "rewriteHint": "仅标记有明确抽象名词的候选；代词“它”的指代及普通物品空间位置由语义审查判断，不按“它在”猜拟人。"
+        "rewriteHint": "核对拟人是否符合叙述声纹且有具体作用；普通空间位置和有效修辞不需改写。",
+        "review": "semantic"
+      },
+      {
+        "ruleId": "VOLUME-CONTRAST",
+        "name": "音量与气势反差",
+        "pattern": "(?:声音|嗓音|话音)(?:并|倒|其实)?不(?:大|高|响|重)[^。！？!?；;\\n]{0,18}(?:却|但|偏偏)[^。！？!?；;\\n]{0,24}",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "scope": "narrative",
+        "rewriteHint": "核对低音量与实际效果是否有依据；只有空泛气势时删去评价，保留已经写出的声音和现场反应。"
+      },
+      {
+        "ruleId": "NEGATION-PARADE",
+        "name": "连续否定列举",
+        "pattern": "没有[^。！？!?；;，,\\n]{1,12}[，,]\\s*没有[^。！？!?；;，,\\n]{1,12}(?:[，,]\\s*(?:没有|只是|只会|只有)[^。！？!?；;，,\\n]{1,16})*",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "scope": "all",
+        "rewriteHint": "核对每个否定是否排除了不同可能；事实清单、反复修辞和人物语气可保留，只合并无信息增量的列举。"
+      },
+      {
+        "ruleId": "ENDING-PREVIEW",
+        "name": "章尾命运或传奇预告",
+        "pattern": "(?:(?:属于[^。！？!?，,\\n]{1,12}的)?(?:故事|传奇|一切|新的篇章|崭新的篇章|新的人生))[^。！？!?\\n]{0,8}(?:才(?:刚刚|刚)?|即将)(?:开始|拉开)|命运(?:的)?齿轮[^。！？!?\\n]{0,16}(?:转动|运转)",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "scope": "narrative",
+        "rewriteHint": "核对预告是否符合已声明的叙述方式；只承诺未来精彩而没有新信息时可删，完整收束和真实后果仍应保留。",
+        "endingWindowHan": 400
+      },
+      {
+        "ruleId": "FUTURE-NARRATION",
+        "name": "章尾越时预告",
+        "pattern": "(?:谁也不知道|没有人知道|无人知道|他不知道的是|她不知道的是)[^。！？!?\\n]{0,48}(?:将会|终将|日后|多年以后)[^。！？!?\\n]{0,32}",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "scope": "narrative",
+        "rewriteHint": "核对未来信息的视角权限和叙述用途；全知回望可以成立，无依据的预告才需要收回。",
+        "endingWindowHan": 400
+      },
+      {
+        "ruleId": "BREATH-CLICHE",
+        "name": "换气反应套句",
+        "pattern": "(?:深吸(?:了)?(?:一口|口)气|呼吸(?:猛地|忽然|突然)?一滞)",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "scope": "narrative",
+        "rewriteHint": "检查换气是否承担潜水、说话或情绪变化等具体作用；孤立动作可保留，连续无变化的反应可合并。",
+        "perParagraphLimit": 1
+      },
+      {
+        "ruleId": "ATTITUDE-CLICHE",
+        "name": "少量词包装态度",
+        "pattern": "(?:带着|透着|夹着)(?:一丝|一抹|几分)(?:轻蔑|讥讽|戏谑|玩味|不屑|冷意)",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "scope": "narrative",
+        "rewriteHint": "核对态度能否由已写出的言行辨认；重复标签可以删，不凭空增添动作证明情绪。",
+        "perParagraphLimit": 1
       }
     ],
     "triple": {
       "name": "三项同构排比",
       "pattern": "((?:[^，。\\n]{1,8}了[，,]){2}[^，。\\n]{1,8}了)",
-      "action_exempt_pattern": "[操顶插射夹捅撞磨蹭咬]"
-    }
+      "action_exempt_pattern": "(?!)",
+      "ruleId": "PARALLEL-TRIPLE",
+      "severity": "advisory",
+      "review": "semantic",
+      "gate": false,
+      "scope": "narrative",
+      "rewriteHint": "核对并列各项是否有不同作用；有意排比可以保留，不为打散形式而增删故事事实。"
+    },
+    "clusters": [
+      {
+        "ruleId": "CLICHE-CLUSTER",
+        "name": "局部库存表达聚集",
+        "members": [
+          "BODY-CLICHE",
+          "SHOCK-PHYSIOLOGY",
+          "CLICHE-EYES",
+          "CLICHE-MOUTH",
+          "CLICHE-AIR",
+          "CLICHE-HEART",
+          "BREATH-CLICHE",
+          "ATTITUDE-CLICHE"
+        ],
+        "scope": "narrative",
+        "severity": "advisory",
+        "review": "semantic",
+        "gate": false,
+        "windowHan": 500,
+        "minMatches": 4,
+        "minPerKHan": 8,
+        "rewriteHint": "按附带定位通读这一组描写，保留各自承担的动作、判断和信息；删减同一情绪的重复包装，不用另一批套话替换。"
+      }
+    ]
   },
   "adverb_patch": {
     "regex": [
@@ -419,7 +550,8 @@
   },
   "diagnosticPolicy": {
     "proseQuality": {
-      "minScore": 70
+      "minScore": 70,
+      "severity": "info"
     },
     "subjectSentence": {
       "impersonalExistencePattern": "^(?:(?:又|却|仍然|仍|再|还是|已经|终于|忽然)(?:也|还)?)*没(?:有)?(?:(?:任何|一点儿?|一丝|半点)?(?:新的?|别的|其他的?|更多的?)?(?:消息|动静|声音|声响|脚步声|回声|人影|信号)(?=$|[，,；;]|传来|响起|出现)|(?:任何(?:新的?|别的|其他的?|更多的?)?|新的?|别的|其他的?|更多的?)通知(?=$|[，,；;]|传来|响起|出现)|通知(?=传来|响起|出现)|(?:任何人|一个人|人)(?=$|[，,；;]|应门|回答|回应|答话|说话|开口|过来|进来|出现))"
@@ -482,6 +614,21 @@
       "sensoryStayMinLength": 25,
       "stickyMinLength": 20,
       "enabled": false
+    },
+    "sentenceRhythm": {
+      "minSentences": 6,
+      "minSentenceChars": 4,
+      "minMeanChars": 10,
+      "maxVariance": 5,
+      "severity": "advisory"
+    },
+    "degeneration": {
+      "verbatimMinChars": 20,
+      "verbatimMinCount": 3,
+      "shortRepeatMinChars": 8,
+      "shortRepeatMinCount": 3,
+      "adjacentMinChars": 15,
+      "adjacentSimilarity": 0.75
     }
   },
   "smellKeywords": [

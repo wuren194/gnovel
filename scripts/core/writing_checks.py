@@ -23,13 +23,14 @@ def rules_card(*, mode, intensityLevel, strictFloor=False):
     _, checks, _ = validator.build_checks(mode, strictFloor, intensityLevel, strict_dialogue_floor=strictFloor)
     policy = diagnostic_policy()
     patterns = validator.load_text_patterns()
+    ai_patterns = text_module('text.ai_patterns')
     floor = registry.degradation_floor()
     thresholds = {'S-10s': policy['sentenceLength'],
                   'S-09d': {k: v for k, v in policy['sensoryDensity'].items() if k != 'channels'},
                   'S-08': policy['paragraphRatio'], 'S-06': policy['dialogueDynamics'],
                   'S-09b': {k: floor[k] for k in ('minLevel', 'thresholds', 'level6')}, 'S-16': patterns['adverb_patch'],
                   'S-17': patterns['transition'], 'S-18': patterns['word_density'],
-                  'S-19': patterns['adjective_stack'], 'S-10': patterns['ai']['triple'], 'S-09': policy['sceneDynamics']}
+                  'S-19': patterns['adjective_stack'], 'S-09': policy['sceneDynamics']}
     rows = []
     for name, _ in checks:
         rid = validator.RULE_ID_BY_NAME[name]
@@ -38,6 +39,11 @@ def rules_card(*, mode, intensityLevel, strictFloor=False):
             severity = 'info'
         if rid == 'S-10s': severity = policy['sentenceLength']['lengthSeverity'] + '; unpunctuated=error'
         if rid == 'S-09d': severity = policy['sensoryDensity']['severity']
+        if rid == 'S-10q': severity = policy['proseQuality']['severity']
+        if rid == 'S-10':
+            severity = 'error' if any(ai_patterns.finding_policy(rule)['gate'] for rule in
+                                     [*ai_patterns.pattern_rules(patterns), *patterns['ai'].get('clusters', [])]
+                                     if mode.lower() not in {v.lower() for v in rule.get('exemptModes', [])}) else 'info'
         row = {'ruleId': rid, 'name': name, 'severity': severity,
                'scope': 'selected paragraphs when sceneParagraphs supplied; otherwise declared scene' if name in validator.ADULT_CHECK_NAMES else 'chapter',
                'guidance': validator.FIX_HINT_BY_ID.get(rid, '')}
@@ -50,11 +56,11 @@ def rules_card(*, mode, intensityLevel, strictFloor=False):
             row['thresholds'] = thresholds[rid]
             row.pop('guidance', None)
         rows.append(row)
-    for rule in patterns['ai']['regex']:
-        # Both legacy consumers currently scan AI rules in their fixed mode;
-        # expose their actual union instead of pretending mode exemptions apply.
-        if {'mixed', 'plot'} <= {v.lower() for v in rule.get('exemptModes', [])}: continue
-        rows.append({k: rule[k] for k in ('ruleId', 'name', 'severity', 'pattern', 'scope', 'perParagraphLimit') if k in rule})
+    for rule in [*ai_patterns.pattern_rules(patterns), *patterns['ai'].get('clusters', [])]:
+        if mode.lower() in {v.lower() for v in rule.get('exemptModes', [])}: continue
+        rows.append({**{k: rule[k] for k in ('ruleId', 'name', 'pattern', 'scope', 'perParagraphLimit', 'rewriteHint',
+                     'minMatches', 'minPerKHan', 'windowHan', 'endingWindowHan', 'members') if k in rule},
+                     **ai_patterns.finding_policy(rule)})
     return {'ok': True, 'code': 'DIAGNOSTIC_RULES', 'mode': mode, 'intensityLevel': intensityLevel,
             'implementationSource': 'scripts/text/validator.py',
             'strictFloor': strictFloor, 'rules': rows,
@@ -65,9 +71,8 @@ def rules_card(*, mode, intensityLevel, strictFloor=False):
             'additionalChecks': {'voice': {'globalBanned': patterns['voice']['globalBannedInterjections'],
                 'perRole': '运行诊断时从项目读取；当前加载情况见 voiceCoverage'},
                 'degeneration': {'source': 'scripts/check_degeneration.py',
-                    'repetitionMinLength': text_module('check_degeneration').REPETITION_MIN_LEN,
-                    'repetitionMinCount': text_module('check_degeneration').REPETITION_MIN_COUNT,
-                    'adjacentSimilarity': text_module('check_degeneration').ADJACENT_SIMILARITY_THRESHOLD},
+                    **policy['degeneration']},
+                'sentenceRhythm': policy['sentenceRhythm'],
                 'chapterContract': '运行项目诊断时从推演读取字数与段预算'},
             'coverage': '形式检查；张力等级数字是上限，实际强度、POV、因果和必须落地项仍须语义审校。'}
 
@@ -80,7 +85,7 @@ def check_paragraph(*, text, mode='buildUp', intensityLevel=None):
     rules_card(mode=mode, intensityLevel=intensityLevel)  # shared argument validation
     checks = [validator._norm(validator.check_sentence_length(text, mode), '句子长度'),
               validator._norm(validator.check_subject_sentences(text), '句式节奏'),
-              validator._norm(validator.check_ai_patterns(text), 'AI句式套路')]
+              validator._norm(validator.check_ai_patterns(text, mode=mode), 'AI句式套路')]
     cliche = text_module('ai_cliche_linter').build_report(text, intensity_level=intensityLevel, mode=mode)
     return {'ok': True, 'code': 'PARAGRAPH_CHECK', 'scope': 'paragraph', 'textSha256': sha256_text(text),
             'checks': checks, 'findings': cliche['findings'], 'ceiling': cliche['intensityLevelCheck'],

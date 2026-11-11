@@ -91,9 +91,9 @@ class CheckerEvaluationTests(unittest.TestCase):
         self.assertNotEqual(evaluation.evaluate(suite)["suiteDigest"], self.report["suiteDigest"])
 
     def test_unscored_findings_do_not_become_false_positives(self) -> None:
-        observed = evaluation.run_checkers("他感到一阵羞耻。", {"cliche"}, [])
-        self.assertIn("cliche/BODY-FIRST", observed)
-        self.assertEqual(evaluation.score_assertions({"cliche/ABSTRACT-EMOTION": True}, observed),
+        observed = evaluation.run_checkers("那个秘密一直在等。", {"cliche"}, [])
+        self.assertIn("cliche/INANIMATE-AGENCY", observed)
+        self.assertEqual(evaluation.score_assertions({"cliche/ABSTRACT-EMOTION": False}, observed),
                          {"falsePositives": [], "falseNegatives": []})
 
     def test_voice_adapter_consumes_actual_global_registry(self) -> None:

@@ -244,10 +244,12 @@ class ProseQualityPolicyTests(unittest.TestCase):
 
         try:
             defaults = {score: check(body) for score, body in bodies.items()}
-            self.assertEqual({score: row['pass'] for score, row in defaults.items()}, {69: False, 70: True, 71: True})
+            self.assertEqual({score: row['pass'] for score, row in defaults.items()}, {69: True, 70: True, 71: True})
+            self.assertTrue(all(row['level'] == 'info' for row in defaults.values()))
             for score, row in defaults.items():
                 self.assertIn(f'得分 {score}/100', row['detail'])
             policy['diagnosticPolicy']['proseQuality']['minScore'] = 71
+            policy['diagnosticPolicy']['proseQuality']['severity'] = 'fail'
             policy_path.write_text(json.dumps(policy, ensure_ascii=False))
             changed = check(bodies[70])
             self.assertFalse(changed['pass'])

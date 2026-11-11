@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "protocolVersion": 1,
   "kind": "synthetic-engineering",
-  "suiteDigest": "6c8d42fecb97166ed61652feb40cea5fb5d6bd852e223d50eb219abeaa4d3e4a",
+  "suiteDigest": "f6a0a5ddddbbf64bd698abd4ecb16922e6151fea20241085bb35d6f648ed22d1",
   "limitations": [
     "Not a novel-quality score or human-approved calibration",
     "Only explicitly labeled case-rule pairs are scored",
@@ -10,15 +10,15 @@
     "Cycles mean exact text return or monitored rule disappearance and return"
   ],
   "summary": {
-    "cases": 52,
-    "rules": 20,
-    "assertions": 66,
+    "cases": 74,
+    "rules": 28,
+    "assertions": 85,
     "failedCases": 0,
     "repairs": 6,
     "failedRepairs": 0,
-    "TP": 26,
+    "TP": 36,
     "FP": 0,
-    "TN": 40,
+    "TN": 49,
     "FN": 0,
     "precision": 1.0,
     "recall": 1.0
@@ -27,20 +27,60 @@
     "cliche/ABSTRACT-EMOTION": {
       "TP": 2,
       "FP": 0,
-      "TN": 1,
-      "FN": 0,
-      "precision": 1.0,
-      "recall": 1.0
-    },
-    "cliche/BODY-FIRST": {
-      "TP": 1,
-      "FP": 0,
       "TN": 2,
       "FN": 0,
       "precision": 1.0,
       "recall": 1.0
     },
+    "cliche/ATTITUDE-CLICHE": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/BREATH-CLICHE": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/CLICHE-CLUSTER": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/ENDING-PREVIEW": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/FUTURE-NARRATION": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
     "cliche/HONEST-OPEN": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "cliche/NEGATION-PARADE": {
       "TP": 1,
       "FP": 0,
       "TN": 1,
@@ -56,6 +96,14 @@
       "precision": 1.0,
       "recall": 1.0
     },
+    "cliche/PARALLEL-TRIPLE": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
     "cliche/RHYTHM-LOW-VARIANCE": {
       "TP": 1,
       "FP": 0,
@@ -64,10 +112,18 @@
       "precision": 1.0,
       "recall": 1.0
     },
-    "degeneration/AI自指/拒绝语": {
+    "cliche/VOLUME-CONTRAST": {
       "TP": 1,
       "FP": 0,
       "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "degeneration/AI自指/拒绝语": {
+      "TP": 2,
+      "FP": 0,
+      "TN": 2,
       "FN": 0,
       "precision": 1.0,
       "recall": 1.0
@@ -104,6 +160,14 @@
       "precision": 1.0,
       "recall": 1.0
     },
+    "degeneration/短句连续复读": {
+      "TP": 1,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
     "degeneration/章节引用(advisory)": {
       "TP": 1,
       "FP": 0,
@@ -121,7 +185,7 @@
       "recall": 1.0
     },
     "degeneration/逐字复读": {
-      "TP": 1,
+      "TP": 2,
       "FP": 0,
       "TN": 2,
       "FN": 0,
@@ -239,8 +303,7 @@
       "id": "emotion-positive",
       "textDigest": "1e9e286a9d2f867b7237cefe69a26986fceaf885dfc8b12c12fcd5946f242b0c",
       "observed": [
-        "cliche/ABSTRACT-EMOTION",
-        "cliche/BODY-FIRST"
+        "cliche/ABSTRACT-EMOTION"
       ],
       "unscored": [],
       "passed": true,
@@ -699,6 +762,226 @@
       "textDigest": "9721e2ddce274d7d2efeef71a7418d7153a74d0036f2850257139c17aa10e64c",
       "observed": [
         "cliche/NOT-A-BUT-B"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "physical-sensation-negative",
+      "textDigest": "41ddefe0c423248bb61bdcf3cec94ca572f07e834507af6ec7edc3dd1c51fe95",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-contrast-positive",
+      "textDigest": "a8bc91c4723307fa59690bb974f167da6b416cd50d8e6268a9acc4b3b6ceca2b",
+      "observed": [
+        "cliche/VOLUME-CONTRAST"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "voice-contrast-negative",
+      "textDigest": "e412186fead81d83ca42702a1cfa9166d62a95ddb0692197b3c47b17190da26d",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "negation-parade-positive",
+      "textDigest": "8c771cd9f5803ec06a52cfcd08da55b99386093892ea68234105bcc912bbf85e",
+      "observed": [
+        "cliche/NEGATION-PARADE"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "negation-parade-negative",
+      "textDigest": "3cd55a3874fbd2daf5dc868d240c0c825e2021a1a647f1f8a559c849954bedfe",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "ending-preview-positive",
+      "textDigest": "7a23cde17d35298270c9e6cf930af2fd6d9d94d5aabbfcfed2c116827aa99bc9",
+      "observed": [
+        "cliche/ENDING-PREVIEW"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "ending-preview-negative",
+      "textDigest": "37e669144c702638b37f96375c7acaa0169b83a5341222b9d05713f853ec069c",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "future-narration-positive",
+      "textDigest": "094bf6fbc1c46958bd01ab05d3bdeb8810ba856984f644f34a4000d7edcae146",
+      "observed": [
+        "cliche/FUTURE-NARRATION"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "future-narration-negative",
+      "textDigest": "bb2f28df880068f8ca835b9aa1413aa500bb48e9ecd4345d59c55d9bdde23bfc",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "breath-density-positive",
+      "textDigest": "5aa2d5ee1a0c537b9b488f06f91c240ad177f0dadf66d1ca7ac66883ff719b7b",
+      "observed": [
+        "cliche/BREATH-CLICHE"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "breath-density-negative",
+      "textDigest": "e7767513426cb78f69df6415315f47b9ea7d8c7904d483db54ba4fc4d09f7e17",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "attitude-density-positive",
+      "textDigest": "1844db5a24a8f79fe3f484ad004ea9f48014762f7ff439a49432e5c558c44e1c",
+      "observed": [
+        "cliche/ATTITUDE-CLICHE"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "attitude-density-negative",
+      "textDigest": "8452a08865472313d28ef6fff313ac553f607751c7356fad962b7ba209691f16",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "triple-positive",
+      "textDigest": "7b919e375ce6203d39a381ba7a465eb4a062c7f6652a66b649481c2fa9ce1927",
+      "observed": [
+        "cliche/PARALLEL-TRIPLE"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "triple-negative",
+      "textDigest": "a76da5129ad2723ce959ae456c461712a08506fd3ea93a5f85c05c6d35225804",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "cluster-positive",
+      "textDigest": "f398f8b597fd8daeccd2a2cb1fa56ae451fd7d7d2c7ee9131f016baacc46dd98",
+      "observed": [
+        "cliche/CLICHE-CLUSTER"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "cluster-negative",
+      "textDigest": "e7767513426cb78f69df6415315f47b9ea7d8c7904d483db54ba4fc4d09f7e17",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "short-repeat-positive",
+      "textDigest": "1bbb7ba8b98d2370a6a007b81a2c12a1503d0954a194ee49bf53a326a4ec8c29",
+      "observed": [
+        "degeneration/短句连续复读"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "short-repeat-dialogue-negative",
+      "textDigest": "1f1c2a312fe6f087310eb65c9e0d983b3256336cf1dd02af682c23c93f994638",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "repeat-same-line-positive",
+      "textDigest": "e9b9e1aca0905917ea10ef6af21f09f0c5d9e7830852329104ff29f9be2db1d3",
+      "observed": [
+        "degeneration/逐字复读"
+      ],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "first-person-negative",
+      "textDigest": "29471372ea7269b45e146285ba7114d3911f2eece42cb0973b56f5bcd1b38ba1",
+      "observed": [],
+      "unscored": [],
+      "passed": true,
+      "falsePositives": [],
+      "falseNegatives": []
+    },
+    {
+      "id": "generation-commentary-positive",
+      "textDigest": "e806d0c6c4684a2acb9225765320e1dd2a52449c6c424be7bd8286e8642425ef",
+      "observed": [
+        "degeneration/AI自指/拒绝语"
       ],
       "unscored": [],
       "passed": true,
