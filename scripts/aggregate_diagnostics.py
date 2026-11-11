@@ -270,6 +270,7 @@ def main():
                 "ruleId": f.get("ruleId"),
                 "message": f"[{f.get('pattern')}] {f.get('matched')} in '{f.get('context')}'",
                 "line": f.get("line"),
+                **{key: f[key] for key in ('column', 'start', 'end', 'review', 'gate', 'rewriteHint', 'density', 'occurrences') if key in f},
                 "raw": f
             })
             aggregated["summary"]["perScript"]["ai_cliche_linter"] += 1

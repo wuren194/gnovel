@@ -368,7 +368,9 @@ print(json.dumps(results))
     def test_warm_validator_and_voice_reads_use_the_current_registry(self):
         patterns = json.loads((provider.ROOT / 'shared/registries/text-patterns.json').read_text())
         patterns['ai']['regex'] = []
-        patterns['ai']['triple'].update(pattern='旧信号', action_exempt_pattern='(?!)', name='测试规则')
+        patterns['ai']['clusters'] = []
+        patterns['ai']['triple'].update(pattern='旧信号', action_exempt_pattern='(?!)', name='测试规则',
+                                        review='mechanical', severity='blocking', gate=True)
         patterns['voice']['globalBannedInterjections'] = ['旧信号']
         path = self.root / 'patterns.json'
         path.write_text(json.dumps(patterns, ensure_ascii=False))

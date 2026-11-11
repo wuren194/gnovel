@@ -80,7 +80,7 @@ FIX_HINT_BY_ID = {
     "S-10s": "有停顿的长句只提示人工复读，不要求切碎；无标点长句补合适停顿；对话行豁免",
     "S-11": '核对连续句的主语、动作和节奏；修订不得省略必要因果。',
     "S-08": "恢复多句段间隔，拆开超长段；对话段、分隔符与保守识别的状态变化单句已豁免",
-    "S-10": "删不是X而是Y/排比三连/假坦诚/因果补全，以及喉结滚动、修长手指、镜头化套话和抽象情绪包",
+    "S-10": "按具体定位核对信息增量、视角和文风；语义候选允许保留，不按句式计数认定缺陷或要求全章重写",
     "S-16": "不要机械删副词。把副词+宽泛动词或程度词+抽象标签改为精确动词、可观察动作/感官/结果；每删一个修饰语都确认其信息功能已补回",
     "S-09": "场景补齐嗅/触/视；叙事核心动作段至少两类感官。纯对白/对白剥离后无叙事核心的不检",
     "S-06": '依据已启用的对白规则检查说话意图、称呼及上下文。',
@@ -90,7 +90,7 @@ FIX_HINT_BY_ID = {
     "A-18": "删除正文中的章节/写作工程词；标题行豁免，故事世界内真实讨论文本的例外交 L2 复核",
     "F-07": "按 FULL GATE 重写胜负：不得靠认输/放水/伤病/体力骤降/临时开挂，也不得把本场控制扩成长期支配",
     "S-09d": "提高触觉受力、状态/温度、微表情、听觉、嗅觉多通道感官词密度（目标≥10次/千字，覆盖≥2通道）",
-    "S-10q": "清理“他感到/意识到”抽象心理、模板过渡词（与此同时/就在这时）与升华总结结尾，提升身体细节描述",
+    "S-10q": "词面指标仅供复核，不能评定文学质量；保留必要心理、因果和衔接，不为加分堆感官词",
     "S-17": "叙事段内转折词（然而/但是/不过/可是/却）每段≤1个、每500字≤2个；对话行豁免，用动作或语序自然转折替代",
     "S-18": "功能词密度：叙事每500字「这」家族≤3个、「是」系动词≤4个（复合词缀于是/可是/但是/还是/不是/而是/只是/要是/倒是/算是/老是/或是先剔除再计数）；对话行豁免，用动作/状态/语序改写判断句与指示词",
     "S-19": '核对形容词是否承载独立信息；保留有作用的细节，处理重复说明。',
@@ -837,27 +837,25 @@ def check_sensory_channels(text: str) -> tuple:
     )
 
 
-def ai_pattern_violations(text: str) -> list[dict]:
+def ai_pattern_violations(text: str, *, mode: str = "plot") -> list[dict]:
     rows = []
-    for item in scan_ai_patterns(text, mode="plot"):
-        if item.get('gate', True):
-            rows.append({'rule': 'S-10', 'pattern': item['name'], 'line': item.get('line'),
-                         'text': item.get('matched', item.get('text', '')), 'blocking': True})
-    config = load_text_patterns()['ai']['triple']
-    for match in re.finditer(config['pattern'], text):
-        if not re.search(config['action_exempt_pattern'], match.group()):
-            rows.append({'rule': 'S-10', 'pattern': config['name'],
-                         'line': text.count('\n', 0, match.start()) + 1,
-                         'start': match.start(), 'end': match.end(), 'text': match.group(), 'blocking': True})
+    for item in scan_ai_patterns(text, mode=mode):
+        rows.append({**item, 'rule': 'S-10', 'pattern': item['name'],
+                     'text': item['matched'], 'blocking': item['gate']})
     return rows
 
 
-def check_ai_patterns(text: str) -> tuple[bool, str]:
-    rows = ai_pattern_violations(text)
+def check_ai_patterns(text: str, *, mode: str = "plot") -> tuple:
+    rows = ai_pattern_violations(text, mode=mode)
     if not rows:
         return True, ''
-    counts = Counter(row['pattern'] for row in rows)
-    return False, '检测到：' + '；'.join(f'{name}（{count}处）' for name, count in counts.items()) + '；例：' + rows[0]['text']
+    blocking = [row for row in rows if row['blocking']]
+    reported = blocking or rows
+    counts = Counter(row['pattern'] for row in reported)
+    detail = '；'.join(f'{name}（{count}处）' for name, count in counts.items()) + '；例：' + reported[0]['text']
+    if blocking:
+        return False, '形式约束命中：' + detail
+    return True, '风格候选待语义复核：' + detail, 'info'
 
 
 def check_adjective_stack(text: str) -> tuple[bool, str]:
@@ -1222,8 +1220,7 @@ def check_l5_floor(text: str, intensity_level: int = 5) -> tuple[bool, str, str]
     return (ok, detail, "info")
 
 
-# Compatibility export; patterns are owned by the runtime registry.
-
+# Historical lexical score, reported as an uncalibrated indicator by default.
 PROSE_CLICHE_PATTERNS = {
     "抽象心理直说": (
         re.compile(
@@ -1357,11 +1354,14 @@ def check_sensory_density(text: str) -> tuple:
     return ok, detail
 
 
-def check_prose_quality(text: str) -> tuple[bool, str]:
+def check_prose_quality(text: str) -> tuple:
     s_info = analyze_sensory_density(text)
     q_info = analyze_prose_quality(text, s_info)
-    ok = q_info["score"] >= diagnostic_policy()['proseQuality']['minScore']
-    detail = f"得分 {q_info['score']}/100 (等级:{q_info['grade']}) · 扣分:-{q_info['deductions']} · 加分:+{q_info['bonuses']}"
+    policy = diagnostic_policy()['proseQuality']
+    ok = q_info["score"] >= policy['minScore']
+    detail = f"启发式得分 {q_info['score']}/100 (等级:{q_info['grade']}) · 扣分:-{q_info['deductions']} · 加分:+{q_info['bonuses']}；不是文学质量评分"
+    if policy['severity'] == 'info':
+        return True, detail, 'info'
     return ok, detail
 
 
@@ -1414,13 +1414,16 @@ def build_checks(
     def dialogue_density(t: str):
         return check_dialogue_dynamics_density(t, intensity_level, strict=strict_dialogue_floor)
 
+    def ai_patterns(t: str):
+        return check_ai_patterns(t, mode=mode)
+
     checks = [
         ("破折号使用", check_dash),
         ("省略号使用", check_ellipsis),
         ("句子长度", sentence_len),
         ("句式节奏", check_subject_sentences),
         ("段落节奏", check_paragraph_rhythm),
-        ("AI句式套路", check_ai_patterns),
+        ("AI句式套路", ai_patterns),
         ("转折词密度", check_transition_density),
         ("功能词密度", check_word_density),
         ("低信息副词补丁", check_adverb_patches),
@@ -1612,11 +1615,12 @@ def main():
         check_text = scene_text if args.scene_paragraphs and name in ADULT_CHECK_NAMES else text
         result = fn(check_text)
         item = _norm(result, name)
-        if name == 'AI句式套路' and not item['pass']:
-            locations = ai_pattern_violations(text)
-            item['locations'] = locations
-            item['line'] = locations[0]['line']
-            item['evidence'] = locations[0]['text']
+        if name == 'AI句式套路':
+            locations = ai_pattern_violations(text, mode=mode)
+            if locations:
+                item['locations'] = locations
+                item['line'] = locations[0]['line']
+                item['evidence'] = locations[0]['text']
         if name == "L5张力等级地板" and strict_l5 and not item["pass"]:
             item["level"] = "fail"
             item["pass"] = False

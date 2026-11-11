@@ -4,11 +4,8 @@
 The linter reports form-level evidence only.  It does not claim to prove POV,
 character voice, causality, consent, or physical continuity.
 
-Calibration baseline (v13): blocking rules MUST achieve 0 false positives on the
-author's published chapters before being promoted to Editor hard-gate. Each rule
-annotated with calibration status:
-  - CALIBRATED: tested on {"<work>"} N chapters, 0 hits
-  - UNCALIBRATED: pending human-verified corpus run
+Style candidates require contextual review. Synthetic regression controls do
+not calibrate literary quality, establish authorship, or authorize a rewrite.
 """
 
 from __future__ import annotations
@@ -17,104 +14,58 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import NamedTuple
 
 try:
     from scripts import intensity_registry
     from scripts.core.exit_codes import EXIT_FAIL_CLOSED, exit_code_for_recommendation, FailClosedArgumentParser
     from scripts.text_utils import chinese_char_count
-    from scripts.text.ai_patterns import scan_ai_patterns
+    from scripts.text.ai_patterns import load_text_patterns, paragraph_spans, scan_ai_patterns
+    from scripts.text.prose_spans import mask_prose
 except ImportError:  # Direct script invocation without the repository on sys.path.
     import intensity_registry
     from core.exit_codes import EXIT_FAIL_CLOSED, exit_code_for_recommendation, FailClosedArgumentParser
     from text_utils import chinese_char_count
-    from text.ai_patterns import scan_ai_patterns
+    from text.ai_patterns import load_text_patterns, paragraph_spans, scan_ai_patterns
+    from text.prose_spans import mask_prose
 
 
-class ClicheMatch(NamedTuple):
-    line_num: int
-    pattern_name: str
-    matched_text: str
-    line_content: str
-    severity: str = "warning"
-    rule_id: str = "STYLE"
-    rewrite_hint: str = ""  # points to libraries/de-ai-humanize/sections/ section slug
+# 词面规则、范围和阈值来自 text-patterns 注册表；本模块只组装报告。
+# 标点和功能词密度仍由 validate-text 的既有检查负责。
 
 
-# AI 句式规则唯一真源：shared/registries/text-patterns.json.ai.regex。
-# 本模块只保留 linter 报告与兼容 CLI，不平行声明正则或严重度。
-
-BODY_WORDS = (
-    "耳", "脸", "喉", "肩", "背", "手", "指", "掌", "腿", "膝", "腰", "腹", "胸",
-    "皮肤", "肌肉", "骨", "呼吸", "喘", "汗", "疼", "酸", "胀", "麻", "酥", "烫", "紧", "颤",
-)
-
-# 破折号、转折词与功能词的密度阈值唯一真源：validate-text.py S-13/S-17/S-18，
-# 词表见 shared/registries/text-patterns.json。本 linter 不再平行判定，
-# 避免与机械层给出矛盾结论。
-
-
-def _is_markup_or_instruction(line: str) -> bool:
-    stripped = line.strip()
-    return (
-        not stripped
-        or stripped.startswith(("#", "```", "|", ">"))
-        or (stripped.startswith(("【", "[")) and "规则" in stripped)
-    )
-
-
-def _add_regex_matches(text: str) -> list[ClicheMatch]:
-    matches: list[ClicheMatch] = []
-    for item in scan_ai_patterns(text):
-        matches.append(ClicheMatch(
-            item["line"], item["name"], item["matched"], item["context"],
-            item["severity"], item["ruleId"], item["rewriteHint"],
-        ))
-    for line_num, line in enumerate(text.splitlines(), 1):
-        if _is_markup_or_instruction(line):
-            continue
-        if re.search(r"(?:感到|觉得|涌起|升起).{0,10}(?:羞耻|屈辱|恐惧|绝望|痛苦)", line):
-            if not any(word in line for word in BODY_WORDS):
-                matches.append(ClicheMatch(
-                    line_num,
-                    "心理未绑定身体反应",
-                    "abstract-emotion-without-body",
-                    line.strip(),
-                    "blocking",
-                    "BODY-FIRST",
-                    "abstract-emotion",
-                ))
-    return matches
-
-
-def _sentence_rhythm(text: str) -> list[ClicheMatch]:
-    matches: list[ClicheMatch] = []
-    for line_num, line in enumerate(text.splitlines(), 1):
-        if _is_markup_or_instruction(line):
-            continue
-        sentences = [part.strip() for part in re.split(r"[。！？；!?]", line) if len(part.strip()) > 3]
-        if len(sentences) < 6:
+def _sentence_rhythm(text: str) -> list[dict]:
+    policy = load_text_patterns()["diagnosticPolicy"]["sentenceRhythm"]
+    source = mask_prose(text)
+    matches = []
+    for start, end in paragraph_spans(source):
+        paragraph = source[start:end]
+        sentences = [part.strip() for part in re.split(r"[。！？；!?]", paragraph)
+                     if len(part.strip()) >= policy["minSentenceChars"]]
+        if len(sentences) < policy["minSentences"]:
             continue
         lengths = [len(sentence) for sentence in sentences]
         mean = sum(lengths) / len(lengths)
         variance = sum((length - mean) ** 2 for length in lengths) / len(lengths)
-        if mean > 10 and variance < 5:
-            matches.append(ClicheMatch(
-                line_num,
-                "句长方差过低",
-                f"variance={variance:.1f}, mean={mean:.1f}",
-                line.strip(),
-                "warning",
-                "RHYTHM-LOW-VARIANCE",
-            ))
+        if mean > policy["minMeanChars"] and variance < policy["maxVariance"]:
+            start += len(paragraph) - len(paragraph.lstrip())
+            end -= len(paragraph) - len(paragraph.rstrip())
+            matches.append({
+                "line": text.count("\n", 0, start) + 1,
+                "column": start - text.rfind("\n", 0, start), "start": start, "end": end,
+                "name": "连续句长接近", "ruleId": "RHYTHM-LOW-VARIANCE",
+                "matched": text[start:end], "context": text[start:end],
+                "severity": policy["severity"], "review": "semantic", "gate": False,
+                "metrics": {"variance": round(variance, 2), "meanChars": round(mean, 2), "sentences": len(sentences)},
+                "rewriteHint": "检查连续句子是否机械同长；有意节奏可保留，需要调整时从现有句子拆合，不补无关内容。",
+            })
     return matches
 
 
-def scan_text_for_cliches(text: str) -> list[ClicheMatch]:
-    """Return deterministic form-level findings for compatibility callers."""
-    matches = _add_regex_matches(text)
+def scan_text_for_cliches(text: str, *, mode: str = "mixed") -> list[dict]:
+    """Return deterministic candidates, including the evidence for review."""
+    matches = scan_ai_patterns(text, mode=mode)
     matches.extend(_sentence_rhythm(text))
-    return sorted(matches, key=lambda item: (item.line_num, item.rule_id, item.matched_text))
+    return sorted(matches, key=lambda item: (item["start"], item["ruleId"], item["end"]))
 
 
 def check_intensity_level_consistency(text: str, declared_level: int, mode: str = "mixed") -> dict:
@@ -150,47 +101,36 @@ def check_intensity_level_consistency(text: str, declared_level: int, mode: str 
 
 
 def build_report(text: str, *, intensity_level: int | None = None, mode: str = "mixed") -> dict:
-    matches = scan_text_for_cliches(text)
+    matches = scan_text_for_cliches(text, mode=mode)
     counts = {
-        "blocking": sum(1 for item in matches if item.severity == "blocking"),
-        "error": sum(1 for item in matches if item.severity == "error"),
-        "advisory": sum(1 for item in matches if item.severity == "advisory"),
+        severity: sum(1 for item in matches if item["severity"] == severity)
+        for severity in ("blocking", "error", "advisory", "info")
     }
     han_count = chinese_char_count(text)
-    blocking_density = (counts["blocking"]) / max(han_count / 1000, 1)
+    narrative_han_count = chinese_char_count(mask_prose(text))
+    blocking_density = counts["blocking"] * 1000 / max(narrative_han_count, 1)
     dirty = check_intensity_level_consistency(text, intensity_level, mode) if intensity_level is not None else None
-    if counts["blocking"] >= 3:
-        # 三条及以上 blocking = 场景是整段 AI 生成，需回生成器重写
-        recommendation = "rewrite_required"
-    elif counts["blocking"] >= 1 or counts["error"] >= 6 or (dirty and dirty["status"] in {'INCONSISTENT', 'INVALID'}):
-        # 单条 blocking 可外科修复，不是全章重写
+    if any(item["gate"] for item in matches) or (dirty and dirty["status"] in {'INCONSISTENT', 'INVALID'}):
         recommendation = "surgical_edit"
-    elif dirty and dirty.get('contextReview'):
+    elif matches or (dirty and dirty.get('contextReview')):
         recommendation = 'review_advisory'
     else:
         recommendation = "pass"
     return {
         "schemaVersion": 1,
         "tool": "ai-cliche-linter",
-        "limitations": ["form-only", "no-pov-proof", "no-ooc-proof", "no-causality-proof", "no-consent-proof"],
+        "limitations": ["form-only", "no-ai-origin-proof", "no-pov-proof", "no-ooc-proof", "no-causality-proof", "no-consent-proof"],
         "calibrationStatus": "UNCALIBRATED",  # pending human-authored corpus validation
         "metrics": {
             "hanCount": han_count,
+            "narrativeHanCount": narrative_han_count,
             "findingCount": len(matches),
             "counts": counts,
             "blockingDensityPerKHan": round(blocking_density, 2),
         },
         "recommendation": recommendation,
         "findings": [
-            {
-                "line": item.line_num,
-                "ruleId": item.rule_id,
-                "severity": item.severity,
-                "pattern": item.pattern_name,
-                "matched": item.matched_text,
-                "context": item.line_content,
-                "rewriteHint": item.rewrite_hint,
-            }
+            {**{key: value for key, value in item.items() if key != "name"}, "pattern": item["name"]}
             for item in matches
         ],
         "intensityLevelCheck": dirty,

@@ -7,7 +7,7 @@ Govel 的完整工程门禁可在 macOS 或 Linux 上执行。本文件说明验
 | 维度 | 定位 |
 | --- | --- |
 | 运行平台 | macOS / Linux |
-| Python | 使用当前本机运行时，并在报告中记录路径与版本 |
+| Python | 3.11 或更新版本；报告记录实际路径与版本 |
 | Linux 文件系统 | 需要 `renameat2(RENAME_NOREPLACE)`；内核或文件系统不支持时拒绝发布 |
 | 原生 Windows | 暂不支持；启动时在导入 POSIX 模块前给出说明 |
 | GitHub | 源码托管与评审 |
@@ -15,7 +15,18 @@ Govel 的完整工程门禁可在 macOS 或 Linux 上执行。本文件说明验
 
 平台范围不改变稳定身份、事务保全、只读边界、证据绑定和数据完整性要求。更新 Python 或运行环境后，用新环境执行完整门禁，再据实际结果更新支持说明。
 
-Linux 分派的模拟测试不能替代 Linux 内核运行证据。WSL2 属于 Linux 运行环境，也需在实际项目使用的文件系统上验证；原生 Windows 的文件锁、目录句柄和发布协议尚未实现。外改确认窗口需桌面会话，工程测试模拟确认结果，不能证明真人已完成弹窗确认。
+Linux 分派的模拟测试不能替代 Linux 内核运行证据。Ubuntu 的实际运行记录见下表。WSL2 尚未单独验收，需在实际项目使用的文件系统上验证；原生 Windows 的文件锁、目录句柄和发布协议尚未实现。外改确认窗口需桌面会话，Linux 另需 `zenity`；工程测试模拟确认结果，不证明真人已完成弹窗确认。
+
+## 已验证的平台基线
+
+2026-11-11，提交 [`1661a5b`](https://github.com/wuren194/govel/commit/1661a5b18128af2273603c0f6ca2c8a4384841d8) 在 [CI 运行 42900393681](https://github.com/wuren194/govel/actions/runs/42900393681) 中通过两端完整 `local_ci.py` 门禁及公开发布内容检查：
+
+| 环境 | Python | 测试结果 |
+| --- | --- | --- |
+| macOS 15.8.2，ARM64 | 3.11.9 | 2,954 项，0 失败、0 错误、0 跳过 |
+| Ubuntu 24.04，x86_64，glibc 2.39 | 3.11.18 | 2,954 项，0 失败、0 错误、4 项跳过 |
+
+Linux 跳过项为 3 项依赖 macOS 整路径 `O_NOFOLLOW_ANY` 的测试，以及 1 项要求文件系统原生 CoW 克隆的测试；该 runner 的文件系统不支持后者。Linux 独占发布、普通副本回退和事务测试在同次完整套件中执行。此记录覆盖上述环境和提交，不代表所有 Linux 文件系统、WSL2、原生 CoW 或真人桌面确认均已验收。后续提交继续以各自的 `macos-ci`、`linux-ci` 结果为准。
 
 ## 运行时记录
 
@@ -196,6 +207,6 @@ untracked 归属变化都判 `repositoryMutatedByCI=true` 并逐项报出 before
 
 ## 外部 CI
 
-GitHub Actions 的 `macos-ci` 在 `macos-15`、`linux-ci` 在 `ubuntu-24.04` 上使用 Python 3.11 执行 `python3 scripts/local_ci.py`，两者均运行公开发布内容检查；macOS 作业另运行贡献流程脚本回归。工作流使用只读仓库权限，不加载个人 Provider 或审核词表；报告写入 runner 的仓库外临时目录，不作为源码或附件提交。新增作业配置本身不代表远程运行已通过。
+GitHub Actions 的 `macos-ci` 在 `macos-15`、`linux-ci` 在 `ubuntu-24.04` 上使用 Python 3.11 执行 `python3 scripts/local_ci.py`，两者均运行公开发布内容检查；macOS 作业另运行贡献流程脚本回归。工作流使用只读仓库权限，不加载个人 Provider 或审核词表；报告写入 runner 的仓库外临时目录，不作为源码或附件提交。查看具体提交对应的检查结果，已完成的初始平台验证见上方记录。
 
 外部 CI 补充公开干净环境的证据，不替代本机门禁。基础设施不可用与代码测试失败分别报告，远程通过不等于作者本机已验证。签署流程与工程 CI 分开，GitHub 分支保护的配置见 [维护清单](GITHUB-MAINTAINER.md)。

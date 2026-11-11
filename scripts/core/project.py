@@ -211,6 +211,8 @@ def diagnostic_policy() -> dict:
     minimum = policy.get('proseQuality', {}).get('minScore')
     if type(minimum) is not int or not 1 <= minimum <= 100:
         raise ValueError('diagnosticPolicy.proseQuality.minScore must be an integer from 1 to 100')
+    if policy['proseQuality'].get('severity') not in {'info', 'fail'}:
+        raise ValueError('diagnosticPolicy.proseQuality.severity must be info or fail')
     lengths, sensory, talk = (policy[k] for k in ('sentenceLength', 'sensoryDensity', 'dialogueDynamics'))
     numbers = [*lengths['byMode'].values(), lengths['stickyCap'], lengths['unpunctuatedCap'],
                sensory['minPerKHan'], sensory['minChannels'], sensory['minTextLength'],

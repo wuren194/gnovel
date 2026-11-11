@@ -77,8 +77,10 @@ class AuthoringSurfaceTests(unittest.TestCase):
 
     def test_triple_parallelism_has_exact_offsets_and_line(self):
         text = '门开着。\n纸干透了，脆了，使猛了。'
-        self.assertFalse(check_ai_patterns(text)[0])
+        self.assertTrue(check_ai_patterns(text)[0])
         hit = next(r for r in ai_pattern_violations(text) if r['pattern'] == '三项同构排比')
+        self.assertFalse(hit['blocking'])
+        self.assertEqual(hit['review'], 'semantic')
         self.assertEqual(hit['line'], 2)
         self.assertEqual(text[hit['start']:hit['end']], hit['text'])
         self.assertIn('干透了', hit['text'])

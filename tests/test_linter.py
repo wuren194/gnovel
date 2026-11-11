@@ -11,12 +11,13 @@ class LinterTests(unittest.TestCase):
         report = build_report("他喉结滚了一下，掌心的汗蹭在裤缝上。")
         self.assertEqual(report["recommendation"], "pass")
 
-    def test_abstract_emotion_without_body_is_actionable(self) -> None:
+    def test_abstract_emotion_requests_review_without_a_body_quota(self) -> None:
         report = build_report("他感到一阵羞耻。")
         rule_ids = {finding["ruleId"] for finding in report["findings"]}
         self.assertIn("ABSTRACT-EMOTION", rule_ids)
-        self.assertIn("BODY-FIRST", rule_ids)
-        self.assertEqual(report["recommendation"], "surgical_edit")
+        self.assertNotIn("BODY-FIRST", rule_ids)
+        self.assertEqual(report["recommendation"], "review_advisory")
+        self.assertTrue(all(item['review'] == 'semantic' and not item['gate'] for item in report['findings']))
 
     def test_dash_and_transitions_are_not_linter_business(self) -> None:
         # 破折号、转折词与功能词密度的唯一真源是 validate-text.py S-13/S-17/S-18；
@@ -40,7 +41,7 @@ class LinterTests(unittest.TestCase):
         findings = [finding for finding in report["findings"] if finding["ruleId"] == "THAT-WAS"]
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["severity"], "advisory")
-        self.assertEqual(report["recommendation"], "pass")
+        self.assertEqual(report["recommendation"], "review_advisory")
 
 
 if __name__ == "__main__":
