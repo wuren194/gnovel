@@ -100,7 +100,6 @@ def _state_truth(root: Path, field: str) -> str:
         import state_cache
     name = STATE_BUILDERS[field]
     current = state_cache.build_state(root) if name == 'state' else state_cache.build_design(root)
-    from .structure_store import load_structure
     # Source transactions intentionally do not maintain Markdown-derived
     # caches. Bind the current source projection, as finalization does.
     return sha256_json(current)

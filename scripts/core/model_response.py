@@ -52,11 +52,6 @@ def cli_operation(arguments: dict) -> str:
     return '.'.join(part for part in parts if isinstance(part, str))
 
 
-def operation_for_tool(name: str) -> str | None:
-    from .operations import operations
-    return next((spec.id for spec in operations() if spec.name == name), None)
-
-
 def presentation_target(operation: str, arguments: dict) -> tuple[str, dict]:
     if operation in {'capabilities.read', 'capabilities.export'} and isinstance(arguments.get('arguments'), dict):
         target = arguments.get('operation')

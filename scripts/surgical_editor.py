@@ -49,14 +49,6 @@ def _read_lines(raw: str) -> list[str]:
     return [ln[:-1] if ln.endswith("\r") else ln for ln in lines]
 
 
-def _replacement_lines(new_text: str) -> list[str]:
-    """把替换文本切成行（剥掉可能的 \r），与 _read_lines 的行语义一致。"""
-    lines = new_text.split("\n")
-    if lines and lines[-1] == "":
-        lines = lines[:-1]
-    return [ln[:-1] if ln.endswith("\r") else ln for ln in lines]
-
-
 def _write_lines(file_path: Path, lines: list[str], newline: str, trailing: bool) -> None:
     content = newline.join(lines)
     if trailing:
@@ -106,7 +98,7 @@ def apply_surgical_replacement(file_path: Path, start_line: int, end_line: int, 
 
     _validate_line_range(total, start_line, end_line)
 
-    new_lines = _replacement_lines(new_text)
+    new_lines = _read_lines(new_text)
     if not new_lines and not allow_delete:
         raise ValueError(
             "替换文本为空——若意图删除该区间请使用 --delete 标记（防止误删整段正文）"

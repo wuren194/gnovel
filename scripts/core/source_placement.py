@@ -7,14 +7,6 @@ VOLUME_SCOPE = 'volume'
 PROJECT_SCOPE = 'project'
 
 
-def placement_scopes() -> list[str]:
-    return list(source_model_policy()['placementScopes'])
-
-
-def unit_member_types() -> list[str]:
-    return list(source_model_policy()['unitMemberTypes'])
-
-
 def placement_from_volume(volume_id: str) -> dict:
     """Construct a volume placement from its stable volume identity."""
     return {'scope': VOLUME_SCOPE, 'volumeId': volume_id}

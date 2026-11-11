@@ -333,11 +333,6 @@ def load(root: Path) -> tuple[dict, dict]:
     raise StateCacheError("cache load could not read a stable generation")
 
 
-def state_path(root: Path) -> Path:
-    load(root)
-    return _cache_paths(root)[0]
-
-
 def design_path(root: Path) -> Path:
     load(root)
     return _cache_paths(root)[1]

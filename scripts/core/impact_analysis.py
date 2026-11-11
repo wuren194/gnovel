@@ -172,35 +172,3 @@ def anchor_change_impact(structure: dict, entity_id: str, changes: dict) -> dict
         "note": ("时间锚点改动会重排其后的时间线：受影响的章节跨度与挂载实体列在 "
                  "staleCandidates / linkedEntityIds，提交后请运行 `structure timeline` 复查倒挂。"),
     }
-
-
-def anchor_archive_impact(structure: dict, entity_id: str) -> dict:
-    """归档时间锚点的影响面：仍挂载在该锚点上的章节与实体。
-
-    归档此前走通用 entity 影响面，只查 references（章→实体边），而时间线挂载
-    （章节 storyTimeStartId/EndTimeId、实体 timeStartId/timeEndId）不走 reference，
-    一个都看不见（机制 36 审查的缺陷 8）。归档后锚点退出时间线，`story_timeline`
-    对仍挂载它的对象报 ARCHIVED_ANCHOR_REFERENCED——这里让作者在归档前就看到
-    需要迁移的对象。
-    """
-    base = entity_change_impact(structure, entity_id, {"status": "archived"})
-    chapters = set(base["staleCandidates"])
-    linked_entities: list[str] = []
-    for chapter in structure.get("chapters") or []:
-        if entity_id in (chapter.get("storyTimeStartId"), chapter.get("storyTimeEndId")):
-            chapters.add(chapter.get("chapterId"))
-    for entity in structure.get("entities") or []:
-        if entity.get("entityId") == entity_id:
-            continue
-        if entity_id in (entity.get("timeStartId"), entity.get("timeEndId")):
-            linked_entities.append(entity.get("entityId"))
-    linked_entities.sort()
-    return {
-        **base,
-        "timeAnchor": True,
-        "linkedEntityIds": linked_entities,
-        "staleCandidates": sorted(chapters),
-        "approvalInvalidations": sorted(chapters),
-        "note": ("归档后该锚点退出时间线；仍挂载它的章节与实体列在 staleCandidates / "
-                 "linkedEntityIds，提交前请迁移挂载或确认这些对象不再需要时间定位。"),
-    }

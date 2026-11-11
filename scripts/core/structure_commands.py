@@ -11,13 +11,10 @@ import uuid
 from copy import deepcopy
 from pathlib import Path
 
-from .clock import utc_now
-from .entity_registry import replace_entity_fields
 from .impact_analysis import (
-    anchor_change_impact, archive_impact, entity_change_impact,
-    insertion_impact, merge_entity_impact, move_impact,
+    archive_impact, insertion_impact, move_impact,
 )
-from .jsonio import read_json, write_json, write_text
+from .jsonio import read_json, write_json
 from .locks import project_lock
 from .paths import ProjectPathError, safe_project_path
 from .project import gc_keep_backups_default
@@ -27,7 +24,6 @@ from .structure_store import (
     is_time_ordinal,
     load_structure,
     new_id,
-    save_structure,
     structure_hash,
     validate_structure,
 )
@@ -70,13 +66,6 @@ def _file_state(path: Path) -> dict:
     if path.exists() and not path.is_file():
         raise StructureError("TRANSACTION_TARGET_INVALID", "transaction target must be a regular file", {"path": str(path)})
     return {"exists": path.is_file(), "sha256": hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None}
-
-
-def _validate_file_paths(root: Path, files: list[Path], backup: Path) -> None:
-    for path in files:
-        relative = str(path.relative_to(root))
-        _file_state(_safe_path(root, relative))
-        _file_state(_safe_path(root, _backup_path(backup, relative).relative_to(root)))
 
 
 def _plan_dir(root: Path) -> Path:
@@ -438,7 +427,7 @@ def list_operations(root: Path) -> list[dict]:
         current = load_structure(root)
     except (StructureError, OSError, ValueError):
         current = None
-    current_binding = current is not None and True
+    current_binding = current is not None
     rows = []
     for path in directory.glob("OP-*.json"):
         try:

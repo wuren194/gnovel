@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-from .paths import ProjectPathError, safe_project_path
 
 OUTLINE_ORIGIN = "outline"
 PARTICIPANT_FIELD = "参与实体"

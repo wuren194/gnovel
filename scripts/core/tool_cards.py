@@ -5,7 +5,6 @@
 """
 from __future__ import annotations
 
-from pathlib import Path
 
 from .jsonio import write_text
 from .project import TOOLBOX_ROOT

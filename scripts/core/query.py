@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from .artifacts import sha256_json
-from .entity_registry import PREFIX_BY_TYPE, resolve_entity
+from .entity_registry import resolve_entity
 from .project import query_policy
 from .settings_schema import settings_schema
 from .source_model import owner_types

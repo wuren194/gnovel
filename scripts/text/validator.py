@@ -1592,7 +1592,7 @@ def main():
         except ValueError as exc:
             parser.error(str(exc))
 
-    if (args.strict_floor or args.strict_l5) and args.mode != 'peakScene' and not args.scene_paragraphs:
+    if (args.strict_floor or args.strict_l5) and mode_raw != 'peakscene' and not args.scene_paragraphs:
         parser.error('非全章关键场景的严格地板检查须显式传 --scene-paragraphs，避免把剧情段计入密度')
 
     if getattr(args, "no_strict_l5", False):

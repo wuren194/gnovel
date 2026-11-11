@@ -13,7 +13,7 @@ from .artifacts import sha256_json
 from .jsonio import read_json
 from .mechanical_evidence import evidence_current
 from .operations import call_operation, operations
-from .project import TOOLBOX_ROOT, toolbox_manifest
+from .project import TOOLBOX_ROOT
 from .structure_store import StructureError, load_structure
 from .summary_status import summary_freshness
 from .tool_catalog import FACT_TYPES, load_catalog

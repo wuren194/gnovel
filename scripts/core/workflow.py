@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import file_sha256
-from .paths import ProjectPathError, safe_project_path, stored_project_path
+from .paths import ProjectPathError, stored_project_path
 from .review_artifacts import validate_artifact_binding
 
 WORKFLOW_SCHEMA_VERSION = 2
@@ -338,7 +338,7 @@ def record_artifact(
                 if not isinstance(frozen_previous, dict) or frozen_previous.get('artifactSha256') != previous['artifactSha256']:
                     raise WorkflowError('CANDIDATE_HANDOFF_STALE', 'writing notes changed after the selection handoff')
         validate_notes(artifact['payload'].get('writingNotes', {}), artifact['payload'].get('text', ''))
-        if True and artifact['payload'].get('writingNotes', {}).get('newFacts'):
+        if artifact['payload'].get('writingNotes', {}).get('newFacts'):
             raise WorkflowError('SOURCE_FACTS_REQUIRE_PROPOSAL', 'single-source new facts require source proposals')
     if artifact['artifactType'] == 'stage_b_review' and project_root is not None:
         previous = workflow.get('artifacts', {}).get(chapter_id, {}).get('stage_b_review', {})

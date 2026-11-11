@@ -21,7 +21,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -249,7 +248,7 @@ def activate_candidate_version(
     """
     root = root.expanduser().resolve()
     from .locks import project_lock
-    from .write_sets import apply_write_set, capture_guards, inventory, json_bytes
+    from .write_sets import apply_write_set, capture_guards, json_bytes
 
     if not isinstance(candidate_version, int) or not isinstance(expected_active_token, int):
         raise StructureError("CANDIDATE_ACTIVATE_INVALID", "candidateVersion and expectedActiveToken must be integers")

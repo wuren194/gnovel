@@ -17,12 +17,11 @@ from pathlib import Path
 from typing import Any
 
 from .paths import stored_project_path
-from .artifacts import file_sha256
 from .clock import utc_now
-from .jsonio import read_json, write_json
+from .jsonio import read_json
 from .locks import project_lock
-from .paths import ProjectPathError, safe_project_path
-from .structure_store import load_structure, save_structure, StructureError
+from .paths import ProjectPathError
+from .structure_store import load_structure, StructureError
 from .workflow import (
     WorkflowError,
     default_workflow,
@@ -46,15 +45,6 @@ def _load_workflow(root: Path) -> dict[str, Any]:
     if not path.is_file():
         return default_workflow()
     return normalize_workflow(read_json(path))
-
-
-
-
-def _prose_path(root: Path, chapter: dict[str, Any]) -> Path:
-    try:
-        return safe_project_path(root, str(chapter.get("filePath", "")))
-    except ProjectPathError as exc:
-        raise WorkflowError(exc.code, str(exc), exc.details) from exc
 
 
 def _gate_planned(root: Path, chapter: dict[str, Any], workflow: dict[str, Any]) -> dict[str, Any]:
@@ -224,7 +214,7 @@ def prepare_transition(root, structure, workflow, chapter_id, target_status, *, 
     chapter = next(row for row in structure["chapters"] if row["chapterId"] == chapter_id)
     from .source_model import require_current_source
     require_current_source(structure)
-    if True and target_status in {'planned', 'draft', 'review'}:
+    if target_status in {'planned', 'draft', 'review'}:
         from .source_rules import require_rules
         from .structure_store import StructureError
         try:

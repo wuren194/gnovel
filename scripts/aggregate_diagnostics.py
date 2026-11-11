@@ -12,7 +12,6 @@ Runs 4 separate diagnostic scripts and merges their JSON reports:
 """
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -110,6 +109,7 @@ def main():
     # 2. validate-text.py
     validate_cmd = [
         sys.executable, str(validate_script),
+        str(args.draft_file),
         "--mode", args.mode,
         "--intensity-level", str(args.intensity_level),
     ]
@@ -121,9 +121,6 @@ def main():
     if args.scene_paragraphs:
         validate_cmd += ["--scene-paragraphs", args.scene_paragraphs]
     validate_cmd += ["--json"]
-    # validate-text.py reads from stdin for the draft file if not provided as positional?
-    # Wait, validate-text.py positional arg or stdin. Let's pass it as positional.
-    validate_cmd.insert(2, str(args.draft_file))
     validate_res = run_script(validate_cmd, environment=child_environment)
 
     # 3. check_voice_lexicon.py
@@ -262,8 +259,6 @@ def main():
             aggregated['summary']['perScript']['ai_cliche_linter'] += 1
         for f in cliche_res.get("findings", []):
             sev = f.get("severity", "warning")
-            if sev == "block":
-                sev = "error"
             findings.append({
                 "source": "ai_cliche_linter",
                 "severity": sev,

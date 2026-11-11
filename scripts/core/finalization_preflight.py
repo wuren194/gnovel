@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import sha256_bytes, sha256_json, sha256_text
-from .jsonio import read_json
 from .paths import ProjectPathError, safe_project_path
 from .review_artifacts import ReviewArtifactError, validate_artifact_binding
 from .structure_store import StructureError, load_structure, validate_structure
@@ -441,10 +440,9 @@ def preflight_finalization(root: Path, chapter_id: str, *, title_candidate_id: s
             current = builder(root, structure=structure)
             # Only structure.json owns the source-mode state; legacy caches
             # may be absent or belong to the revision before a transition.
-            cached = current
             if current.get("projectId") != structure["projectId"]:
                 result.block("STATE_CACHE_INVALID", "project marker and structure projectId differ")
-            if state_candidate is not None and (sha256_json(cached) != state_candidate[field_name] or sha256_json(current) != state_candidate[field_name]):
+            if state_candidate is not None and sha256_json(current) != state_candidate[field_name]:
                 result.block(code, f"{name} changed after state candidate was produced",
                              artifactType='state_candidate', field=field_name,
                              expected=sha256_json(current), actual=state_candidate[field_name])
@@ -525,7 +523,6 @@ def preflight_finalization(root: Path, chapter_id: str, *, title_candidate_id: s
         # backups 或血缘证据，也绝不 fallback 到 prose_ownership。
         from .prose_binding import (OWNED_CLEAN, UNBOUND, observe_chapter,
                                     observation_error_code, request_generation_current)
-        from .write_sets import file_state
         from .file_preservation import observation
         ownership = observe_chapter(root, structure, chapter,
                                     pending=bool(result.transactions))

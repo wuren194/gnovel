@@ -8,7 +8,7 @@ never drift between the ceiling check (ai_cliche_linter) and the floor check
 
 - ceiling: ``ceiling_violations(level)`` -> words forbidden at that level
 - floor:   ``degradation_floor()``       -> S-09b word pool and thresholds
-- gate:    ``EXTREME_LEVEL`` / ``extreme_markers()`` -> Level 10 human gate
+- gate:    ``extreme_level()`` / ``extreme_markers()`` -> Level 10 human gate
 
 intensity.json 是全库唯一真源，本模块是唯一读取者（runtime 已移除）。
 """
@@ -16,7 +16,6 @@ intensity.json 是全库唯一真源，本模块是唯一读取者（runtime 已
 from __future__ import annotations
 
 import json
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -54,10 +53,6 @@ def level_bounds() -> tuple[int, int]:
 
 def extreme_level() -> int:
     return int(load()["extremeLevel"])
-
-
-def levels() -> list[dict[str, Any]]:
-    return list(load()["levels"])
 
 
 def ceiling_violations(level: int) -> tuple[str, ...]:

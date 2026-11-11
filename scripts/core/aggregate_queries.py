@@ -7,7 +7,6 @@ from pathlib import Path
 from .artifacts import sha256_json, sha256_text
 from .consistency import require_no_pending
 from .prepare_dependencies import capture_dependencies, observe_reads, bind_observed, validate_dependencies
-from .project import query_policy
 from .source_impact import ReviewInputs, fragment_review_status, read_review
 from .source_review import bounded_page
 from .source_review_triage import NEEDS_ATTENTION

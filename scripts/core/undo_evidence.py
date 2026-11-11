@@ -25,17 +25,11 @@ digest and an isolated forged receipt has no authority to point back at it.
 """
 from __future__ import annotations
 
-import re
-from typing import Optional
 
 from .write_sets import json_bytes
 
 # Relative, canonical (POSIX separators) location of the durable undo authority.
 UNDO_OPERATION_DIR = '.govel/undo-operations'
-
-OPERATION_ID_PATTERN = re.compile(r'OP-[0-9A-F]{16}')
-_HEX64 = re.compile(r'[0-9a-f]{64}')
-
 
 def authority_relative_path(operation_id: str, undo_revision: int) -> str:
     """Where the undo authority for ``operation_id`` undone at ``undo_revision`` lives.
@@ -70,40 +64,3 @@ def authority_bytes(*, reversed_operation_id: str, undo_operation_id: str, rever
         'receiptPath': receipt_path,
         'receiptDigest': receipt_digest,
     })
-
-
-def authority_identity(record: object, *, entry_stem: str) -> Optional[tuple[str, str, int]]:
-    """``(reversedOperationId, undoOperationId, restoredRevision)`` of a shaped authority, else None.
-
-    Shape and self-naming only: the formal undo operation, the reversed-journal digest, the receipt
-    cross-binding and the hash/revision ties are bound by the consumer, which is where those files
-    are read. ``None`` means this is not usable undo authority — the caller decides broken vs
-    non-claim.
-    """
-    if not isinstance(record, dict) or record.get('operation') != 'undo':
-        return None
-    operation_id = record.get('reversedOperationId')
-    undo_operation_id = record.get('undoOperationId')
-    restored_revision = record.get('restoredRevision')
-    for value in (operation_id, undo_operation_id):
-        if not isinstance(value, str) or not OPERATION_ID_PATTERN.fullmatch(value):
-            return None
-    if undo_operation_id == operation_id:
-        return None  # an undo is its own operation and never reverses itself
-    if not isinstance(restored_revision, int) or isinstance(restored_revision, bool) or restored_revision < 1:
-        return None
-    for key in ('reversedJournalDigest', 'reversedAfterHash', 'preUndoHash', 'restoredHash', 'receiptDigest'):
-        value = record.get(key)
-        if not isinstance(value, str) or not _HEX64.fullmatch(value):
-            return None
-    for key in ('actor', 'committedAt', 'undoneAt', 'receiptPath'):
-        value = record.get(key)
-        if not isinstance(value, str) or not value.strip():
-            return None
-    for key in ('reversedAfterRevision', 'preUndoRevision'):
-        value = record.get(key)
-        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            return None
-    if entry_stem != f'{operation_id}-{restored_revision}':
-        return None
-    return operation_id, undo_operation_id, restored_revision

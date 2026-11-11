@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
 from .artifacts import sha256_json, sha256_text
 from .static_cache import cached_bytes, cached_sha256 as file_sha256
-from .review_plan import DECISION_TYPES, SOURCE_CONTRACT, resolve_effective_review_plan
+from .review_plan import SOURCE_CONTRACT, resolve_effective_review_plan
 from .project import TOOLBOX_ROOT, toolbox_manifest
-from .prompt_conditions import PromptPlanError, evaluate_condition, resolve_field
+from .prompt_conditions import PromptPlanError, evaluate_condition
 
 
 def _project_design(project_root: Path, chapter_id: str | None = None) -> dict[str, Any]:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from typing import Iterable
 
@@ -16,10 +15,6 @@ CARD_ORIGIN = "card"
 UNSPECIFIED_KIND = "unspecified"
 LINK_FIELD = "关联ID"
 _TOKEN_SPLIT = re.compile(r"[、,，;；\s]+")
-
-
-def entity_index(structure: dict) -> dict[str, dict]:
-    return {item["entityId"]: item for item in structure.get("entities", [])}
 
 
 def resolve_entity(structure: dict, selector: str) -> dict:

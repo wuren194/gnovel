@@ -279,10 +279,9 @@ def _export_locked(root: Path, *, statuses: tuple[str, ...], fmt: str, output: P
 def export_candidate_batch(root: Path, *, batchRef: dict, output: str, fmt: str = 'md',
                            overwrite: bool = False, expectedFileHash: str | None = None) -> dict:
     """Explicit candidate reading snapshot; formal manuscript export is unchanged."""
-    from .candidate_batch import batch_progress, batch_record
+    from .candidate_batch import batch_record
     from .finalization import _load_workflow
     from .structure_store import load_structure
-    from .mechanical_evidence import _registered
     from .prepare_dependencies import capture_dependencies, observe_reads, bind_observed, validate_dependencies
     if fmt not in {'md', 'txt'}:
         raise StructureError('INVALID_EXPORT_FORMAT', 'candidate reading format must be md or txt')

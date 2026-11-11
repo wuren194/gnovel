@@ -23,7 +23,6 @@ import sys
 try:  # 包内导入（scripts.continuation_context）
     from scripts.core.context_builder import (
         LAYERS,
-        CONFIG_SOURCE,
         ContextBuilderError,
         ContinuationContextError,
         bound_station_context,
@@ -31,25 +30,11 @@ try:  # 包内导入（scripts.continuation_context）
         build_continuation_context,
         build_station_context,
         serialize_context,
-        sha256_json,
-        _build_memory_pack,
-        _chapter_keyword_filter,
-        _chapter_placement,
-        _chapter_volume,
-        _characters,
-        _entities,
-        _explicitly_visible,
-        _load_commit_data,
-        _load_story_summary,
-        _plot_line,
-        _relations,
-        _station_view,
     )
     from scripts.core.exit_codes import EXIT_FAIL_CLOSED, EXIT_FINDING, EXIT_OK, FailClosedArgumentParser
 except ImportError:  # 以 `python3 scripts/continuation_context.py` 直接运行时
     from core.context_builder import (
         LAYERS,
-        CONFIG_SOURCE,
         ContextBuilderError,
         ContinuationContextError,
         bound_station_context,
@@ -57,19 +42,6 @@ except ImportError:  # 以 `python3 scripts/continuation_context.py` 直接运�
         build_continuation_context,
         build_station_context,
         serialize_context,
-        sha256_json,
-        _build_memory_pack,
-        _chapter_keyword_filter,
-        _chapter_placement,
-        _chapter_volume,
-        _characters,
-        _entities,
-        _explicitly_visible,
-        _load_commit_data,
-        _load_story_summary,
-        _plot_line,
-        _relations,
-        _station_view,
     )
     from core.exit_codes import EXIT_FAIL_CLOSED, EXIT_FINDING, EXIT_OK, FailClosedArgumentParser
 
@@ -137,7 +109,6 @@ def main(argv: list[str] | None = None) -> int:
                         help="本章章纲目标，唯一驱动知识检索与记忆过滤")
     parser.add_argument("--view", default="full", choices=["full", "station"],
                         help="full 返回完整审计上下文；station 只返回预算化工位包")
-    parser.add_argument("--json", action="store_true", help="输出 JSON（默认）")
     parser.add_argument("--summary", action="store_true", help="输出纯文本摘要")
     args = parser.parse_args(argv)
 

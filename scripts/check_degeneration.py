@@ -36,7 +36,6 @@ class DegenMatch(NamedTuple):
     matched_text: str
     line_content: str
     severity: str  # "blocking" | "advisory"
-    tier: int  # 1 = blocking engineering leak, 2 = advisory chapter ref
 
 
 # Repetition thresholds: text-patterns.diagnosticPolicy.degeneration.
@@ -116,7 +115,7 @@ def detect_repetitions(text: str) -> list[DegenMatch]:
         if count >= policy['verbatimMinCount']:
             first_line = next(line for line, value in sentences if value == sentence)
             matches.append(DegenMatch(first_line, '逐字复读', sentence[:60] + ('…' if len(sentence) > 60 else ''),
-                                      originals[first_line - 1], 'blocking', 1))
+                                      originals[first_line - 1], 'blocking'))
 
     # A short refrain may be intentional; it does not veto the prose.
     cursor = 0
@@ -128,7 +127,7 @@ def detect_repetitions(text: str) -> list[DegenMatch]:
         if (policy['shortRepeatMinChars'] <= len(sentence) < policy['verbatimMinChars']
                 and stop - cursor >= policy['shortRepeatMinCount']):
             matches.append(DegenMatch(line_num, '短句连续复读', sentence,
-                                      originals[line_num - 1], 'advisory', 2))
+                                      originals[line_num - 1], 'advisory'))
         cursor = stop
 
     for i in range(len(lines) - 1):
@@ -141,7 +140,7 @@ def detect_repetitions(text: str) -> list[DegenMatch]:
         sim = _jaccard(_char_bigrams(a_norm), _char_bigrams(b_norm))
         if sim >= policy['adjacentSimilarity']:
             matches.append(DegenMatch(i + 1, '紧邻复读(相似度={:.2f})'.format(sim),
-                                      a[:40], originals[i], 'advisory', 2))
+                                      a[:40], originals[i], 'advisory'))
     return matches
 
 def detect_truncation(text: str) -> list[DegenMatch]:
@@ -149,7 +148,7 @@ def detect_truncation(text: str) -> list[DegenMatch]:
     stripped = mask_prose(text, include_dialogue=True).rstrip()
     if stripped and not TERMINAL_PUNCTUATION.search(stripped[-1]):
         return [DegenMatch(text.count('\n', 0, len(stripped)) + 1, '末尾截断',
-                           stripped[-80:], '', 'blocking', 1)]
+                           stripped[-80:], '', 'blocking')]
     return []
 
 def detect_ai_self_reference(text: str) -> list[DegenMatch]:
@@ -163,11 +162,11 @@ def detect_ai_self_reference(text: str) -> list[DegenMatch]:
         found = AI_SELF_REFERENCE.search(stripped)
         if found:
             matches.append(DegenMatch(line_num, 'AI自指/拒绝语', found.group(),
-                                      originals[line_num - 1], 'blocking', 1))
+                                      originals[line_num - 1], 'blocking'))
         for pattern in PLACEHOLDER_PATTERNS:
             for found in re.finditer(pattern, stripped):
                 matches.append(DegenMatch(line_num, '占位符', found.group(),
-                                          originals[line_num - 1], 'blocking', 1))
+                                          originals[line_num - 1], 'blocking'))
     return matches
 
 def detect_engineering_terms(text: str) -> list[DegenMatch]:
@@ -175,12 +174,12 @@ def detect_engineering_terms(text: str) -> list[DegenMatch]:
     matches: list[DegenMatch] = []
     originals = text.splitlines()
     for line_num, line in enumerate(mask_prose(text).splitlines(), 1):
-        for patterns, severity, tier in ((ENGINEERING_TIER1_PATTERNS, 'blocking', 1),
-                                         (ENGINEERING_TIER2_PATTERNS, 'advisory', 2)):
+        for patterns, severity in ((ENGINEERING_TIER1_PATTERNS, 'blocking'),
+                                   (ENGINEERING_TIER2_PATTERNS, 'advisory')):
             for pattern, rule_id, name in patterns:
                 for found in re.finditer(pattern, line):
                     matches.append(DegenMatch(line_num, name, found.group(),
-                                              originals[line_num - 1], severity, tier))
+                                              originals[line_num - 1], severity))
     return matches
 
 def scan(text: str, file_label: str = "") -> dict:

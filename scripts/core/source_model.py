@@ -81,7 +81,7 @@ def source_schema() -> dict:
     from .relationship_causality import declaration_schema
     from .pair_classification import pair_schema
     from .behavior_review import schema as behavior_schema
-    from .source_rules import RULE_ACTIONS, RULE_REQUIRED
+    from .source_rules import RULE_REQUIRED
     policy = source_model_policy()
     patterns = content_id_patterns()
     return {'ok': True, 'code': 'SOURCE_SCHEMA', 'schemaVersion': current_schema_version(),

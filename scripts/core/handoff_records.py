@@ -25,7 +25,7 @@ from .clock import utc_now
 from .jsonio import read_json
 from .locks import project_lock_reentrant
 from .paths import ProjectPathError, safe_project_path
-from .project import knowledge_policy, resolve_knowledge_mode
+from .project import resolve_knowledge_mode
 from .structure_store import StructureError, load_structure
 
 HANDOFF_INDEX_SCHEMA_VERSION = 1

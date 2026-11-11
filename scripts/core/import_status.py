@@ -2,7 +2,6 @@
 from pathlib import Path
 import json
 
-from .import_commit import RECEIPT
 from .structure_store import load_structure
 from .write_sets import safe_project_path
 

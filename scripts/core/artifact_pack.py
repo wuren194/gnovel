@@ -16,9 +16,8 @@ from .artifacts import envelope, sha256_json
 from .clock import utc_now
 from .jsonio import read_json
 from .locks import project_lock_reentrant
-from .paths import safe_project_path as resolve_project_path
 from .review_artifacts import validate_review_artifact
-from .structure_store import StructureError, load_structure, validate_structure
+from .structure_store import StructureError, load_structure
 from .workflow import default_workflow, normalize_workflow, record_artifact
 from .write_sets import (apply_write_set, digest, guard_observation, inventory, json_bytes,
                          safe_project_path, validate_guards)
@@ -258,7 +257,7 @@ def _pack_artifact(root: Path, *, chapterId: str, artifactType: str, input: str,
                     raise StructureError('ARTIFACT_INPUT_INVALID', 'save writing notes under 工作台')
                 payload['writingNotes'] = json.loads(observe(note_relative) if prepared_notes is None else prepared_notes)
                 validate_notes(payload['writingNotes'], text)
-                if True and payload['writingNotes'].get('newFacts'):
+                if payload['writingNotes'].get('newFacts'):
                     raise StructureError('SOURCE_FACTS_REQUIRE_PROPOSAL',
                         '新增事实由 B 的 factAssessment/findings 盘点，再走源提案与正文证据入口；writingNotes.newFacts 不可提交',
                         {'nextOperations': ['source.schema', 'source.change-preview', 'source.evidence-register'],

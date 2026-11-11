@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 
-from .project import query_policy, source_model_policy
+from .project import query_policy
 from .source_impact import dependency_edges
 from .source_model import SourceIndex, snapshot_hash
 from .source_review import bounded_page, fingerprint, source_snapshot
@@ -16,7 +16,7 @@ DIRECTIONS = {'in', 'out', 'both'}
 def _edges(source: dict, graph: str = 'registered') -> list[dict]:
     rows = []
     if graph == 'planning':
-        from .source_placement import chapter_volume_id, placement_volume_id
+        from .source_placement import placement_volume_id
         schema_version = source.get('schemaVersion')
         def planning_edge(source_id, target_id, kind):
             if target_id:

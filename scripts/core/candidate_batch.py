@@ -118,7 +118,6 @@ def _current_recipe(root, source, workflow, cid):
 def candidate_handoff(root, source, workflow, cid, *, visited=()):
     """Read reviewed conditional material; never registers source facts or B approval."""
     from .source_plan import chapter_plan
-    from .writing_notes import validate_candidate_binding
     from .review_artifacts import validate_registered_stage_b
     from .mechanical_evidence import evidence_current
     candidate = _artifact(root, source, workflow, cid, 'candidate_prose')
@@ -163,7 +162,6 @@ def candidate_handoff(root, source, workflow, cid, *, visited=()):
 
 def prepare_candidate_recipe(root, *, batchRef, chapterId):
     from .source_plan import chapter_plan
-    from .continuity import require_predecessors_ready
     from .transport_cache import put
     root = Path(root).expanduser().resolve()
     with project_lock_reentrant(root):

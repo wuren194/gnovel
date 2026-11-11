@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.continuation_context import ContinuationContextError, _entities, _plot_line, _relations, build_continuation_context
+from scripts.continuation_context import ContinuationContextError, build_continuation_context
+from scripts.core.context_builder import _entities, _plot_line, _relations
 from scripts.core.structure_store import load_structure, save_structure
 from tests.fixtures_current import create_current_project
 

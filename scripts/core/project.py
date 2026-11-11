@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import math
-import shutil
 from pathlib import Path
 
 from .jsonio import read_json
 from .static_cache import cached_derived, cached_json
-from .paths import safe_project_path
 
 TOOLBOX_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = TOOLBOX_ROOT / "toolbox.manifest.json"

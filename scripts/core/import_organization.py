@@ -8,7 +8,7 @@ from .file_preservation import observation
 from .import_commit import RECEIPT
 from .locks import project_lock
 from .project import query_policy, canon_proposal_batch_max_items
-from .source_model import SourceIndex, snapshot_hash
+from .source_model import snapshot_hash
 from .structure_store import StructureError, load_structure
 from .write_sets import GUARD_KEYS, json_bytes, safe_project_path, validate_guards
 

@@ -77,19 +77,6 @@ def canonical_key(relative: str | Path) -> str:
     return text.casefold()
 
 
-def stem_of(relative: str) -> str:
-    return Path(relative).stem
-
-
-def suffix_of(relative: str) -> str:
-    return Path(relative).suffix
-
-
-def parent_of(relative: str) -> str:
-    parent = Path(relative).parent
-    return '' if str(parent) == '.' else parent.as_posix()
-
-
 def same_file(source: Path, target: Path) -> bool:
     """True when both paths resolve to one inode.
 

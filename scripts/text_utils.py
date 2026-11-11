@@ -40,31 +40,3 @@ def chinese_char_count(text: str) -> int:
 def target_tolerance(target: int) -> int:
     """字数目标容差（±5%，下限 50）。wc-target 与 validate-text 共用同一公式。"""
     return max(50, int(target * 0.05))
-
-
-def parse_frontmatter_and_prose(text: str) -> tuple[dict, str]:
-    """
-    Parse a Markdown file that may contain YAML Frontmatter fenced by '---'.
-    Returns (frontmatter_dict, clean_markdown_prose).
-    """
-    if not text.startswith("---"):
-        return {}, text.strip()
-
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return {}, text.strip()
-
-    frontmatter_str = parts[1].strip()
-    prose_str = parts[2].strip()
-
-    metadata = {}
-    # Simple line-by-line key: value parser to avoid hard dependency on PyYAML if not present
-    for line in frontmatter_str.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if ":" in line:
-            k, v = line.split(":", 1)
-            metadata[k.strip()] = v.strip().strip("\"'")
-
-    return metadata, prose_str

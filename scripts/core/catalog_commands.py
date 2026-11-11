@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
-from .entity_registry import PREFIX_BY_TYPE, register_entity, resolve_entity
+from .entity_registry import PREFIX_BY_TYPE, register_entity
 from .structure_commands import _base_plan, _write_plan
 from .structure_store import LIFECYCLE_STATUSES, StructureError, load_structure, new_id, validate_structure
 
@@ -171,7 +171,7 @@ def preview_archive_arc(root: Path, *, arc_id: str, actor: str = "human_ui") -> 
 
 def preview_relink_chapter(root: Path, *, chapter_id: str, primary_arc_id: str, volume_id: str | None = None, placement: dict | None = None, secondary_arc_ids: list[str] | None = None, actor: str = "human_ui") -> dict:
     from .source_model import require_current_source
-    from .source_placement import placement_error, placement_from_volume, placement_volume_id
+    from .source_placement import placement_error, placement_from_volume
     structure = load_structure(root)
     require_current_source(structure)
     if (placement is None) == (volume_id is None):

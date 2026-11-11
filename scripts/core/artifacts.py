@@ -78,14 +78,3 @@ def validate_envelope(data: dict[str, Any], *, artifact_type: str | None = None)
     if data.get("artifactSha256") != expected:
         raise ArtifactError("ARTIFACT_HASH_MISMATCH", "artifact envelope hash does not match payload")
     return data
-
-
-def bind_artifact(source_path: Path, artifact: dict[str, Any], *, expected_source_sha256: str | None = None) -> dict[str, Any]:
-    source_hash = file_sha256(source_path)
-    if expected_source_sha256 and source_hash != expected_source_sha256:
-        raise ArtifactError("SOURCE_HASH_MISMATCH", "source changed after artifact was produced", {"expected": expected_source_sha256, "actual": source_hash})
-    if artifact.get("sourceSha256") and artifact["sourceSha256"] != source_hash:
-        raise ArtifactError("SOURCE_HASH_MISMATCH", "artifact source hash does not match current source", {"expected": artifact["sourceSha256"], "actual": source_hash})
-    updated = {**artifact, "sourceSha256": source_hash}
-    updated["artifactSha256"] = sha256_json({key: value for key, value in updated.items() if key != "artifactSha256"})
-    return validate_envelope(updated)

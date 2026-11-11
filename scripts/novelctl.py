@@ -27,11 +27,11 @@ except ImportError:
 
 try:
     from scripts import intensity_registry
-    from scripts.core.artifact_templates import ARTIFACT_TYPES, artifact_template, validate_artifact_schema_declarations
+    from scripts.core.artifact_templates import ARTIFACT_TYPES, artifact_template
     from scripts.core.catalog_api import CATALOG_OPERATIONS, call_catalog_operation, snake_case
     from scripts.core.chapter_receipt import bound_receipt_response, chapter_receipt
     from scripts.core.chapter_refs import annotate as annotate_chapter_refs, resolve_chapter_arguments
-    from scripts.core.finalization import (finalize_chapter, pending_transactions,
+    from scripts.core.finalization import (finalize_chapter,
                                            preview_accept_external_modification,
                                            recover_transactions, reconcile_workflow)
     from scripts.core.refactor import commit_refactor
@@ -39,7 +39,7 @@ try:
     from scripts.core.clock import utc_now
     from scripts.core.commands import (EXPORT_STATUSES, chapter_prose, entity_graph, export_manuscript, get_entity,
                                     graph_mermaid, project_overview, story_timeline, structure_graph, timeline_mermaid)
-    from scripts.core.importer import (REQUIRED_PROJECT_DIRS, create_external_manuscript_review,
+    from scripts.core.importer import (create_external_manuscript_review,
                                        create_project_from_candidate, validate_import_candidate,
                                        write_import_inventory)
     from scripts.core.jsonio import read_json, write_json
@@ -50,15 +50,14 @@ try:
     from scripts.core.settings import check_settings, query_settings, settings_schema
     from scripts.core.workflow import (
         WorkflowError, approve_artifacts, default_workflow, normalize_workflow,
-        record_artifact, set_next_action, validate_next_action_for_project,
+        record_artifact, set_next_action,
     )
     from scripts.core.artifact_bindings import ArtifactBindError, bind_fields
     from scripts.core.artifacts import ArtifactError, validate_envelope
     from scripts.core.project_doctor import project_doctor
     from scripts.core.project import (
         default_approval_mode, unsupported_error_code,
-        project_template_path, protected_paths, repair_policy, continuation_policy,
-        serial_planning_policy, toolbox_manifest,
+        project_template_path, repair_policy, serial_planning_policy,
     )
     from scripts.core.structure_commands import (
         commit_plan, gc_project, list_operations, list_pending_plans,
@@ -69,15 +68,15 @@ try:
     )
     from scripts.core.structure_store import (
         PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION, StructureError,
-        empty_structure, load_structure, save_structure,
+        load_structure,
     )
 except ImportError:
     import intensity_registry
-    from core.artifact_templates import ARTIFACT_TYPES, artifact_template, validate_artifact_schema_declarations
+    from core.artifact_templates import ARTIFACT_TYPES, artifact_template
     from core.catalog_api import CATALOG_OPERATIONS, call_catalog_operation, snake_case
     from core.chapter_receipt import bound_receipt_response, chapter_receipt
     from core.chapter_refs import annotate as annotate_chapter_refs, resolve_chapter_arguments
-    from core.finalization import (finalize_chapter, pending_transactions,
+    from core.finalization import (finalize_chapter,
                                    preview_accept_external_modification,
                                    recover_transactions, reconcile_workflow)
     from core.refactor import commit_refactor
@@ -85,7 +84,7 @@ except ImportError:
     from core.clock import utc_now
     from core.commands import (EXPORT_STATUSES, chapter_prose, entity_graph, export_manuscript, get_entity,
                             graph_mermaid, project_overview, story_timeline, structure_graph, timeline_mermaid)
-    from core.importer import (REQUIRED_PROJECT_DIRS, create_external_manuscript_review,
+    from core.importer import (create_external_manuscript_review,
                                create_project_from_candidate, validate_import_candidate,
                                write_import_inventory)
     from core.jsonio import read_json, write_json
@@ -96,15 +95,14 @@ except ImportError:
     from core.settings import check_settings, query_settings, settings_schema
     from core.workflow import (
         WorkflowError, approve_artifacts, default_workflow, normalize_workflow,
-        record_artifact, set_next_action, validate_next_action_for_project,
+        record_artifact, set_next_action,
     )
     from core.artifact_bindings import ArtifactBindError, bind_fields
     from core.artifacts import ArtifactError, validate_envelope
     from core.project_doctor import project_doctor
     from core.project import (
         default_approval_mode, unsupported_error_code,
-        project_template_path, protected_paths, repair_policy, continuation_policy,
-        serial_planning_policy, toolbox_manifest,
+        project_template_path, repair_policy, serial_planning_policy,
     )
     from core.structure_commands import (
         commit_plan, gc_project, list_operations, list_pending_plans,
@@ -115,7 +113,7 @@ except ImportError:
     )
     from core.structure_store import (
         PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION, StructureError,
-        empty_structure, load_structure, save_structure,
+        load_structure,
     )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -513,7 +511,10 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
         return {"ok": True, "code": "STATE_CACHE_REBUILT" if args.state_action == "rebuild" else "STATE_CACHE_STATUS", **report}
     if args.action == "workflow":
         if args.workflow_action == "recover":
-            return recover_transactions(root, apply=args.apply)
+            try:
+                return recover_transactions(root, apply=args.apply)
+            except (WorkflowError, StructureError, ValueError, OSError) as exc:
+                raise NovelError(getattr(exc, "code", "TRANSACTION_RECOVER_FAILED"), str(exc), getattr(exc, "details", {})) from exc
         if args.workflow_action == "chapter-receipt":
             return {"ok": True, "code": "CHAPTER_RECEIPT", **chapter_receipt(root, args.chapter_id, title_candidate_id=args.title_candidate_id, skip_title=args.skip_title, view=args.view)}
         if args.workflow_action == "chapter-status":
@@ -586,11 +587,6 @@ def _dispatch_command(args: argparse.Namespace) -> dict:
                 return advance_chapter_status(root, args.chapter_id, args.to, actor="cli")
             except (WorkflowError, StructureError, ValueError, OSError) as exc:
                 raise NovelError(getattr(exc, "code", "CHAPTER_ADVANCE_FAILED"), str(exc), getattr(exc, "details", {})) from exc
-        if args.workflow_action == "recover":
-            try:
-                return recover_transactions(root, apply=args.apply)
-            except (WorkflowError, StructureError, ValueError, OSError) as exc:
-                raise NovelError(getattr(exc, "code", "TRANSACTION_RECOVER_FAILED"), str(exc), getattr(exc, "details", {})) from exc
         if args.workflow_action == "repair-round":
             try:
                 from scripts.core.workflow import increment_repair_round

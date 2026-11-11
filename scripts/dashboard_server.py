@@ -294,10 +294,6 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         morsel = cookie.get(SESSION_COOKIE)
         return (morsel.value if morsel else "") or (self.headers.get(TOKEN_HEADER) or "")
 
-    def _session_ok(self) -> bool:
-        expected = getattr(self.server, "mutation_token", "")
-        presented = self._presented_credential()
-        return bool(expected) and bool(presented) and secrets.compare_digest(presented, expected)
 
     def _require_session(self) -> None:
         """敏感读取与写入统一凭据门（§10：敏感 GET 也要 session）。"""

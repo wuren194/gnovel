@@ -405,20 +405,6 @@ def require_all_binding_health(structure: dict) -> dict:
     return report
 
 
-def require_target_binding_health(structure: dict, chapter_id: object) -> dict:
-    """Raise unless THIS chapter's binding is healthy; unrelated damage is ignored."""
-    chapter = _chapter_by_id(structure, chapter_id)
-    if chapter is None:
-        _reject("OWNERSHIP_BINDING_INVALID", "binding health target chapter does not exist",
-                chapterId=chapter_id)
-    errors = validate_binding(structure, chapter)
-    if errors:
-        raise StructureError("OWNERSHIP_BINDING_INVALID",
-                             "chapter binding is corrupt; explicit repair is required",
-                             {"chapters": {chapter_id: errors}})
-    return {"chapterId": chapter_id, "errors": []}
-
-
 # ---------------------------------------------------------------------------
 # Protected writer boundary（契约 §5.3 Option B / 实施轮 §24–§26）
 # ---------------------------------------------------------------------------
@@ -1368,18 +1354,6 @@ def apply_locator_move_plan(root: Path, structure: dict, chapter: dict, *, new_p
                 "the destination locator already holds a file; existing bytes are never taken over",
                 chapterId=chapter.get("chapterId"), targetPath=new_path)
     return observation
-
-
-def require_no_alias_conflict(root: Path, structure: dict, chapter: dict) -> None:
-    """Commit-time object-alias check for the chapter whose locator is changing（契约 §53）。
-
-    Two distinct locators resolving to one inode is an occupancy conflict, not identity:
-    the write set is about to give this chapter a locator another chapter's file already
-    occupies. Fail closed rather than grow a second object-identity model.
-    """
-    conflict = _alias_conflict_for(root, structure, chapter)
-    if conflict:
-        raise StructureError(conflict["code"], conflict["message"], conflict)
 
 
 # ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .clock import utc_now
 from .jsonio import write_json
-from .structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION, StructureError, empty_structure, validate_structure
+from .structure_store import PROJECT_SCHEMA_VERSION, WORKFLOW_VERSION, StructureError, validate_structure
 
 REQUIRED_PROJECT_DIRS = (
     ".govel", ".govel/cache", ".govel/aux", ".govel/plans",

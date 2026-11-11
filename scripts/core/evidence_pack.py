@@ -327,7 +327,6 @@ def pack_evidence(root: Path, *, decisions: list | dict, snapshot: dict | None =
         result['arguments']['requestId'] = requestId
     if _prepare_snapshot(root, **args)[0] != snapshot:
         raise StructureError('EVIDENCE_SNAPSHOT_STALE', 'evidence inputs changed during assembly')
-    from .project import query_policy
     from .query import _size
     report = {'ok': True, 'code': 'EVIDENCE_PACKED', **result, 'submitted': False, 'approved': False}
     if view == 'model' or _size(report) > budget:

@@ -37,7 +37,6 @@ an administrator who may rewrite every journal, backup and hash on the machine.
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from .write_sets import json_bytes
 
@@ -46,7 +45,6 @@ OPERATIONS_DIR = '.govel/operations'
 BACKUPS_DIR = '.govel/backups'
 
 OPERATION_ID_PATTERN = re.compile(r'OP-[0-9A-F]{16}')
-_HEX64 = re.compile(r'[0-9a-f]{64}')
 
 #: The ledger operation name of a formal undo. Not a refactor move, so lineage never reads it as a hop.
 UNDO_OPERATION_NAME = 'undo'
@@ -97,48 +95,3 @@ def undo_journal_bytes(*, undo_operation_id: str, reversed_operation_id: str,
         'receiptPath': receipt_path,
         'receiptDigest': receipt_digest,
     })
-
-
-def undo_journal_identity(record: object, *, entry_stem: str) -> Optional[tuple[str, int, int]]:
-    """``(reversedOperationId, beforeRevision, afterRevision)`` of a formal undo journal, else None.
-
-    Shape and self-naming only: the reversed-journal digest, the hash/revision relationships and
-    the receipt cross-binding are bound by the consumer, which is where those files are read.
-    ``None`` means this is not usable formal undo provenance — the caller decides broken vs
-    non-claim.
-    """
-    if not isinstance(record, dict) or record.get('operation') != UNDO_OPERATION_NAME:
-        return None
-    if record.get('schemaVersion') != 4:
-        return None
-    operation_id = record.get('operationId')
-    if not isinstance(operation_id, str) or not OPERATION_ID_PATTERN.fullmatch(operation_id):
-        return None
-    if operation_id != entry_stem:
-        return None
-    reversed_operation_id = record.get('reversedOperationId')
-    if not isinstance(reversed_operation_id, str) or not OPERATION_ID_PATTERN.fullmatch(reversed_operation_id):
-        return None
-    if reversed_operation_id == operation_id:
-        return None  # an undo is its own operation; it never reverses itself
-    if record.get('reversible') is not False:
-        return None
-    before_revision, after_revision = record.get('beforeRevision'), record.get('afterRevision')
-    for value in (before_revision, after_revision):
-        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            return None
-    if after_revision != before_revision + 1:
-        return None
-    for key in ('beforeHash', 'afterHash', 'reversedJournalDigest', 'receiptDigest'):
-        value = record.get(key)
-        if not isinstance(value, str) or not _HEX64.fullmatch(value):
-            return None
-    for key in ('actor', 'committedAt', 'receiptPath'):
-        value = record.get(key)
-        if not isinstance(value, str) or not value.strip():
-            return None
-    if record.get('backupPath') != undo_backup_relative_path(operation_id):
-        return None
-    if not isinstance(record.get('impact'), dict):
-        return None
-    return reversed_operation_id, before_revision, after_revision

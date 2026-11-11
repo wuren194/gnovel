@@ -8,7 +8,7 @@ from pathlib import Path
 from .consistency import require_no_pending
 from .project import source_model_policy
 from .source_model import require_current_source, snapshot_hash
-from .source_placement import placement_error, placement_volume_id, VOLUME_SCOPE
+from .source_placement import placement_error, placement_volume_id
 from .source_review import bounded_page
 from .structure_commands import _base_plan, _new_chapter, _write_plan
 from .structure_store import StructureError, load_structure, new_id, validate_structure

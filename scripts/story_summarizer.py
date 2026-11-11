@@ -23,21 +23,19 @@ CLI:
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
 try:
     from scripts import state_cache
     from scripts.core.exit_codes import EXIT_FAIL_CLOSED, EXIT_OK, FailClosedArgumentParser
-    from scripts.core.structure_store import PROJECT_SCHEMA_VERSION, ordered_chapters
+    from scripts.core.structure_store import ordered_chapters
 except ImportError:  # 以 `python3 scripts/xxx.py` 直接运行时
     import state_cache
     from core.exit_codes import EXIT_FAIL_CLOSED, EXIT_OK, FailClosedArgumentParser
-    from core.structure_store import PROJECT_SCHEMA_VERSION, ordered_chapters
+    from core.structure_store import ordered_chapters
 
 TOOLBOX_ROOT = Path(__file__).resolve().parent.parent
-CHAPTER_ORDINAL_RE = re.compile(r"CH(\d+)", re.IGNORECASE)
 try:
     from scripts.text_utils import chinese_char_count
 except ImportError:

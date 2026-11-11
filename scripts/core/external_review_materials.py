@@ -5,7 +5,6 @@ exact descriptor observation, never a later reread; live prose remains a guard.
 These are attachments of the original source request, not a new fact ledger.
 """
 from __future__ import annotations
-from copy import deepcopy
 import difflib
 import json
 from pathlib import Path

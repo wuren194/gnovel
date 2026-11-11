@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .clock import utc_now
 from .derived_views import derived_outputs, renderer_fingerprint, source_files
-from .jsonio import read_json, write_bytes, write_json
+from .jsonio import read_json, write_bytes
 from .locks import project_lock
 from .write_sets import safe_project_path
 from .structure_store import StructureError, load_structure, structure_hash, validate_structure
@@ -385,9 +385,7 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
         revert_locator_renames(root, applied, failure=failure)
         raise
     chapter = next((c for c in proposed['chapters'] if c['chapterId'] == plan['parameters'].get('chapterId')), None)
-    result = {'ok': True, 'code': 'STRUCTURE_COMMITTED', **journal, **({'chapter': chapter} if chapter else {}),
-            'semanticFollowUp': ['refresh_context', 'regenerate_affected_outline', 'repeat_review_and_approval']
-            if '.govel/workflow.json' in journal['backupFiles'] else []}
+    result = {'ok': True, 'code': 'STRUCTURE_COMMITTED', **journal, **({'chapter': chapter} if chapter else {})}
     from .source_reports import public_report
     result['semanticFollowUp'] = ['query_source_reviews', 'query_source_prose_evidence']
     return public_report(result, root=root)

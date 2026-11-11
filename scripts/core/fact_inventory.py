@@ -157,7 +157,6 @@ def inventory_status(root, source, workflow, chapter_id):
     from .prose_binding import OWNED_CLEAN, require_observation
     from .write_sets import safe_project_path
     from .chapter_facts import complete_chapter_facts
-    from .evidence_quotes import quote_span
     versions, unavailable = read_versions(root, source, workflow, chapter_id, 'stage_b_review')
     latest = next((v['report'] for v in versions if v['latest']), None)
     blockers, items, requests = [], [], {}

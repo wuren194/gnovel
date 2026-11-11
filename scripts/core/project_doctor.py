@@ -32,8 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from .project import (continuation_policy, default_approval_mode, protected_paths,
-                      repair_policy, serial_planning_policy, source_model_policy,
-                      toolbox_manifest)
+                      repair_policy, serial_planning_policy, toolbox_manifest)
 from .settings import check_settings
 from .source_model import snapshot_hash
 from .structure_store import StructureError, load_structure, ordered_chapters
@@ -187,14 +186,6 @@ def _safe_domain(domain: str, producer) -> tuple[dict, list[dict], dict]:
                         affected_operations=['project.doctor'],
                         recommended_action='按错误修复该域依赖；其余域的结果仍然有效')],
                 {})
-
-
-def _not_applicable(domain: str, reason: str) -> dict:
-    return {'status': 'not_applicable', 'issueCount': 0, 'issues': [], 'reason': reason}
-
-
-
-
 
 
 # --------------------------------------------------------------------------

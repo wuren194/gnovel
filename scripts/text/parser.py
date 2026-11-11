@@ -1,28 +1,12 @@
-"""Text parsing primitives shared by validation tools."""
+"""Paragraph selection shared by validation tools."""
 
 from __future__ import annotations
 
 import re
 
-DIALOGUE_PREFIXES = ("“", "‘", '"', "『", "「")
-SEPARATOR_RE = re.compile(r"^(?:[-*_]{3,}|[—–]{3,}|第[一二三四五六七八九十百\d]+节)$")
-
-
-def is_dialogue_paragraph(paragraph: str) -> bool:
-    stripped = paragraph.strip()
-    return bool(stripped) and stripped.startswith(DIALOGUE_PREFIXES)
-
-
-def is_separator_paragraph(paragraph: str) -> bool:
-    return bool(SEPARATOR_RE.fullmatch(paragraph.strip()))
-
 
 def nonempty_paragraphs(text: str) -> list[str]:
     return [paragraph.strip() for paragraph in text.split("\n\n") if paragraph.strip()]
-
-
-def sentence_units(text: str) -> list[str]:
-    return [unit.strip() for unit in re.split(r"(?<=[。！？!?])|\n", text) if unit.strip()]
 
 
 def select_paragraphs(text: str, spec: str) -> tuple[str, list[int], int]:

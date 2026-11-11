@@ -85,7 +85,6 @@ def _next_actions(chapter: dict[str, Any], workflow: dict[str, Any], artifacts: 
                        needs_approval=needs_approval, semantic_inputs=semantic_inputs)})
 
     def approve(kinds):
-        from .paths import safe_project_path
         entries = workflow.get('artifacts', {}).get(chapter_id, {})
         paths = []
         for kind in kinds:

@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any
 
@@ -426,7 +425,7 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
     knowledge_route = context.get("knowledgeRoute")
     knowledge_pack = context.get('knowledgePack')
 
-    plan = _plan(root, TASK_STATIONS[task], TASK_DECISIONS.get(task), chapter_id if task != "continuity" else chapter_id, review_class)
+    plan = _plan(root, TASK_STATIONS[task], TASK_DECISIONS.get(task), chapter_id, review_class)
     if plan.get("complete") is False:
         missing.append({"code": "CONTRACT_PLAN_INCOMPLETE", "message": "契约装载计划存在未解析条件", "blocking": True,
                         "details": {"warnings": plan.get("warnings", [])}})

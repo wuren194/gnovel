@@ -3,26 +3,22 @@
 from __future__ import annotations
 
 import json
-import os
-import re
-import shutil
 import uuid
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from .artifacts import file_sha256, sha256_text, sha256_json
+from .artifacts import sha256_text, sha256_json
 from .clock import utc_now
-from .jsonio import append_text, read_json, write_json, write_text
+from .jsonio import read_json, write_text
 from .locks import project_lock
 from .paths import ProjectPathError, safe_project_path, stored_project_path
 from .finalization_preflight import preflight_finalization
-from .structure_store import StructureError, load_structure, save_structure, validate_structure
+from .structure_store import StructureError, load_structure, validate_structure
 from .summary_status import summary_freshness
 from .workflow import WorkflowError, validate_next_action
 
 REQUIRED_FINAL_ARTIFACTS = ("stage_a_review", "candidate_prose", "diagnostics", "stage_b_review", "state_candidate")
-TRANSACTION_PHASES = ("prepare", "prose", "structure", "indexes", "rewrite", "workflow", "cache", "committed")
 
 
 def _workflow_path(root: Path) -> Path:

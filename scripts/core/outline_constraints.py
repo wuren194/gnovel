@@ -34,7 +34,6 @@ def inspect_project_levels(root, structure, chapter, outline, intensity_level):
 def stage_a_seats(root, structure, chapter_id, payload):
     """Project authored review lines into the artifact; never supply a missing verdict."""
     from .outline_facts import inspect_outline
-    from .review_artifacts import require_completed_text
     from .structure_store import StructureError
     facts = inspect_outline(root, chapterId=chapter_id, structure=structure)
     if payload.get('decision') not in {'adopt', 'modify'}:
