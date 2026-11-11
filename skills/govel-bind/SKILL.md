@@ -7,6 +7,8 @@ description: 安装、绑定或检查当前宿主的 Govel 接入；适用于首
 
 本 Skill 自带接入脚本 `scripts/bind.py` 与 `binding.json`，可以独立安装。以本 `SKILL.md` 所在目录定位脚本，使用其绝对路径调用；不要相对小说目录猜路径。脚本需要 Python 3.11 或更新版本。
 
+Windows 桌面宿主提供实验性的 WSL2 接入，真实 Windows 客户端、写入／恢复与 WSLg 窗口尚未验收。引擎与项目放在 Linux 文件系统，在对应发行版内运行 `scripts/bind.py wsl-config --engine-root <完整引擎绝对路径> --json`。该操作检查 Windows→WSL 的实际 MCP 握手，输出 `mcpConfig` 供加入 Windows 客户端；不会修改宿主配置。直接 `python3` 插件入口和下面的 `install --host` 不会替 Windows 宿主配置 WSL 桥接。先按完整引擎的 `docs/WINDOWS.md` 安装，再核对实际聊天中的帮助调用；WSL 内运行的宿主 CLI 仍按下面流程接入。
+
 1. 先明确当前宿主。原生 Govel 插件已安装时用 `--host plugin`；单独安装本 Skill 时使用当前的 `--host codex`、`--host claude` 或 `--host antigravity`。只处理作者选定的宿主。
 2. 运行 `scripts/bind.py check --host <宿主> --json`。已有完整引擎路径时加 `--engine-root <绝对路径>`；检查不会下载或改配置。
 3. 作者要求安装、连接或绑定且检查显示未就绪时，运行同一脚本的 `install`，保留相同的宿主与显式路径参数。此授权仅涵盖 Govel 安装目录和所选宿主的 Govel 注册。独立 Skill 缺少引擎时，安装器从登记的官方仓库下载并记录具体提交；不要另写下载程序或覆盖冲突注册。原生插件已能启动 MCP 时，无须追加全局注册。

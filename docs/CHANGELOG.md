@@ -2,6 +2,12 @@
 
 不兼容变更条目以 **BREAKING:** 开头。产品版本以 `toolbox.manifest.json` 为准，以下条目记录各次发行；项目格式与契约版本独立维护。
 
+## 未发布 · 2026-11-11 · Windows／WSL2 实验性接入
+
+新增 Windows／WSL2 实验性接入，复用现有 Linux 引擎。`govel-bind wsl-config` 在 WSL 内固定发行版、Linux 用户、解释器及资料目录，通过 `wsl.exe` 完成 MCP 握手和帮助调用后生成 Windows 客户端配置。生成不改宿主注册或作品，当前聊天连接仍需单独核对。
+
+补充 Windows／Ubuntu 分步安装、项目存放、MCP 接入及 WSLg 外改确认说明。工程回归以模拟桥接连接真实 MCP，验证中文、空格和字面参数的传递。真实 Windows＋WSL2 的客户端连接、小说写入与恢复、WSLg 确认窗口尚未实测；模拟测试和 Ubuntu CI 均不代表这些项目通过。原生 Windows 引擎和 Windows 挂载盘项目不在本次范围。
+
 ## 未发布 · 2026-11-11 · 风格诊断
 
 **BREAKING:** 公开风格规则改为有定位的语义候选，增加 `review`、有效 `gate`、行列与原始字符偏移。有候选返回 `review_advisory`，不因句式次数要求全章重写；CLI 发现类退出码与聚合机械门分开解释。已成立的阶段 B 阻断、作者批准和正文事务不自动改变。
