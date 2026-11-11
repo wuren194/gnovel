@@ -4,6 +4,8 @@ Govel 的插件把 Skill 与本地 MCP 引擎一起安装。运行需要 macOS �
 
 macOS 15 与 Ubuntu 24.04 已通过完整公开工程门禁，具体环境和限制见 [平台验证记录](LOCAL-CI.md#已验证的平台基线)。该结果验证引擎，不表示所有宿主的插件安装与桌面确认都已实测；原生 Windows 不支持，WSL2 尚未单独验收。
 
+Windows 提供 [WSL2 实验性接入](WINDOWS.md)：在 Ubuntu 内运行 `python3 scripts/govel_bind.py wsl-config --json`，桥接握手成功后将输出的 `wsl.exe` 配置加入 Windows 客户端。真实 Windows＋WSL2 的客户端连接、小说写入与恢复、WSLg 确认窗口仍待实测。此操作不改宿主配置、不安装插件，也不创建小说；下文的直接 `python3` 插件入口适用于 macOS／Linux 侧宿主。
+
 ## 安装宿主插件
 
 Claude Code：

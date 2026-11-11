@@ -20,6 +20,8 @@ Provider 的未配置、缺失、摘要失配、路径范围和任务依赖由 `
 
 首次接入使用同一 `govel-bind` 引导包，宿主声明与薄入口由包装生成器维护。`tests/test_govel_bind.py`、`tests/test_plugin_shells.py` 验证独立复制、运行时与完整引擎检查、真实帮助调用、注册保全、固定提交下载及授权范围。配置、独立进程握手与当前会话连接分别报告；脚本不能把前两项当成宿主已加载的证明。
 
+Windows 接入复用 WSL2 中的 Linux 引擎。`govel-bind wsl-config` 固定发行版、用户、路径与资料环境，沿 `wsl.exe` 检查 MCP 握手并生成供 Windows 客户端使用的配置，不改宿主注册或作品。`tests/test_wsl_binding.py` 使用模拟桥接程序连接真实 MCP，验证参数与环境传递、失败结果和无注册写入；该测试不证明真实 Windows／WSL2 或 WSLg 窗口已经验收。
+
 `tests/test_plugin_distribution.py` 将公共包解压到只读、含空格的陌生目录，验证 MCP、根 Skill、契约与 doctor 的实际消费者；`tests/test_packaged_tooling.py` 确认运行时保留包装检查，且 `.git` 目录或文件不会触发发布候选、无关客户端的全局登记检查。这些维护检查仍由原命令单独执行。发布包不携带私人资料，插件升级不迁移现有作品或重写批准。真实宿主的安装与当前会话验证另行记录，不以静态 manifest 校验代替。
 
 可编辑圆桌由 `tests/test_local_roundtable.py` 验证：固定入口无须配置、缺失和空白使用默认版、五个审校工位共用用户版、保存后旧回执失效、知识库与未消费圆桌的任务不受影响。公开目录骨架及其空占位约束由发布检查测试验证。

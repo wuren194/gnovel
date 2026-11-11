@@ -10,6 +10,7 @@ Govel 的完整工程门禁可在 macOS 或 Linux 上执行。本文件说明验
 | Python | 3.11 或更新版本；报告记录实际路径与版本 |
 | Linux 文件系统 | 需要 `renameat2(RENAME_NOREPLACE)`；内核或文件系统不支持时拒绝发布 |
 | 原生 Windows | 暂不支持；启动时在导入 POSIX 模块前给出说明 |
+| Windows＋WSL2 | 实验性接入；提供 `wsl-config` 桥接检查与配置生成，真实客户端、写入／恢复与 WSLg 窗口待实测，见 [Windows 指南](WINDOWS.md) |
 | GitHub | 源码托管与评审 |
 | 外部 CI | 可补充工程证据，不替代本地门禁 |
 

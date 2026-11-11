@@ -47,7 +47,11 @@ Govel 本身不提供独立的图形写作界面，而是作为一组本地工�
 
 支持 macOS 和 Linux，要求 Python 3.11 或更新版本；Python 代码只使用标准库。macOS 15 与 Ubuntu 24.04 已在 GitHub Actions 上通过完整工程门禁，具体提交、运行环境和跳过项见 [平台验证记录](docs/LOCAL-CI.md#已验证的平台基线)。
 
-Linux 写入需要 libc 提供 `renameat2`，项目所在文件系统支持 `RENAME_NOREPLACE`；其他发行版和挂载文件系统需在实际环境验证。原生 Windows 暂不支持。WSL2 可作为 Linux 运行方式，但尚未单独完成验收，使用前请在该环境及实际项目文件系统上执行完整检查。
+Linux 写入需要 libc 提供 `renameat2`，项目所在文件系统支持 `RENAME_NOREPLACE`；其他发行版和挂载文件系统需在实际环境验证。
+
+**Windows：提供基于 WSL2 的实验性接入，尚未完成实机验收。** 按 [Windows 使用指南](docs/WINDOWS.md)将引擎与小说放在 Ubuntu 内，通过 `wsl.exe` 接入 Windows 客户端；在 WSL 内运行 `python3 scripts/govel_bind.py wsl-config --json` 检查桥接并生成 MCP 配置。
+
+目前已验证 macOS／Linux 引擎及模拟桥接。真实 Windows＋WSL2 上的客户端连接、小说写入与恢复、WSLg 确认窗口仍待实测。原生 Windows 不支持；本路线要求活跃项目放在 WSL 的 Linux 文件系统，`/mnt/c` 等 Windows 挂载盘不在验收范围。
 
 Claude Code 安装插件：
 

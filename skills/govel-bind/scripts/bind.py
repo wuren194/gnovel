@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shutil
 import stat
 import subprocess
 import sys
@@ -188,6 +189,39 @@ def probe(engine: dict, environment: dict, policy: dict, *, entry: dict | None =
             'verifiedCalls': ['initialize', 'tools/list', 'get_tool_help']}
 
 
+def wsl_configuration(engine: dict, environment: dict, policy: dict) -> dict:
+    """Generate a Windows stdio entry and probe the actual Windows-to-WSL bridge."""
+    distribution = os.environ.get('WSL_DISTRO_NAME')
+    if platform.system() != 'Linux' or not distribution:
+        raise BindError('WSL_REQUIRED', '请在安装 Govel 的 WSL2 发行版内运行 wsl-config；步骤见 docs/WINDOWS.md')
+    executable = shutil.which('wsl.exe')
+    if not executable:
+        raise BindError('WSL_BRIDGE_UNAVAILABLE',
+                        'WSL 中找不到 wsl.exe；请启用 Windows 程序互操作和 Windows PATH，再重试')
+    import pwd
+    user = pwd.getpwuid(os.getuid()).pw_name
+    root = Path(engine['engineRoot'])
+    prefix = ['--distribution', distribution, '--user', user, '--cd', str(root), '--exec', '/usr/bin/env']
+    # Windows environment propagation is optional in WSL. Pass Linux paths as
+    # explicit argv entries, including empty overrides for unselected providers.
+    environment = {'PYTHONUTF8': '1', 'PYTHONDONTWRITEBYTECODE': '1', **environment}
+    def arguments(values):
+        return [*prefix, *[key + '=' + value for key, value in sorted(values.items())]]
+    server = [sys.executable, '-u', str(root / 'scripts/mcp_server.py')]
+    entry = {'command': 'wsl.exe', 'args': [*arguments(environment), *server]}
+    checked = {'command': executable,
+               'args': [*arguments({**environment, 'GOVEL_LOG_MODE': 'off'}), *server]}
+    try:
+        handshake = probe(engine, {}, policy, entry=checked)
+    except BindError as exc:
+        raise BindError('WSL_MCP_HANDSHAKE_FAILED',
+                        'wsl.exe 未完成 MCP 握手与帮助调用；检查 WSL 发行版、互操作和 Python 路径后重试',
+                        distribution=distribution, engineRoot=str(root)) from exc
+    return {'distribution': distribution, 'linuxUser': user,
+            'mcpConfig': {'mcpServers': {'govel': entry}}, 'processHandshake': handshake,
+            'cliCommand': ['wsl.exe', *arguments(environment), sys.executable, str(root / 'scripts/novelctl.py')]}
+
+
 @contextmanager
 def installation_lock(state_root: Path):
     import fcntl
@@ -243,7 +277,16 @@ def run(action: str, *, host: str = 'plugin', engine_root: str | None = None,
         if engine is None:
             raise BindError('ENGINE_NOT_BOUND', '未找到完整 Govel 引擎；运行 install 或指定 --engine-root',
                             stateRoot=str(state))
-        environment, data = data_environment(engine, state, host)
+        environment, data = data_environment(engine, state, 'wsl' if action == 'wsl-config' else host)
+        if action == 'wsl-config':
+            environment = {'GOVEL_DATA_HOME': data['dataHome'] or '', 'GOVEL_PROVIDER_CONFIG': '', **environment}
+            connection = wsl_configuration(engine, environment, policy)
+            return {'ok': True, 'code': 'WSL_CONFIG_READY', **engine, **data, **connection,
+                    'registration': {'status': 'manual_configuration_required', 'changed': False},
+                    'hostConnection': 'not_observed', 'authorApprovalGranted': False,
+                    'nextAction': {'tool': 'get_tool_help', 'arguments': {'operation': 'project.overview', 'view': 'full'},
+                                   'instruction': '把 mcpConfig 中的 govel 条目加入 Windows 客户端的 MCP 配置，'
+                                                  '刷新后在当前会话调用帮助，核对同一引擎路径。'}}
         if action == 'serve':
             arguments = list(mcp_args or [])
             if arguments[:1] == ['--']:
@@ -284,12 +327,14 @@ def run(action: str, *, host: str = 'plugin', engine_root: str | None = None,
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='接入 Govel 引擎；不创建小说、不授予作品修改批准。')
-    parser.add_argument('action', choices=('check', 'install', 'serve'))
+    parser.add_argument('action', choices=('check', 'install', 'serve', 'wsl-config'))
     parser.add_argument('--host', choices=('plugin', 'codex', 'claude', 'antigravity'), default='plugin')
     parser.add_argument('--engine-root')
     parser.add_argument('--state-root')
     parser.add_argument('--json', action='store_true', help='输出机器可读结果')
     args, remainder = parser.parse_known_args(argv)
+    if args.action == 'wsl-config' and args.host != 'plugin':
+        parser.error('wsl-config 生成通用 Windows MCP 配置，无需指定 --host')
     if remainder and args.action != 'serve':
         parser.error('unrecognized arguments: ' + ' '.join(remainder))
     try:

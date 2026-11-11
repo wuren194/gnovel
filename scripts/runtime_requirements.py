@@ -30,6 +30,7 @@ def require_supported_platform() -> None:
     sys.stderr.write(
         f"Govel 当前支持 macOS 和 Linux；检测到 {system}，尚不支持原生运行。\n"
         "安全写入依赖 POSIX 文件锁、目录描述符和内核独占重命名。"
-        "Windows 请使用 WSL2 的 Linux 环境，并在该环境运行 python3 scripts/local_ci.py 验证。\n"
+        "Windows 请按 docs/WINDOWS.md 使用 WSL2；在 WSL 内运行 "
+        "python3 scripts/govel_bind.py wsl-config --json 生成 Windows 客户端配置。\n"
     )
     raise SystemExit(2)
