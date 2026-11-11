@@ -1024,6 +1024,12 @@
       "kind": "maintenance"
     },
     {
+      "id": "govel-bind",
+      "path": "scripts/govel_bind.py",
+      "kind": "maintenance",
+      "description": "检查引擎与 MCP 握手，或安装引擎并维护所选宿主的 Govel 注册与绑定；serve 委托现有 mcp_server.py。安装不创建作品、不授予作者批准"
+    },
+    {
       "id": "check-mcp-registration",
       "path": "scripts/check_mcp_registration.py",
       "kind": "maintenance"
@@ -1112,6 +1118,12 @@
       "id": "package-toolbox",
       "path": "scripts/package_toolbox.py",
       "kind": "maintenance"
+    },
+    {
+      "id": "package-plugin",
+      "path": "scripts/package_plugin.py",
+      "kind": "maintenance",
+      "description": "只读检查公共插件文件清单，或向仓库外的新 ZIP 路径构建完整公开插件；排除私有资料，不覆盖已有目标、不修改作品"
     },
     {
       "id": "provider",

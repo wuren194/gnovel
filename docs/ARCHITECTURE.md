@@ -20,6 +20,13 @@ Provider 身份与声明摘要进入计划和诊断依赖。切换包或变更�
 
 公开发行包含通用引擎与中性工程用例。完整图形工作台及用户参考数据不在此发行范围内。
 
+## 接入与分发工具
+
+`shared/registries/tools.json` 的 `tools` 库存将安装与打包脚本归为 `maintenance`，供校验和审计展示。作品任务计划只消费 `capabilities` 及其绑定的 OperationSpec；登记维护脚本不会把它变成作品操作，也不赋予任务执行器运行任意脚本的权限。
+
+- `scripts/govel_bind.py` 委托独立 Skill 的 `skills/govel-bind/scripts/bind.py`。`check` 只读检查引擎与独立 MCP 握手；`install` 维护引擎缓存、绑定记录及所选宿主的 Govel 注册，不创建小说或授予作者批准。`serve` 启动现有 `scripts/mcp_server.py`，沿用同一操作与事务边界；配置成功、独立握手成功和当前宿主会话已连接分别报告。
+- `scripts/package_plugin.py` 的 `--plan` 只读校验并列出公开插件文件；`--output` 在源码仓库外构建完整插件 ZIP，校验源文件与归档后独占发布到新路径。构建排除私有资料，不覆盖已有目标，不修改作品。
+
 ## 传输入口
 
 - `scripts/novelctl.py`：当前格式项目、源查询与事务、工位准备、正文及工件提交、证据、摘要、定稿与连续性；参数以 operations 注册定义为准；project export 成品导出与 preview → commit 原子事务；workflow finalize-chapter 与 continuity-complete。

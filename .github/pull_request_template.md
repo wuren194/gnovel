@@ -4,7 +4,7 @@
 
 ## 验证
 
-- macOS / Python 版本：
+- 本地运行平台 / Python 版本：
 - `python3 scripts/local_ci.py`：
 - `python3 scripts/check_release_contents.py --public`：
 - 专项检查、未验证范围及原因：

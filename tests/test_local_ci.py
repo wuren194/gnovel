@@ -965,7 +965,7 @@ class ReportSchemaTests(unittest.TestCase):
                     "gitIdentityIntegrity", "mergeGate", "overall"):
             self.assertIn(key, report)
         self.assertEqual(report["kind"], "local_ci_report")
-        self.assertEqual(report["platformPolicy"], "macos-local-authoritative")
+        self.assertEqual(report["platformPolicy"], "macos-linux-local-authoritative")
         self.assertEqual(report["mergeGate"], {"authoritative": env["supportedPlatform"], "result": "PASS"})
 
     def test_environment_metadata_captured(self):
@@ -973,7 +973,19 @@ class ReportSchemaTests(unittest.TestCase):
         for key in ("platform", "system", "architecture", "pythonExecutable", "pythonVersion",
                     "repoRoot", "supportedPlatform", "supportedPlatformCheck"):
             self.assertIn(key, env)
-        self.assertEqual(env["supportedPlatform"], platform.system() == "Darwin")
+        self.assertEqual(env["supportedPlatform"], platform.system() in {"Darwin", "Linux"})
+
+    def test_linux_uses_the_same_full_gate_requirements(self):
+        for system in ('Darwin', 'Linux', 'Windows', 'FreeBSD'):
+            with self.subTest(system=system), patch.object(local_ci.platform, 'system', return_value=system):
+                env = local_ci.environment_info()
+                supported = system in {'Darwin', 'Linux'}
+                self.assertEqual(env['supportedPlatform'], supported)
+                gates = {key: {'pass': True} for key in local_ci.GATE_KEYS}
+                expected = ('PASS', 0) if supported else ('UNVERIFIED', 2)
+                self.assertEqual(local_ci.decide(gates, env['supportedPlatform']), expected)
+                gates['fullTests']['pass'] = False
+                self.assertEqual(local_ci.decide(gates, env['supportedPlatform']), ('FAIL', 1))
 
     def test_report_is_ascii_serializable_with_non_ascii_paths(self):
         gates = {key: {"pass": True} for key in local_ci.GATE_KEYS}
@@ -1054,9 +1066,9 @@ class MainWiringTests(unittest.TestCase):
         self.assertEqual(code, local_ci.EXIT_FAIL)
         self.assertEqual(report["overall"], "FAIL")
 
-    def test_main_pass_on_darwin_unverified_elsewhere(self):
+    def test_main_pass_on_supported_platforms_unverified_elsewhere(self):
         code, report, _ = self._run_main(self._gates(), [])
-        if platform.system() == "Darwin":
+        if platform.system() in {"Darwin", "Linux"}:
             self.assertEqual((code, report["overall"]), (0, "PASS"))
         else:
             self.assertEqual((code, report["overall"]), (local_ci.EXIT_UNVERIFIED, "UNVERIFIED"))

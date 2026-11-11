@@ -10,12 +10,14 @@ from .write_sets import safe_project_path
 from .paths import ProjectPathError
 
 
-def preheat_metadata(source: dict, after_chapter_id: str) -> tuple[dict, dict, dict, dict]:
+def preheat_metadata(source: dict, after_chapter_id: str, *,
+                     _plan: dict | None = None) -> tuple[dict, dict, dict, dict]:
     """Registered planning metadata for the chapter after ``after_chapter_id``.
 
     Shared by the preheat operation and the Context Builder so both derive one
     fingerprint from the same inputs. Reads only registered structure — never prose
-    and never any future plot.
+    and never any future plot. The Builder may pass the plan it just computed
+    from this same source snapshot; it is never a persisted preheat cache.
     """
     chapters = ordered_chapters(source)
     position = next((index for index, row in enumerate(chapters)
@@ -26,7 +28,9 @@ def preheat_metadata(source: dict, after_chapter_id: str) -> tuple[dict, dict, d
         raise StructureError('NEXT_CHAPTER_NOT_FOUND', 'no registered active next chapter')
     current, target = chapters[position:position + 2]
     target_id = target['chapterId']
-    plan = chapter_plan(source, target_id)
+    plan = chapter_plan(source, target_id) if _plan is None else _plan
+    if plan['chapterId'] != target_id:
+        raise ValueError('preheat plan belongs to another chapter')
     references = sorted({row['targetId'] for row in source.get('references', [])
                          if row['sourceId'] == target_id})
     arc_ids = sorted({row['arcId'] for row in source.get('chapterArcLinks', [])
@@ -39,13 +43,13 @@ def preheat_metadata(source: dict, after_chapter_id: str) -> tuple[dict, dict, d
     return metadata, plan, current, target
 
 
-def preheat_fingerprint(source: dict, after_chapter_id: str) -> str:
+def preheat_fingerprint(source: dict, after_chapter_id: str, *, _plan: dict | None = None) -> str:
     """The reusable input fingerprint a preheat run after ``after_chapter_id`` produces.
 
     The Context Builder records this for the chapter it builds so a caller can verify a
     prior preheat still matches the fresh dependencies, without caching any future context.
     """
-    return fingerprint(preheat_metadata(source, after_chapter_id)[0])
+    return fingerprint(preheat_metadata(source, after_chapter_id, _plan=_plan)[0])
 
 
 def preheat_next_chapter(root: Path, *, afterChapterId: str,

@@ -1,0 +1,15 @@
+{
+  "name": "govel",
+  "description": "使用 Govel 工具箱管理中文长篇小说；续写、读稿、进度查询、设定修改、导入与审校。",
+  "version": "0.7.0",
+  "owner": {
+    "name": "wuren194",
+    "url": "https://github.com/wuren194/govel"
+  },
+  "plugins": [
+    {
+      "name": "govel",
+      "source": "./"
+    }
+  ]
+}

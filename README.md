@@ -45,15 +45,31 @@ Govel 本身不提供独立的图形写作界面，而是作为一组本地工�
 
 ## 安装与接入
 
-本地运行环境为 macOS、Python 3.11 或更新版本。运行时只使用 Python 标准库。
+本地运行环境为 macOS 或 Linux、Python 3.11 或更新版本。Python 代码只使用标准库；Linux 写入需要 libc 提供 `renameat2`，项目所在文件系统支持 `RENAME_NOREPLACE`。原生 Windows 暂不支持，可在 WSL2 的 Linux 环境中运行并执行完整验证。平台验收口径见 [LOCAL-CI.md](docs/LOCAL-CI.md)。
+
+Claude Code 安装插件：
 
 ```bash
-python3 scripts/novelctl.py --help
-python3 scripts/novelctl.py project quick-init --project-root /tmp/govel-example --book-name 山城旧事
-python3 scripts/novelctl.py project doctor --project-root /tmp/govel-example
+claude plugin marketplace add wuren194/govel
+claude plugin install govel@govel
 ```
 
-项目目录必须为空。当前项目格式由 `toolbox.manifest.json` 声明；不自动转换其他格式，也不继承外部稿件的批准记录。
+Codex 安装插件：
+
+```bash
+codex plugin marketplace add wuren194/govel
+codex plugin add govel@govel
+```
+
+Antigravity 安装插件：
+
+```bash
+agy plugin install https://github.com/wuren194/govel
+```
+
+插件内置同一套公共引擎，由宿主启动本地 MCP。安装后选择 `govel-bind` 检查接入；Claude Code 可用 `/govel:init`，Codex 可用 `$govel-bind`。需要宿主刷新时按提示重新加载，再实际调用 `get_tool_help` 确认当前会话。接入不会新建小说或授予作品修改批准。
+
+只安装引导 Skill 时可使用 `npx skills add wuren194/govel --skill govel-bind`。首次绑定会复用完整引擎；没有可用引擎时，从官方仓库解析到固定提交再安装。Node/npm 仅用于这个可选安装入口，不是引擎运行依赖。完整步骤、数据位置与离线使用见 [接入说明](docs/INTEGRATIONS.md)。
 
 本发行版提供 CLI、MCP 和本地 JSON 接口。日常对话优先通过 MCP 接入；具备本地命令执行能力的客户端也可由 AI 调用 CLI。
 
@@ -61,19 +77,14 @@ python3 scripts/novelctl.py project doctor --project-root /tmp/govel-example
 
 MCP 服务为 stdio 传输，由客户端作为子进程启动。以下示例中的 `/path/to/govel` 替换为本仓库的绝对路径。
 
-Claude Code：
+已有完整 checkout 时，也可由统一引导脚本绑定客户端，无须手填 JSON 或 TOML：
 
 ```bash
-claude mcp add -s user govel -- python3 /path/to/govel/scripts/mcp_server.py
+python3 scripts/govel_bind.py check --host codex --engine-root . --json
+python3 scripts/govel_bind.py install --host codex --engine-root . --json
 ```
 
-Codex（`~/.codex/config.toml`）：
-
-```toml
-[mcp_servers.govel]
-command = "python3"
-args = ["/path/to/govel/scripts/mcp_server.py"]
-```
+`--host` 可选 `codex`、`claude`、`antigravity`；原生插件使用 `plugin` 模式，不再重复注册全局服务器。`check` 只检查，`install` 安装或绑定；已有冲突条目会保留并报错。Claude/Codex 的独立绑定需要其官方 CLI。
 
 Claude Desktop、Cursor 等使用 `mcpServers` JSON 配置的客户端：
 
@@ -133,7 +144,9 @@ python3 scripts/novelctl.py project tools help --command-group workflow
 
 已有项目可通过 `import.append-preview` 追加外部章节；章节拆分、合并分别使用 `chapter.split-preview` 与 `chapter.merge-preview`。工具保留来源正文，生成新章节身份和待整理状态，作者核对后提交。
 
-自行修改受管正文后，使用 `workflow.external-preview` 核对旧版、新版与差异，再由 `workflow.external-commit` 请求本机 macOS 确认。接受后重新标记待审，不直接定稿。整本项目的可恢复备份使用 `project.backup`，恢复先调用 `project.restore-preview`，核对后恢复到新目录。以上能力均有 MCP 和 CLI 入口，参数与执行逻辑共用；详见[项目管理与章节整理](docs/OPERATIONS.md#项目管理与章节整理)。
+自行修改受管正文后，使用 `workflow.external-preview` 核对旧版、新版与差异，再由 `workflow.external-commit` 请求本机桌面确认。macOS 使用系统窗口；Linux 桌面需要安装 `zenity`。无头或锁屏时保留原计划，回到可操作的桌面后重试。接受后重新标记待审，不直接定稿。
+
+整本项目的可恢复备份使用 `project.backup`，恢复先调用 `project.restore-preview`，核对后恢复到新目录。备份不会清除原项目的事务证据。以上能力均有 MCP 和 CLI 入口，参数与执行逻辑共用；详见[项目管理与章节整理](docs/OPERATIONS.md#项目管理与章节整理)。
 
 ## 接入本地资料
 

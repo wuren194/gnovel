@@ -6,6 +6,7 @@ not evidence that a running Antigravity process has loaded the registration.
 from __future__ import annotations
 
 from copy import deepcopy
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -165,7 +166,7 @@ def inspect_entry(entry, script: Path) -> dict:
             'resolvedCommand': command, 'script': str(script)}
 
 
-def _desired_configuration(snapshot: dict, script: Path) -> dict:
+def _desired_configuration(snapshot: dict, script: Path, *, extra_environment: dict | None = None) -> dict:
     data = deepcopy(snapshot['data'])
     entries = data.setdefault('mcpServers', {})
     entry = entries.get('govel')
@@ -179,6 +180,16 @@ def _desired_configuration(snapshot: dict, script: Path) -> dict:
             or any(not isinstance(key, str) or not key or '=' in key or '\0' in key
                    or not isinstance(value, str) or '\0' in value for key, value in environment.items())):
         raise RegistrationError('MCP_ENV_INVALID', 'govel env 无法安全合并；保留原文件')
+    if extra_environment is not None:
+        if (not isinstance(extra_environment, dict)
+                or any(not isinstance(key, str) or not key or '=' in key or '\0' in key
+                       or not isinstance(value, str) or '\0' in value for key, value in extra_environment.items())):
+            raise RegistrationError('MCP_ENV_INVALID', '新增 govel env 必须是合法字符串键值对象')
+        for key, value in extra_environment.items():
+            if key in environment and environment[key] != value:
+                raise RegistrationError('MCP_ENV_CONFLICT', f'已有 {key} 与本次接入冲突；保留原配置')
+        if environment or extra_environment:
+            entry['env'] = {**environment, **extra_environment}
     args = entry.get('args')
     tail = (args[1:] if isinstance(args, list) and args and all(isinstance(arg, str) and '\0' not in arg for arg in args)
             and args[0].endswith('.py') else [])
@@ -212,7 +223,7 @@ def _write_private(path: Path, raw: bytes):
 
 
 def _same_configuration(path: Path, expected: dict):
-    current = read_configuration(path)
+    current = _read_file(path)
     if current['identity'] != expected['identity'] or current['raw'] != expected['raw']:
         raise RegistrationError('MCP_CONFIG_CHANGED', 'MCP 配置已被其他进程修改，本次安装不覆盖它')
 
@@ -226,20 +237,33 @@ def _sync_directory(path):
 
 
 def _pending_path(path):
-    return path.parent / '.govel-mcp-install-pending.json'
+    return path.parent / f'.{path.name}.govel-mcp-install-pending.json'
 
 
 def pending_registration(path: Path) -> dict | None:
     """Return only validated recovery locations; never create or restore files."""
     path = _configuration_path(path)
-    record = _read_file(_pending_path(path))
+    marker = _pending_path(path)
+    legacy = path.parent / '.govel-mcp-install-pending.json'
+    if legacy.exists() or legacy.is_symlink():
+        if path.name != 'mcp_config.json':
+            raise RegistrationError('MCP_RECOVERY_TARGET_UNBOUND',
+                                    '目录中存在旧版无目标绑定的恢复记录；先恢复原 Antigravity 配置，记录保持原样')
+        if marker.exists() or marker.is_symlink():
+            raise RegistrationError('MCP_RECOVERY_AMBIGUOUS', '同时存在两份安装恢复记录；保留原记录与备份')
+        marker = legacy
+    record = _read_file(marker)
     if record['raw'] is None:
         return None
     try:
         payload = json.loads(record['raw'])
         keys = {'schemaVersion', 'token', 'originalSha256', 'installedSha256', 'originalMode'}
+        if marker != legacy:
+            keys.add('configurationName')
         if (not isinstance(payload, dict) or set(payload) != keys or type(payload['schemaVersion']) is not int
-                or payload['schemaVersion'] != 1 or not isinstance(payload['token'], str)
+                or payload['schemaVersion'] != (1 if marker == legacy else 2)
+                or (marker != legacy and payload.get('configurationName') != path.name)
+                or not isinstance(payload['token'], str)
                 or not re.fullmatch('[0-9a-f]{32}', payload['token'])
                 or type(payload['originalMode']) is not int or not 0 <= payload['originalMode'] <= 0o7777):
             raise ValueError('invalid recovery shape')
@@ -252,6 +276,7 @@ def pending_registration(path: Path) -> dict | None:
     except (ValueError, TypeError, KeyError) as exc:
         raise RegistrationError('MCP_RECOVERY_INVALID', 'MCP 安装恢复标记损坏；保留配置和备份') from exc
     return {**payload,
+            'markerPath': str(marker),
             'backupPath': str(path.parent / f'.{path.name}.govel-backup-{payload["token"]}'),
             'stagedPath': str(path.parent / f'.govel-mcp-staged-{payload["token"]}')}
 
@@ -277,7 +302,7 @@ def _restore_backup(path: Path, backup: Path, mode: int) -> bool:
 
 def _clear_pending(path, pending):
     Path(pending['stagedPath']).unlink(missing_ok=True)
-    _pending_path(path).unlink()
+    Path(pending.get('markerPath', _pending_path(path))).unlink()
     _sync_directory(path.parent)
 
 
@@ -345,7 +370,7 @@ def _publish_configuration(path: Path, snapshot: dict, raw: bytes, token: str) -
     """
     staged = path.parent / f'.govel-mcp-staged-{token}'
     backup = path.parent / f'.{path.name}.govel-backup-{token}'
-    pending = {'schemaVersion': 1, 'token': token,
+    pending = {'schemaVersion': 2, 'configurationName': path.name, 'token': token,
                'originalSha256': hashlib.sha256(snapshot['raw']).hexdigest() if snapshot['raw'] is not None else None,
                'installedSha256': hashlib.sha256(raw).hexdigest(), 'originalMode': snapshot['mode']}
     _write_private(staged, raw)
@@ -394,11 +419,11 @@ def _publish_configuration(path: Path, snapshot: dict, raw: bytes, token: str) -
             staged.unlink(missing_ok=True)
 
 
-def install_registration(path: Path, script: Path) -> dict:
-    """Preserve other entries; publish only after an unchanged-byte check."""
+@contextmanager
+def _configuration_lock(path: Path):
     path = _configuration_path(path)
     if not path.parent.is_dir():
-        raise RegistrationError('MCP_CONFIG_PARENT_MISSING', 'Antigravity 官方配置目录不存在')
+        raise RegistrationError('MCP_CONFIG_PARENT_MISSING', '宿主配置目录不存在')
     lock_path = path.parent / '.govel-mcp-install.lock'
     descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
     try:
@@ -409,9 +434,37 @@ def install_registration(path: Path, script: Path) -> dict:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise RegistrationError('MCP_INSTALL_BUSY', '另一安装进程正在修改 MCP 配置') from exc
-        recovery = _recover_pending(path)
+        yield path, _recover_pending(path)
+    finally:
+        os.close(descriptor)
+
+
+def publish_host_configuration(path: Path, prepare) -> dict:
+    """Publish caller-validated host bytes against their actual original inode.
+
+    ``prepare`` receives the locked raw snapshot and returns complete candidate
+    bytes. It must validate its host's schema and permitted changes. No JSON or
+    TOML interpretation occurs in this shared preservation layer.
+    """
+    with _configuration_lock(path) as (path, recovery):
+        snapshot = _read_file(path)
+        raw = prepare(snapshot)
+        if not isinstance(raw, bytes):
+            raise RegistrationError('MCP_CANDIDATE_INVALID', '宿主配置候选必须是已校验字节')
+        if raw == snapshot['raw']:
+            return {'changed': False, 'backupPath': None, 'recovery': recovery}
+        backup = _publish_configuration(path, snapshot, raw, uuid.uuid4().hex)
+        return {'changed': True, 'backupPath': str(backup) if backup else None, 'recovery': recovery}
+
+
+def install_registration(path: Path, script: Path, *, environment: dict | None = None,
+                         only_if_missing: bool = False) -> dict:
+    """Preserve other entries; publish only after an unchanged-byte check."""
+    with _configuration_lock(path) as (path, recovery):
         snapshot = read_configuration(path)
-        desired = _desired_configuration(snapshot, script)
+        if only_if_missing and 'govel' in snapshot['data'].get('mcpServers', {}):
+            raise RegistrationError('MCP_REGISTRATION_CONFLICT', '检查后出现 govel 注册；保留原条目')
+        desired = _desired_configuration(snapshot, script, extra_environment=environment)
         if (json.dumps(desired, sort_keys=True, allow_nan=False) == json.dumps(snapshot['data'], sort_keys=True, allow_nan=False)
                 and snapshot['raw'] is not None):
             return {'changed': False, 'backupPath': None, 'changedFields': [], 'recovery': recovery}
@@ -425,5 +478,3 @@ def install_registration(path: Path, script: Path) -> dict:
         backup = _publish_configuration(path, snapshot, raw, uuid.uuid4().hex)
         return {'changed': True, 'backupPath': str(backup) if backup else None,
                 'changedFields': changed_fields, 'recovery': recovery}
-    finally:
-        os.close(descriptor)

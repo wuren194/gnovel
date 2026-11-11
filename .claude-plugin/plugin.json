@@ -1,0 +1,25 @@
+{
+  "name": "govel",
+  "version": "0.7.0",
+  "description": "使用 Govel 工具箱管理中文长篇小说；续写、读稿、进度查询、设定修改、导入与审校。",
+  "author": {
+    "name": "wuren194",
+    "url": "https://github.com/wuren194/govel"
+  },
+  "homepage": "https://github.com/wuren194/govel",
+  "repository": "https://github.com/wuren194/govel",
+  "license": "AGPL-3.0-only",
+  "mcpServers": {
+    "govel": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/skills/govel-bind/scripts/bind.py",
+        "serve",
+        "--host",
+        "plugin",
+        "--engine-root",
+        "${CLAUDE_PLUGIN_ROOT}"
+      ]
+    }
+  }
+}

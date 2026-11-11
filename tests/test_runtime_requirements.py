@@ -1,4 +1,4 @@
-"""Entrypoints reject unsupported Python before loading application modules."""
+"""Entrypoints reject unsupported runtimes before loading application modules."""
 from __future__ import annotations
 
 import json
@@ -14,6 +14,37 @@ ENTRYPOINTS = ("novelctl", "mcp_server", "local_ci", "dashboard_server")
 
 
 class RuntimeRequirementsTests(unittest.TestCase):
+    def test_windows_stops_before_posix_imports_for_script_and_module(self) -> None:
+        bootstrap = """
+import platform
+import runpy
+import sys
+from pathlib import Path
+root, entry, mode = sys.argv[1:]
+path = Path(root) / 'scripts' / (entry + '.py')
+platform.system = lambda: 'Windows'
+sys.modules['fcntl'] = None
+sys.argv = [str(path), '--help']
+sys.path.insert(0, str(root if mode == 'module' else path.parent))
+if mode == 'module':
+    runpy.run_module('scripts.' + entry, run_name='__main__')
+else:
+    runpy.run_path(str(path), run_name='__main__')
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            for entry in ENTRYPOINTS:
+                for mode in ('script', 'module'):
+                    with self.subTest(entry=entry, mode=mode):
+                        result = subprocess.run(
+                            [sys.executable, '-c', bootstrap, str(ROOT), entry, mode],
+                            cwd=directory, input='', capture_output=True, text=True, timeout=20,
+                        )
+                        self.assertEqual(result.returncode, 2, result.stderr)
+                        self.assertEqual(result.stdout, '')
+                        self.assertIn('Windows', result.stderr)
+                        self.assertIn('WSL2', result.stderr)
+                        self.assertNotIn('Traceback', result.stderr)
+
     def test_unsupported_runtime_has_actionable_stderr_for_script_and_module(self) -> None:
         bootstrap = """
 import runpy

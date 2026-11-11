@@ -5,10 +5,13 @@ import errno
 import os
 from pathlib import Path
 import tempfile
+import threading
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from scripts.core import file_preservation
+from scripts.core.structure_store import StructureError
 
 
 class FilePreservationTests(unittest.TestCase):
@@ -186,3 +189,116 @@ class FilePreservationTests(unittest.TestCase):
                 with self.assertRaises(FileNotFoundError):
                     with file_preservation.parent_directory(Path('relative/file.txt'), create=create):
                         self.fail('relative path was accepted')
+
+    def test_exclusive_move_keeps_the_original_inode_and_open_descriptor(self):
+        source = self.root / 'original'
+        source.write_bytes(b'original')
+        target = self.root / 'nested' / 'published'
+        with source.open('r+b') as held:
+            inode = os.fstat(held.fileno()).st_ino
+            file_preservation.exclusive_move(source, target)
+            self.assertFalse(source.exists())
+            self.assertEqual(target.stat().st_ino, inode)
+            held.write(b'late-save')
+            held.flush()
+            self.assertEqual(target.read_bytes(), b'late-save')
+
+    def test_exclusive_move_never_overwrites_any_existing_destination(self):
+        source = self.root / 'original'
+        source.write_bytes(b'original')
+        inode = source.stat().st_ino
+        regular, link, directory = (self.root / name for name in ('regular', 'link', 'directory'))
+        regular.write_bytes(b'occupant')
+        link.symlink_to(self.sentinel)
+        directory.mkdir()
+        for target in (regular, link, directory):
+            with self.subTest(target=target):
+                with self.assertRaises(FileExistsError):
+                    file_preservation.exclusive_move(source, target)
+                self.assertEqual(source.read_bytes(), b'original')
+                self.assertEqual(source.stat().st_ino, inode)
+        self.assertEqual(regular.read_bytes(), b'occupant')
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(self.sentinel.read_bytes(), b'outside-original')
+        self.assertTrue(directory.is_dir())
+
+    def test_competing_exclusive_moves_have_one_winner_and_keep_the_loser(self):
+        sources = [self.root / name for name in ('first', 'second')]
+        for source in sources:
+            source.write_bytes(source.name.encode())
+        target = self.root / 'destination'
+        barrier = threading.Barrier(2)
+        outcomes = []
+
+        def move(source):
+            barrier.wait(timeout=5)
+            try:
+                file_preservation.exclusive_move(source, target)
+            except OSError as exc:
+                outcomes.append((source, exc.errno))
+            else:
+                outcomes.append((source, None))
+
+        workers = [threading.Thread(target=move, args=(source,)) for source in sources]
+        for worker in workers:
+            worker.start()
+        for worker in workers:
+            worker.join(5)
+            self.assertFalse(worker.is_alive())
+        self.assertEqual(len(outcomes), 2)
+        winner = [source for source, error in outcomes if error is None]
+        loser = [source for source, error in outcomes if error == errno.EEXIST]
+        self.assertEqual(len(winner), 1)
+        self.assertEqual(len(loser), 1)
+        self.assertFalse(winner[0].exists())
+        self.assertEqual(target.read_bytes(), winner[0].name.encode())
+        self.assertEqual(loser[0].read_bytes(), loser[0].name.encode())
+
+    def test_native_unsupported_rename_keeps_source_and_reports_capability(self):
+        source = self.root / 'original'
+        source.write_bytes(b'original')
+        target = self.root / 'destination'
+        for system, name, flag in (('Darwin', 'renameatx_np', 4), ('Linux', 'renameat2', 1)):
+            for code in sorted({errno.ENOSYS, errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP}):
+                with self.subTest(system=system, errno=code):
+                    native = Mock(return_value=-1)
+                    library = SimpleNamespace(**{name: native})
+                    with patch.object(file_preservation.platform, 'system', return_value=system), \
+                            patch.object(file_preservation.ctypes, 'CDLL', return_value=library), \
+                            patch.object(file_preservation.ctypes, 'get_errno', return_value=code):
+                        with self.assertRaises(StructureError) as caught:
+                            file_preservation.exclusive_move(source, target)
+                    self.assertEqual(caught.exception.code, 'SAFE_PUBLICATION_UNAVAILABLE')
+                    self.assertEqual(caught.exception.details['primitive'], name)
+                    self.assertEqual(caught.exception.details['errno'], code)
+                    args = native.call_args.args
+                    self.assertEqual((args[1], args[3], args[4]), (b'original', b'destination', flag))
+                    self.assertIsInstance(args[0], int)
+                    self.assertIsInstance(args[2], int)
+                    self.assertEqual(source.read_bytes(), b'original')
+                    self.assertFalse(target.exists())
+
+    def test_missing_native_primitive_fails_before_creating_target_directories(self):
+        source = self.root / 'original'
+        source.write_bytes(b'original')
+        target = self.root / 'missing' / 'destination'
+        for system in ('Darwin', 'Linux', 'Windows'):
+            with self.subTest(system=system), \
+                    patch.object(file_preservation.platform, 'system', return_value=system), \
+                    patch.object(file_preservation.ctypes, 'CDLL', return_value=SimpleNamespace()):
+                with self.assertRaises(StructureError) as caught:
+                    file_preservation.exclusive_move(source, target)
+                self.assertEqual(caught.exception.code, 'SAFE_PUBLICATION_UNAVAILABLE')
+                self.assertEqual(source.read_bytes(), b'original')
+                self.assertFalse(target.parent.exists())
+
+    def test_native_permission_denial_is_not_reported_as_missing_capability(self):
+        source = self.root / 'original'
+        source.write_bytes(b'original')
+        target = self.root / 'destination'
+        with patch.object(file_preservation, '_exclusive_rename', return_value=(Mock(return_value=-1), 1, 'renameat2')), \
+                patch.object(file_preservation.ctypes, 'get_errno', return_value=errno.EACCES):
+            with self.assertRaises(PermissionError):
+                file_preservation.exclusive_move(source, target)
+        self.assertEqual(source.read_bytes(), b'original')
+        self.assertFalse(target.exists())

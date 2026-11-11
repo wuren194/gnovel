@@ -14,7 +14,8 @@ health or readiness computation that already owns the rule:
     canon        -> pending structure plans (the same baseRevision/planHash the
                     commit path enforces) and canon_guard's fail-closed contract
     workflow     -> finalization.pending_transactions + workflow/structure cross-check
-    tooling      -> generate_wrappers.check, check_release_contents, install_antigravity
+    tooling      -> generate_wrappers.check; release and host registration checks
+                    remain explicit maintenance operations
 
 Re-deriving any of those rules here would create a second, silently divergent
 source of truth — which is the failure mode this module exists to replace. A
@@ -962,11 +963,11 @@ def _knowledge_domain() -> tuple[dict, list[dict]]:
 
 
 def _tooling_domain() -> tuple[dict, list[dict]]:
-    """Toolbox-level maintenance health, consumed from the existing checkers.
+    """Check runtime wrappers without inferring an installation from Git metadata.
 
-    Each checker is loaded from `scripts/` (they are entrypoints, not core
-    modules) and guarded independently: a missing checker is itself reported,
-    never turned into a crash, and never escalated to blocking on its own.
+    Plugin caches can retain .git. Release candidates and unrelated global host
+    registrations are maintenance concerns, not evidence of project health.
+    The existing wrapper checker still owns runtime drift and missing checks.
     """
     import importlib
     import sys
@@ -998,63 +999,15 @@ def _tooling_domain() -> tuple[dict, list[dict]]:
                 message=str(wrappers['error']), evidence={'error': wrappers['error']},
                 recommended_action='检查 generate_wrappers.py 与 toolbox.manifest.json'))
 
-        try:
-            release = importlib.import_module('check_release_contents').check_worktree()
-        except Exception as exc:  # noqa: BLE001
-            release = {'ok': False, 'problems': [], 'error': str(exc)}
-        report['releaseContents'] = {'ok': release.get('ok'),
-                                     'problemCount': len(release.get('problems', [])),
-                                     'fileCount': release.get('fileCount'),
-                                     'mode': release.get('mode')}
-        for row in release.get('problems', [])[:20]:
-            issues.append(_issue(
-                code='RELEASE_CONTENTS_' + str(row.get('code', 'unknown')).upper(), domain='tooling',
-                severity='warning', status='mechanical_error', object_type='releaseFile',
-                object_id=row.get('path', ''),
-                message=json.dumps(row, ensure_ascii=False, sort_keys=True), evidence=row,
-                affected_operations=['project.tools.list'],
-                recommended_action='私有来源、凭据或越界软链不得进入发行候选；修正后再打包'))
-        if release.get('error'):
-            issues.append(_issue(
-                code='RELEASE_CHECK_FAILED', domain='tooling', severity='warning',
-                status='mechanical_error', object_type='releaseFile',
-                object_id='check_release_contents.py', message=str(release['error']),
-                evidence={'error': release['error']},
-                recommended_action='检查 check_release_contents.py 是否可运行'))
-
-        try:
-            install = importlib.import_module('install_antigravity').check()
-        except Exception as exc:  # noqa: BLE001
-            install = {'ok': False, 'problems': [], 'error': str(exc)}
-        report['antigravityInstall'] = {'ok': install.get('ok'),
-                                        'installed': install.get('installed'),
-                                        'problemCount': len(install.get('problems', [])),
-                                        'fixCount': len(install.get('fixes', []))}
-        if install.get('installed') is False:
-            # 没装这个客户端不是故障：报成警告会让每台只跑 CI 或只用 CLI 的机器变黄。
-            # 「本机未安装 Antigravity」是不适用，不是待修。
-            report['antigravityInstall']['applicable'] = False
-            report['antigravityInstall']['reason'] = 'Antigravity 全局定制目录不存在，本机未安装该客户端'
-            issues.append(_issue(
-                code='ANTIGRAVITY_NOT_INSTALLED', domain='tooling', severity='informational',
-                status='informational', object_type='install', object_id='antigravity',
-                message='本机未安装 Antigravity；全局软链层不适用', evidence={},
-                recommended_action='无需处理；装上该客户端后再跑 install_antigravity'))
-        else:
-            for item in install.get('problems', []):
-                issues.append(_issue(
-                    code='ANTIGRAVITY_INSTALL_PROBLEM', domain='tooling', severity='warning',
-                    status='mechanical_error', object_type='install', object_id='antigravity',
-                    message=str(item), evidence={'problem': item},
-                    affected_operations=['project.tools.list'],
-                    recommended_action='运行 python3 scripts/install_antigravity.py 修复'))
-            for item in install.get('fixes', []):
-                issues.append(_issue(
-                    code='ANTIGRAVITY_INSTALL_DRIFT', domain='tooling', severity='warning',
-                    status='needs_rebuild', object_type='install', object_id='antigravity',
-                    message=str(item), evidence={'fix': item},
-                    affected_operations=['project.tools.list'],
-                    recommended_action='运行 python3 scripts/install_antigravity.py 修复软链'))
+        report['releaseContents'] = {
+            'applicable': False, 'ok': None, 'status': 'not_applicable',
+            'reason': '发布候选由 scripts/check_release_contents.py --public 单独核验',
+        }
+        report['antigravityInstall'] = {
+            'applicable': False, 'ok': None, 'status': 'not_applicable',
+            'hostConnection': 'not_observed',
+            'reason': '全局软链由 scripts/install_antigravity.py --check 单独核验；当前宿主连接需另行验证',
+        }
     finally:
         if added:
             try:

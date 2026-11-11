@@ -42,7 +42,7 @@ def public_report(report: dict, *, root: Path | None = None) -> dict:
         if privileged:
             result.pop('nextAction', None)
             result['execution'] = {'executable': False, 'code': 'PRIVILEGED_APPROVAL_REQUIRED',
-                'reason': '预览已冻结；采用前须在本机 macOS 确认，普通 commit 不授予该能力。',
+                'reason': '预览已冻结；采用前须在本机桌面确认，普通 commit 不授予该能力。',
                 'missingPrerequisites': ['independent_user_presence_capability',
                     *report.get('externalReviewMaterials', {}).get('missingPrerequisites', [])],
                 'approvalPerformed': False}

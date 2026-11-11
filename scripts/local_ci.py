@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""统一本地 CI 入口 —— macOS 本机的 authoritative merge gate。
+"""统一本地 CI 入口 —— macOS / Linux 的 authoritative merge gate。
 
 用法：
     python3 scripts/local_ci.py
@@ -12,11 +12,12 @@
 from __future__ import annotations
 
 try:
-    from scripts.runtime_requirements import require_supported_python
+    from scripts.runtime_requirements import SUPPORTED_SYSTEMS, require_supported_platform, require_supported_python
 except ImportError:
-    from runtime_requirements import require_supported_python
+    from runtime_requirements import SUPPORTED_SYSTEMS, require_supported_platform, require_supported_python
 
 require_supported_python()
+require_supported_platform()
 
 import argparse
 import hashlib
@@ -35,8 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PLATFORM_POLICY = "macos-local-authoritative"
-AUTHORITATIVE_SYSTEM = "Darwin"
+PLATFORM_POLICY = "macos-linux-local-authoritative"
 EXIT_PASS = 0
 EXIT_FAIL = 1
 EXIT_UNVERIFIED = 2
@@ -563,7 +563,7 @@ def working_tree_gate(before: dict, after: dict) -> dict:
 # --- environment, orchestration & decision ----------------------------------
 
 def environment_info() -> dict:
-    supported = platform.system() == AUTHORITATIVE_SYSTEM
+    supported = platform.system() in SUPPORTED_SYSTEMS
     return {"platform": platform.platform(), "system": platform.system(),
             "architecture": platform.machine(), "pythonExecutable": sys.executable,
             "pythonVersion": platform.python_version(), "pythonVersionFull": sys.version.replace("\n", " "),
@@ -667,7 +667,7 @@ def render_summary(report: dict) -> str:
     env, git = report["environment"], report["git"]
     full = report["fullTests"]
     summary = full.get("summary", {})
-    lines = ["LOCAL CI REPORT", "", "Platform", f"macOS / {env['system']}", env["architecture"], "",
+    lines = ["LOCAL CI REPORT", "", "Platform", env['system'], env["architecture"], "",
              "Python", env["pythonVersion"], env["pythonExecutable"], "", "HEAD", str(git.get("head")), "",
              "Full unittest suite", f"Ran {summary.get('testsRun')} tests",
              " ".join(f"{key}={summary.get(key)}" for key in
@@ -698,13 +698,13 @@ def render_summary(report: dict) -> str:
         lines.append(f"{change['path']}: {', '.join(change['changeTypes'])}; {change['beforeHash']} -> {change['afterHash']}")
     lines += ["", "LOCAL MERGE GATE", report["overall"]]
     if env["supportedPlatform"] is not True:
-        lines.append("note: authoritative PASS requires platform == Darwin (macOS)")
+        lines.append("note: authoritative PASS requires macOS or Linux and all verification gates")
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
     started = time.monotonic()
-    parser = argparse.ArgumentParser(description="统一本地 CI 入口（macOS 权威 merge gate）。")
+    parser = argparse.ArgumentParser(description="统一本地 CI 入口（macOS / Linux 权威 merge gate）。")
     parser.add_argument("--focus", action="append", default=[], metavar="MODULE",
                         help="专项模块（可重复）；全量模式追加运行，--quick 模式只运行这些模块")
     parser.add_argument('--quick', action='store_true', help='开发快速检查；未指定 --focus 时按 Git 改动选择，不作为完整 merge gate')

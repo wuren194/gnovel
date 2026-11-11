@@ -103,7 +103,7 @@ def external_edit_operations():
             _schema({**identity, 'part': {'type': 'string', 'enum': ['H1', 'H2', 'diff']}, 'offset': INTEGER}, ['operationId', 'planHash']),
             'read', lambda root, a: read_external_edit(root, **a), ('workflow', 'external-read'), category='author'),
         OperationSpec('workflow.external-commit', 'accept_external_manuscript_edit',
-            '明确批准冻结预览后在本机弹出 macOS 确认；确认成功才采用该外改版本并标记待审。单次能力由本机确认签发，不能通过普通参数代替。',
+            '明确批准冻结预览后在本机桌面确认（macOS 或 Linux zenity）；确认成功才采用该外改版本并标记待审。单次能力由本机确认签发，不能通过普通参数代替。',
             _schema({**identity, 'approve': {**BOOLEAN, 'const': True}, 'confirmOnDevice': {**BOOLEAN, 'const': True}},
                     ['operationId', 'planHash', 'approve', 'confirmOnDevice']),
             'protected-write', lambda root, a: commit_external_edit(root, **a), ('workflow', 'external-commit'), category='author'),

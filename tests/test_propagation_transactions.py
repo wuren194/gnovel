@@ -240,9 +240,15 @@ with project_lock(Path(sys.argv[1])):
             root = self._guard_root(temp)
             guards = write_sets.capture_guards(root, ['authored.md'])
             path = root / 'authored.md'
+            before = path.stat()
             payload = path.read_bytes()
-            path.unlink()
-            path.write_bytes(payload)
+            # Allocate while the original exists so its inode cannot be recycled.
+            replacement = path.with_name(path.name + '.replacement')
+            replacement.write_bytes(payload)
+            os.replace(replacement, path)
+            after = path.stat()
+            self.assertNotEqual((before.st_dev, before.st_ino), (after.st_dev, after.st_ino))
+            self.assertEqual(path.read_bytes(), payload)
             with self.assertRaises(StructureError) as caught:
                 write_sets.apply_write_set(root, {'business.json': b'new'}, operation='test',
                                            guards=guards)
