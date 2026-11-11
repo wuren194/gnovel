@@ -22,7 +22,7 @@ def append_operations():
             'plan-write', lambda root, a: preview_append(root, **a), ('import', 'append-preview'),
             category='author', discover=True,
             examples=({'projectRoot': '/path/to/书', 'requestId': 'append-chapters-1', 'source': '/path/to/新增章节.txt',
-                       'volumeId': 'VOL-EXAMPLE', 'primaryArcId': 'ARC-EXAMPLE'},)),
+                       'volumeId': 'volume-EXAMPLE', 'primaryArcId': 'arc-EXAMPLE'},)),
         OperationSpec('import.append-inspect', 'inspect_manuscript_append',
             '分页核对追加原稿的冻结分章、来源区段、稳定 ID 与位置；提交后同样可查来源回执。',
             _schema({**identity, 'offset': INTEGER, 'limit': INTEGER}, ['projectRoot', 'operationId', 'planHash']),

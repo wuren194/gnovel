@@ -1,7 +1,7 @@
 {
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "govel",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "使用 Govel 工具箱管理中文长篇小说；续写、读稿、进度查询、设定修改、导入与审校。",
   "author": {
     "name": "wuren194",

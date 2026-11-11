@@ -212,10 +212,10 @@ class SourceEvidenceAssemblyTests(unittest.TestCase):
         self.root = Path(temp.name).resolve(); self.source = source_fixture(self.root)
 
     def test_review_snapshot_contains_read_text_and_payload_submits_without_transcription(self):
-        prepared = prepare_evidence(self.root, kind='review', recordIds=['SF-HEIGHT'])
+        prepared = prepare_evidence(self.root, kind='review', recordIds=['fact-HEIGHT'])
         snapshot = prepared['snapshot']
         self.assertNotIn('text', snapshot['items'][0])
-        decisions = [{'recordId': 'SF-HEIGHT', 'decision': 'compatible', 'reason': '核对原文',
+        decisions = [{'recordId': 'fact-HEIGHT', 'decision': 'compatible', 'reason': '核对原文',
                       'quotes': [{'text': prepared['materials'][0]['text']}]}]
         result = pack_evidence(self.root, snapshot=snapshot, decisions=decisions, requestId='review')
         self.assertFalse(result['submitted']); self.assertFalse(result['approved'])
@@ -228,11 +228,11 @@ class SourceEvidenceAssemblyTests(unittest.TestCase):
     def test_prose_snapshot_preserves_crlf_and_assembled_citation_is_accepted(self):
         from tests.test_source_evidence import ProseEvidenceTests
         fixture = ProseEvidenceTests(); fixture.setUp(); self.addCleanup(fixture.doCleanups)
-        prepared = prepare_evidence(fixture.root, kind='prose', chapterId='CH-ALPHA')
+        prepared = prepare_evidence(fixture.root, kind='prose', chapterId='chapter-ALPHA')
         snapshot = prepared['snapshot']
         self.assertNotIn('text', snapshot)
         self.assertIn('\r\n', prepared['materials'][0]['text'])
-        decisions = [{'quote': {'text': prepared['materials'][0]['text']}, 'targetIds': ['AT-HEIGHT'],
+        decisions = [{'quote': {'text': prepared['materials'][0]['text']}, 'targetIds': ['attribute-HEIGHT'],
                       'kind': 'depends_on', 'reason': '明确引用身高'}]
         result = pack_evidence(fixture.root, snapshot=snapshot, decisions=decisions, requestId='cite')
         self.assertTrue(call_operation(result['operation'], fixture.root, result['arguments'])['ok'])
@@ -246,11 +246,11 @@ class SourceEvidenceAssemblyTests(unittest.TestCase):
         self.assertEqual(quote_span('同句。同句。', {'text': '同句', 'start': 3, 'end': 5})['start'], 3)
 
     def test_cli_and_mcp_expose_the_same_new_read_operation(self):
-        args = {'kind': 'review', 'recordIds': ['SF-HEIGHT']}
+        args = {'kind': 'review', 'recordIds': ['fact-HEIGHT']}
         expected = call_operation('evidence.prepare', self.root, args)
         self.assertIn('snapshotRef', expected)
         cli = subprocess.run([sys.executable, str(ROOT / 'scripts/novelctl.py'), 'project', 'evidence', 'prepare',
-                              '--project-root', str(self.root), '--kind', 'review', '--record-ids', 'SF-HEIGHT'], capture_output=True, text=True)
+                              '--project-root', str(self.root), '--kind', 'review', '--record-ids', 'fact-HEIGHT'], capture_output=True, text=True)
         self.assertEqual(cli.returncode, 0, cli.stdout + cli.stderr)
         self.assertEqual(json.loads(cli.stdout), expected)
         request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {

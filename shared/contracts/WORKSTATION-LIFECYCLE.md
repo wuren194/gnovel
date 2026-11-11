@@ -1,7 +1,7 @@
 ---
 id: WORKSTATION-LIFECYCLE
 version: 1.5.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 六个工位的统一生命周期与职责边界。
 ---
 

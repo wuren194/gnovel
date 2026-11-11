@@ -61,7 +61,7 @@ class BindingCanonicalizationTests(unittest.TestCase):
                     changed = deepcopy(chapter); changed['proseBinding'][field] = value
                     self.assertTrue(validate_binding({'projectId': 'PRJ-GOLDEN'}, changed))
                 self.assertTrue(validate_binding({'projectId': 'PRJ-OTHER'}, chapter))
-                self.assertTrue(validate_binding({'projectId': 'PRJ-GOLDEN'}, {**chapter, 'chapterId': 'CH-OTHER'}))
+                self.assertTrue(validate_binding({'projectId': 'PRJ-GOLDEN'}, {**chapter, 'chapterId': 'chapter-OTHER'}))
 
     def test_fixed_vector_exposes_null_ascii_and_separator_drift(self):
         for state, _, _, canonical, expected in self.GOLDEN:
@@ -75,22 +75,22 @@ class BindingCanonicalizationTests(unittest.TestCase):
                 self.assertNotEqual(hashlib.sha256(changed.encode('utf-8')).hexdigest(), expected)
 
     def test_same_payload_same_digest(self) -> None:
-        first = binding_integrity_digest('P1', 'CH-1', '正文/A.md', 'managed', 12, 'sha256:' + 'a' * 64)
-        second = binding_integrity_digest('P1', 'CH-1', '正文/A.md', 'managed', 12, 'sha256:' + 'a' * 64)
+        first = binding_integrity_digest('P1', 'chapter-1', '正文/A.md', 'managed', 12, 'sha256:' + 'a' * 64)
+        second = binding_integrity_digest('P1', 'chapter-1', '正文/A.md', 'managed', 12, 'sha256:' + 'a' * 64)
         self.assertEqual(first, second)
         self.assertTrue(first.startswith('sha256:'))
 
     def test_seal_is_deterministic(self) -> None:
-        first = seal_binding('P1', 'CH-1', '正文/A.md', state='unbound', generation=3,
+        first = seal_binding('P1', 'chapter-1', '正文/A.md', state='unbound', generation=3,
                              expected_content_digest=None)
-        second = seal_binding('P1', 'CH-1', '正文/A.md', state='unbound', generation=3,
+        second = seal_binding('P1', 'chapter-1', '正文/A.md', state='unbound', generation=3,
                               expected_content_digest=None)
         self.assertEqual(first, second)
 
     def test_payload_fields_change_digest(self) -> None:
-        base = dict(project_id='P1', chapter_id='CH-1', file_path='正文/A.md', state='unbound',
+        base = dict(project_id='P1', chapter_id='chapter-1', file_path='正文/A.md', state='unbound',
                     generation=3, expected_content_digest=None)
-        variants = [dict(base, project_id='P2'), dict(base, chapter_id='CH-2'),
+        variants = [dict(base, project_id='P2'), dict(base, chapter_id='chapter-2'),
                     dict(base, file_path='正文/B.md'), dict(base, state='managed'),
                     dict(base, generation=4),
                     dict(base, expected_content_digest='sha256:' + 'b' * 64)]
@@ -99,7 +99,7 @@ class BindingCanonicalizationTests(unittest.TestCase):
 
     def test_unbound_vs_null_missing_digest_differ(self) -> None:
         # None 与缺省不可混淆：payload 固定字段集，None 显式参与序列化。
-        with_null = binding_integrity_digest('P1', 'CH-1', '正文/A.md', 'unbound', 3, None)
+        with_null = binding_integrity_digest('P1', 'chapter-1', '正文/A.md', 'unbound', 3, None)
         self.assertTrue(with_null.startswith('sha256:'))
 
 
@@ -334,7 +334,7 @@ class ProtectedWriterBoundaryTests(unittest.TestCase):
     def test_chapter_id_mutation_rejected(self) -> None:
         # B16：existing chapterId 是 immutable identity。换 ID 表现为「删旧 + 增新」。
         def mutate(data: dict) -> None:
-            data['chapters'][1]['chapterId'] = 'CH-BINDING-0009'
+            data['chapters'][1]['chapterId'] = 'chapter-BINDING-0009'
         self._assert_rejected(mutate)
 
     def test_project_id_mutation_rejected(self) -> None:
@@ -363,7 +363,7 @@ class GenericWriterCannotAddChapterTests(unittest.TestCase):
     `save_structure` 不得新增任何 chapter——新章自带多合法的密封 binding 都一样，因为
     generic save != materialization authority。"""
 
-    FORGED_ID = 'CH-BINDING-0010'
+    FORGED_ID = 'chapter-BINDING-0010'
 
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -434,8 +434,8 @@ class ExactMaterializationSetEqualityTests(unittest.TestCase):
     放行，是「注册了建章能力却一章没建」的最小反例。
     """
 
-    DECLARED = 'CH-BINDING-0121'
-    OTHER = 'CH-BINDING-0122'
+    DECLARED = 'chapter-BINDING-0121'
+    OTHER = 'chapter-BINDING-0122'
 
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -503,7 +503,7 @@ class TransitionRevisionInvariantTests(unittest.TestCase):
     """R1–R5 / F10–F14（实施轮 §19–§22、§48–§49）：formal transition 的提交版本由权威
     current 决定——proposed 必须恰是 next revision，generation 与提交版本是同一个数。"""
 
-    NEW_ID = 'CH-BINDING-0011'
+    NEW_ID = 'chapter-BINDING-0011'
 
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -681,7 +681,7 @@ class LocalFaultIsolationTests(unittest.TestCase):
     def test_new_chapter_materialization_succeeds_despite_damaged_sibling(self) -> None:
         # Counterexample A（新身份读法）：章 A 损坏，新章的 materialization 照常成功。
         current = load_structure(self.root)
-        new_chapter_id = 'CH-BINDING-0004'
+        new_chapter_id = 'chapter-BINDING-0004'
         proposed = self._proposed_with_new_chapter(current, new_chapter_id)
         snapshot, authority = prose_binding.apply_binding_transitions(
             current, [{'kind': 'materialize', 'chapterId': new_chapter_id}], proposed=proposed)
@@ -697,7 +697,7 @@ class LocalFaultIsolationTests(unittest.TestCase):
 
     def test_committed_transition_preserves_damaged_sibling(self) -> None:
         current = load_structure(self.root)
-        new_chapter_id = 'CH-BINDING-0005'
+        new_chapter_id = 'chapter-BINDING-0005'
         result = prose_binding.commit_binding_transitions(
             self.root, [{'kind': 'materialize', 'chapterId': new_chapter_id}], actor='test',
             proposed=self._proposed_with_new_chapter(current, new_chapter_id))

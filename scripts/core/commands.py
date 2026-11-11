@@ -358,7 +358,7 @@ def list_foreshadowing(root: Path) -> dict:
         if entity.get("entityType") not in {"hook", "secret"}:
             continue
         mentions = sorted(
-            {ref.get("sourceId") for ref in references_to(structure, entity["entityId"]) if str(ref.get("sourceId", "")).startswith("CH-")},
+            {ref["sourceId"] for ref in references_to(structure, entity["entityId"]) if ref.get("sourceId") in chapter_codes},
             key=lambda cid: chapter_codes.get(cid, ""),
         )
         rows.append({

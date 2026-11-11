@@ -1,6 +1,8 @@
 """Public plugin archives remain usable after moving out of the checkout."""
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import hashlib
 import json
 import os
@@ -31,7 +33,7 @@ def small_worktree(root):
     root.mkdir()
     subprocess.run(['git', 'init', '-q', str(root)], check=True)
     manifest = {'name': 'govel', 'version': '0.7.0', 'skills': ['govel-router'],
-                'schemaVersion': 5, 'workflowVersion': '5.0', 'sharedProtocols': {
+                'schemaVersion': current_schema_version(), 'workflowVersion': '6.0', 'sharedProtocols': {
                     'contracts': 'shared/contracts', 'contractsList': ['WORKSTATION.md'],
                     'workflowPolicy': 'shared/registries/workflow.json',
                     'settingsSchema': 'shared/registries/settings.json',

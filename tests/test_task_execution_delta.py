@@ -66,10 +66,10 @@ class TaskExecutionDeltaTests(unittest.TestCase):
 
     def test_pov_change_does_not_reuse_author_side_materials(self):
         full = preparation(self.execute())
-        result = preparation(self.execute(heldPrepareRef=full['prepareRef'], povCharacter='C-TEST-ALPHA'))
+        result = preparation(self.execute(heldPrepareRef=full['prepareRef'], povCharacter='character-TEST-ALPHA'))
         self.assertEqual(result['delivery']['mode'], 'full')
         self.assertEqual(result['delivery']['reason'], 'task_or_pov_scope_changed')
-        self.assertEqual(result['scope']['povCharacter'], 'C-TEST-ALPHA')
+        self.assertEqual(result['scope']['povCharacter'], 'character-TEST-ALPHA')
 
     def test_current_blockers_are_not_inherited_from_held_readiness(self):
         full = preparation(self.execute())

@@ -1,7 +1,7 @@
 ---
 id: RUNTIME-CONFIG
 version: 1.5.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 运行配置、注册表和文档之间的单一真源关系。
 ---
 

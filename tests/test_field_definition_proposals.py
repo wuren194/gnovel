@@ -28,7 +28,7 @@ from tests.fixtures_source import single_source_chapter, source_fixture
 from tests.fixtures_workflow import assessed_review_payload
 
 
-def metadata_item(record_id='FD-HEIGHT'):
+def metadata_item(record_id='field-HEIGHT'):
     return {'kind': 'field_definition', 'recordId': record_id,
             'patch': [{'op': 'set', 'path': ['label'], 'value': '人物身高'},
                       {'op': 'set', 'path': ['description'], 'value': '自然站立时的身高。'}],
@@ -80,7 +80,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         self.commit(preview)
         source = load_structure(self.root)
         updated = source['fieldDefinitions'][0]
-        self.assertEqual(updated['fieldId'], 'FD-HEIGHT')
+        self.assertEqual(updated['fieldId'], 'field-HEIGHT')
         self.assertEqual(updated['label'], '人物身高')
         self.assertEqual(updated['description'], '自然站立时的身高。')
         for collection in ('attributes', 'fragments', 'entities'):
@@ -102,7 +102,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'FIELD_DEFINITION_CHANGE_EMPTY')
 
     def test_semantic_fields_identity_and_invalid_metadata_are_rejected_without_plan(self):
-        cases = [('fieldId', 'FD-OTHER', 'FIELD_DEFINITION_MIGRATION_REQUIRED'),
+        cases = [('fieldId', 'field-OTHER', 'FIELD_DEFINITION_MIGRATION_REQUIRED'),
                  ('key', 'appearance.standing_height', 'FIELD_DEFINITION_MIGRATION_REQUIRED'),
                  ('valueType', 'text', 'FIELD_DEFINITION_MIGRATION_REQUIRED'),
                  ('appliesTo', ['character', 'prop'], 'FIELD_DEFINITION_MIGRATION_REQUIRED'),
@@ -125,7 +125,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
     def test_original_generic_put_delete_and_handcrafted_plan_stay_blocked(self):
         for change in ({'action': 'put', 'collection': 'fieldDefinitions',
                         'record': {**self.source['fieldDefinitions'][0], 'label': '未审更正'}},
-                       {'action': 'delete', 'collection': 'fieldDefinitions', 'id': 'FD-HEIGHT'}):
+                       {'action': 'delete', 'collection': 'fieldDefinitions', 'id': 'field-HEIGHT'}):
             with self.subTest(change=change), self.assertRaises(StructureError) as caught:
                 preview_source_change(self.root, changes=[change], requestId='generic-field',
                                       baseRevision=self.source['revision'], reason='test')
@@ -149,7 +149,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         self.assertEqual(self.inventory(), before)
 
     def test_metadata_is_project_scoped_and_does_not_accept_fake_fact_evidence(self):
-        for extra in ({'chapterId': 'CH-ANY'}, {'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]},
+        for extra in ({'chapterId': 'chapter-ANY'}, {'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]},
                       {'evidenceMode': 'author_declaration'}):
             with self.subTest(extra=extra), self.assertRaises(StructureError) as caught:
                 self.preview(items=[{**metadata_item(), **extra}])
@@ -219,10 +219,10 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         preview = self.preview()
         path = self.root / '.govel/plans' / (preview['operationId'] + '.json')
         original = self.plan(preview)
-        for extra in ({'sourceChapterId': 'CH-NONEXISTENT'},
-                      {'evidence': [{'fragmentId': 'SF-MISSING', 'quote': '不存在的引文'}]},
+        for extra in ({'sourceChapterId': 'chapter-NONEXISTENT'},
+                      {'evidence': [{'fragmentId': 'fact-MISSING', 'quote': '不存在的引文'}]},
                       {'approval': {**original['parameters']['proposals'][0]['proposal']['approval'],
-                                    'sourceChapterId': 'CH-NONEXISTENT'}}):
+                                    'sourceChapterId': 'chapter-NONEXISTENT'}}):
             plan = deepcopy(original)
             plan['parameters']['proposals'][0]['proposal'].update(extra)
             plan['planHash'] = _plan_hash({key: value for key, value in plan.items() if key != 'planHash'})
@@ -242,7 +242,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
                        lambda source: source['fieldDefinitions'].pop(0),
                        lambda source: source['entities'][0].update(name='夹带改名'),
                        lambda source: source['attributes'][0]['values'][0].update(value={'number': 200, 'unit': 'cm'}),
-                       lambda source: source['chapters'].append({'chapterId': 'CH-HIDDEN'})):
+                       lambda source: source['chapters'].append({'chapterId': 'chapter-HIDDEN'})):
             proposed = deepcopy(plan['proposedStructure'])
             mutate(proposed)
             with self.subTest(mutate=mutate), self.assertRaises(StructureError) as caught:
@@ -260,16 +260,16 @@ class FieldDefinitionProposalTests(unittest.TestCase):
             self.assertEqual(caught.exception.code, 'FIELD_DEFINITION_PROPOSAL_SCOPE_INVALID')
 
     def test_metadata_can_share_batch_with_original_fact_gate(self):
-        fact = {'kind': 'fact', 'recordId': 'SF-HEIGHT', 'reason': '更正事实措辞',
+        fact = {'kind': 'fact', 'recordId': 'fact-HEIGHT', 'reason': '更正事实措辞',
                 'patch': [{'op': 'text', 'path': ['text'], 'original': '他身高', 'replacement': '人物甲身高'}],
-                'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '他身高一米九。'}]}
+                'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '他身高一米九。'}]}
         self.commit(self.preview(items=[metadata_item(), fact]))
         source = load_structure(self.root)
         self.assertEqual(source['fieldDefinitions'][0]['label'], '人物身高')
         self.assertEqual(source['fragments'][0]['text'], '人物甲身高一米九。')
 
     def test_invalid_later_item_rejects_whole_batch_and_duplicate_target_is_rejected(self):
-        invalid = metadata_item('FD-SKIN')
+        invalid = metadata_item('field-SKIN')
         invalid['patch'] = [{'op': 'set', 'path': ['valueType'], 'value': 'number'}]
         before = self.inventory()
         with self.assertRaises(StructureError) as caught:
@@ -311,15 +311,15 @@ class FieldDefinitionProposalTests(unittest.TestCase):
 
     def test_direct_value_dependencies_invalidate_only_related_receipts_and_approvals(self):
         source = load_structure(self.root)
-        source['fieldDefinitions'].append({'fieldId': 'FD-PLAN', 'key': 'plot.plan', 'label': '计划',
+        source['fieldDefinitions'].append({'fieldId': 'field-PLAN', 'key': 'plot.plan', 'label': '计划',
                                           'valueType': 'topic', 'appliesTo': ['chapter']})
-        for ordinal, (cid, dependency) in enumerate((('CH-HEIGHT', 'FV-HEIGHT'), ('CH-SKIN', 'FV-SKIN')), 1):
+        for ordinal, (cid, dependency) in enumerate((('chapter-HEIGHT', 'value-HEIGHT'), ('chapter-SKIN', 'value-SKIN')), 1):
             source['chapters'].append(single_source_chapter(source, cid, ordinal=ordinal,
                                       volume_id=source['volumes'][0]['volumeId']))
             source['chapterArcLinks'].append({'chapterId': cid, 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-            source['attributes'].append({'attributeId': 'AT-'+cid, 'ownerId': cid, 'fieldId': 'FD-PLAN', 'values': []})
-            source['fragments'].append({'fragmentId': 'SF-'+cid, 'ownerId': cid, 'contentRole': 'plan',
-                'text': '核对人物资料。', 'order': 1, 'contentBindings': ['AT-'+cid], 'dependsOn': [dependency],
+            source['attributes'].append({'attributeId': 'attribute-'+cid, 'ownerId': cid, 'fieldId': 'field-PLAN', 'values': []})
+            source['fragments'].append({'fragmentId': 'plan-'+cid, 'ownerId': cid, 'contentRole': 'plan',
+                'text': '核对人物资料。', 'order': 1, 'contentBindings': ['attribute-'+cid], 'dependsOn': [dependency],
                 'chapterContract': {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                                     'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
         # Complete the neutral current-format fixture before its first operation.
@@ -327,7 +327,7 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         write_json(self.root / '.govel/structure.json', source)
         source = load_structure(self.root)
         workflow = default_workflow()
-        workflow['approvedChapterIds'] = ['CH-HEIGHT', 'CH-SKIN']
+        workflow['approvedChapterIds'] = ['chapter-HEIGHT', 'chapter-SKIN']
         for cid in workflow['approvedChapterIds']:
             payload = assessed_review_payload(source, cid, 'stage_a_review', {
                 'decision': 'adopt', 'activeSeats': list(range(1, 11)), 'consensus': [], 'disagreements': [], 'openItems': [],
@@ -342,26 +342,26 @@ class FieldDefinitionProposalTests(unittest.TestCase):
         originals = {row['recordId']: row for row in query_reviews(self.root)['items']}
         reviews = []
         texts = {row['fragmentId']: row['text'] for row in source['fragments']}
-        for rid in ('SF-LIFE', 'SF-CH-HEIGHT', 'SF-CH-SKIN'):
+        for rid in ('fact-LIFE', 'plan-chapter-HEIGHT', 'plan-chapter-SKIN'):
             row, text = originals[rid], texts[rid]
             reviews.append({key: row[key] for key in ('recordId', 'inputHash', 'contentHash')} | {
                 'decision': 'compatible', 'reason': '中性夹具输入核验',
                 'evidence': [{'start': 0, 'end': len(text), 'text': text}]})
         submit_review(self.root, requestId='before-field-change', reviews=reviews)
         preview = self.preview(sourceHash=snapshot_hash(source))
-        self.assertEqual(preview['impact']['approvalInvalidations'], ['CH-HEIGHT'])
-        self.assertIn('SF-LIFE', preview['impact']['reviewFragmentIds'])
+        self.assertEqual(preview['impact']['approvalInvalidations'], ['chapter-HEIGHT'])
+        self.assertIn('fact-LIFE', preview['impact']['reviewFragmentIds'])
         self.commit(preview)
         changed = load_structure(self.root)
-        self.assertNotEqual(ReviewInputs(source).fingerprint('SF-LIFE'), ReviewInputs(changed).fingerprint('SF-LIFE'))
+        self.assertNotEqual(ReviewInputs(source).fingerprint('fact-LIFE'), ReviewInputs(changed).fingerprint('fact-LIFE'))
         statuses = {row['recordId']: row['status'] for row in query_reviews(self.root)['items']}
-        self.assertEqual(statuses['SF-LIFE'], 'pending')
-        self.assertEqual(statuses['SF-CH-HEIGHT'], 'pending')
-        self.assertEqual(statuses['SF-CH-SKIN'], 'compatible')
+        self.assertEqual(statuses['fact-LIFE'], 'pending')
+        self.assertEqual(statuses['plan-chapter-HEIGHT'], 'pending')
+        self.assertEqual(statuses['plan-chapter-SKIN'], 'compatible')
         current_workflow = read_json(self.root/'.govel/workflow.json')
-        self.assertFalse(current_workflow['approvals']['CH-HEIGHT']['approved'])
-        self.assertEqual(current_workflow['approvals']['CH-SKIN'], workflow['approvals']['CH-SKIN'])
-        self.assertEqual(current_workflow['artifacts']['CH-SKIN'], workflow['artifacts']['CH-SKIN'])
+        self.assertFalse(current_workflow['approvals']['chapter-HEIGHT']['approved'])
+        self.assertEqual(current_workflow['approvals']['chapter-SKIN'], workflow['approvals']['chapter-SKIN'])
+        self.assertEqual(current_workflow['artifacts']['chapter-SKIN'], workflow['artifacts']['chapter-SKIN'])
 
 
 if __name__ == '__main__':

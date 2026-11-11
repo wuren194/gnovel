@@ -12,7 +12,7 @@ from scripts import continuation_context, novelctl
 from scripts.core.catalog_commands import preview_set_visibility
 from scripts.core.structure_commands import commit_plan
 from scripts.core.structure_store import StructureError, load_structure
-from tests.fixtures_current import ROOT, create_schema5_project
+from tests.fixtures_current import ROOT, create_current_project
 
 
 class RoundTwoIntegrationTests(unittest.TestCase):
@@ -20,7 +20,7 @@ class RoundTwoIntegrationTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
 
     def cli(self, *args):
         result = subprocess.run([sys.executable, str(ROOT / "scripts/novelctl.py"), "project", *args, "--project-root", str(self.root)], cwd=ROOT, capture_output=True, text=True, timeout=20)
@@ -57,7 +57,7 @@ class RoundTwoIntegrationTests(unittest.TestCase):
             with self.subTest(kwargs=kwargs), self.assertRaises(StructureError):
                 preview_set_visibility(self.root, collection='chapters', record_id=cid, **kwargs)
         with self.assertRaises(StructureError):
-            preview_set_visibility(self.root, collection='chapters', record_id='CH-MISSING', visibility='public')
+            preview_set_visibility(self.root, collection='chapters', record_id='chapter-MISSING', visibility='public')
         plan = preview_set_visibility(self.root, collection='chapters', record_id=cid, visibility='private')
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         self.assertEqual(load_structure(self.root)['chapters'][0]['visibleTo'], [])

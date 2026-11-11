@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import tempfile
 import uuid
 import unittest
@@ -16,18 +18,18 @@ NOVELCTL = ROOT / "scripts" / "novelctl.py"
 
 class StrictCacheTests(unittest.TestCase):
     def _project(self, root: Path) -> dict:
-        from tests.fixtures_current import create_schema5_project
-        return create_schema5_project(root, chapter_count=2)['structure']
+        from tests.fixtures_current import create_current_project
+        return create_current_project(root, chapter_count=2)['structure']
 
-    def test_new_structure_builds_schema5_projection(self) -> None:
+    def test_new_structure_builds_current_projection(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             structure = self._project(root)
             state, design = state_cache.load(root)
-            self.assertEqual(state["schemaVersion"], 5)
+            self.assertEqual(state["schemaVersion"], current_schema_version())
             self.assertEqual(state["chapters"][0]["chapterId"], structure["chapters"][0]["chapterId"])
             self.assertEqual(state["chapters"][0]["displayCode"], "CH001")
-            self.assertEqual(design["schemaVersion"], 5)
+            self.assertEqual(design["schemaVersion"], current_schema_version())
 
     def test_structure_edit_invalidates_cache(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

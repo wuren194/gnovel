@@ -827,7 +827,7 @@ class CurrentFormatUndoTests(unittest.TestCase):
                                                     binding_generation=old_generation)),
                 "OWNERSHIP_GENERATION_CONFLICT")
 
-    def test_q2_schema5_full_history_loss_keeps_the_current_binding_healthy(self) -> None:
+    def test_q2_current_full_history_loss_keeps_the_current_binding_healthy(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             fx.ownership_project(root)

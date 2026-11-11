@@ -20,7 +20,7 @@ from scripts.core.project import user_workflow_policy, workflow_policy, repair_p
 from scripts.core.structure_store import load_structure, save_structure
 from scripts.core.task_prepare import prepare_task, TASK_STATIONS, TaskPrepareError
 from scripts.core.workflow import increment_repair_round, WorkflowError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import review_ready_project, register_and_approve, run_and_approve_diagnostics
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -205,7 +205,7 @@ class WorkflowTransitionTests(unittest.TestCase):
     def test_design_write_revise_follow_existing_state_transitions(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            fixture = create_schema5_project(root, chapter_count=1)
+            fixture = create_current_project(root, chapter_count=1)
             chapter = fixture['chapterIds'][0]
             structure = load_structure(root)
             structure['chapters'][0]['status'] = 'planning_required'

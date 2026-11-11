@@ -97,7 +97,7 @@ def external_edit_operations():
             _schema({'chapterId': STRING, 'requestId': STRING}, ['chapterId']), 'plan-write',
             lambda root, a: preview_accept_external_modification(root, chapter_id=a['chapterId'], request_id=a.get('requestId')),
             ('workflow', 'external-preview'), category='author', discover=True,
-            examples=({'chapterId': 'CH-EXAMPLE', 'requestId': 'external-edit-1'},)),
+            examples=({'chapterId': 'chapter-EXAMPLE', 'requestId': 'external-edit-1'},)),
         OperationSpec('workflow.external-read', 'read_external_manuscript_edit',
             '分页核对外改预览的准确旧版 H1、新版 H2 或 diff；缺失旧版明确返回 unavailable。',
             _schema({**identity, 'part': {'type': 'string', 'enum': ['H1', 'H2', 'diff']}, 'offset': INTEGER}, ['operationId', 'planHash']),

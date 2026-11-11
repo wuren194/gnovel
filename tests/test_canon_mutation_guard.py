@@ -28,14 +28,14 @@ class CanonMutationGuardTests(unittest.TestCase):
 
     def test_existing_entity_attribute_fact_and_relation_reject_handcrafted_plan(self):
         source = load_structure(self.root)
-        source['relations'] = [{'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA',
-                                'toEntity': 'C-BETA', 'kind': 'protects'}]
+        source['relations'] = [{'relationId': 'relation-ALPHA-BETA', 'fromEntity': 'character-ALPHA',
+                                'toEntity': 'character-BETA', 'kind': 'protects'}]
         from scripts.core.structure_store import save_structure
         save_structure(self.root, source)
-        cases = [('entities', 'entityId', 'C-ALPHA', 'CANON_PROPOSAL_REQUIRED'),
-                 ('attributes', 'attributeId', 'AT-HEIGHT', 'CONTENT_PROPOSAL_REQUIRED'),
-                 ('fragments', 'fragmentId', 'SF-LIFE', 'CONTENT_PROPOSAL_REQUIRED'),
-                 ('relations', 'relationId', 'REL-ALPHA-BETA', 'RELATION_PROPOSAL_REQUIRED')]
+        cases = [('entities', 'entityId', 'character-ALPHA', 'CANON_PROPOSAL_REQUIRED'),
+                 ('attributes', 'attributeId', 'attribute-HEIGHT', 'CONTENT_PROPOSAL_REQUIRED'),
+                 ('fragments', 'fragmentId', 'fact-LIFE', 'CONTENT_PROPOSAL_REQUIRED'),
+                 ('relations', 'relationId', 'relation-ALPHA-BETA', 'RELATION_PROPOSAL_REQUIRED')]
         for collection, key, rid, code in cases:
             for delete in (False, True):
                 with self.subTest(collection=collection, delete=delete):
@@ -54,15 +54,15 @@ class CanonMutationGuardTests(unittest.TestCase):
         proposed['fragments'][0]['contentRole'] = 'plan'
         self.assert_blocked(proposed, 'CONTENT_PROPOSAL_REQUIRED')
         proposed = deepcopy(source)
-        proposed['fragments'] = [row for row in proposed['fragments'] if row['fragmentId'] != 'SF-LIFE']
-        proposed['fragments'].append({**source['fragments'][-1], 'fragmentId': 'SF-REPLACEMENT'})
+        proposed['fragments'] = [row for row in proposed['fragments'] if row['fragmentId'] != 'fact-LIFE']
+        proposed['fragments'].append({**source['fragments'][-1], 'fragmentId': 'fact-REPLACEMENT'})
         self.assert_blocked(proposed, 'CONTENT_PROPOSAL_REQUIRED')
 
     def test_existing_plan_fragment_cannot_be_promoted_by_overwrite(self):
         source = load_structure(self.root)
-        source['fragments'].append({'fragmentId': 'SF-PLANNED', 'ownerId': 'C-ALPHA',
+        source['fragments'].append({'fragmentId': 'plan-PLANNED', 'ownerId': 'character-ALPHA',
                                     'text': '未来可能发生。', 'order': 7,
-                                    'contentBindings': ['AT-LIFE'], 'contentRole': 'plan'})
+                                    'contentBindings': ['attribute-LIFE'], 'contentRole': 'plan'})
         from scripts.core.structure_store import save_structure
         save_structure(self.root, source)
         proposed = deepcopy(source)
@@ -87,18 +87,18 @@ class CanonMutationGuardTests(unittest.TestCase):
 
     def test_generic_preview_cannot_overwrite_relation_or_field_definition(self):
         source = load_structure(self.root)
-        source['relations'] = [{'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA',
-                                'toEntity': 'C-BETA', 'kind': 'protects'}]
+        source['relations'] = [{'relationId': 'relation-ALPHA-BETA', 'fromEntity': 'character-ALPHA',
+                                'toEntity': 'character-BETA', 'kind': 'protects'}]
         from scripts.core.structure_store import save_structure
         save_structure(self.root, source)
         changes = [({'action': 'put', 'collection': 'relations',
                      'record': {**source['relations'][0], 'kind': 'trusts'}}, 'RELATION_PROPOSAL_REQUIRED'),
-                   ({'action': 'delete', 'collection': 'relations', 'id': 'REL-ALPHA-BETA'},
+                   ({'action': 'delete', 'collection': 'relations', 'id': 'relation-ALPHA-BETA'},
                     'RELATION_PROPOSAL_REQUIRED'),
                    ({'action': 'put', 'collection': 'fieldDefinitions',
                      'record': {**source['fieldDefinitions'][0], 'label': '改名'}},
                     'FIELD_DEFINITION_MIGRATION_REQUIRED'),
-                   ({'action': 'delete', 'collection': 'fieldDefinitions', 'id': 'FD-HEIGHT'},
+                   ({'action': 'delete', 'collection': 'fieldDefinitions', 'id': 'field-HEIGHT'},
                     'FIELD_DEFINITION_MIGRATION_REQUIRED')]
         for i, (change, code) in enumerate(changes):
             with self.subTest(i=i), self.assertRaises(StructureError) as caught:
@@ -112,9 +112,9 @@ class CanonMutationGuardTests(unittest.TestCase):
         proposed['entities'][0]['summary'] = 'changed'
         proposed['entities'][1]['summary'] = 'also changed'
         self.assert_blocked(proposed, 'CANON_PROPOSAL_SCOPE_INVALID', operation='canon_change_proposal',
-                            parameters={'canonProposal': {'entityId': 'C-ALPHA', 'fieldPath': 'summary',
+                            parameters={'canonProposal': {'entityId': 'character-ALPHA', 'fieldPath': 'summary',
                                 'expectedOldExists': False, 'expectedOldValue': None, 'newValue': 'changed',
-                                'reason': 'test', 'evidence': [{'fragmentId': 'SF-LIFE',
+                                'reason': 'test', 'evidence': [{'fragmentId': 'fact-LIFE',
                                                               'quote': '他独自守过城门。'}],
                                 'approval': {'actorId': 'author', 'evidence': 'declared',
                                              'verifiedHuman': False}}})
@@ -124,9 +124,9 @@ class CanonMutationGuardTests(unittest.TestCase):
         proposed = deepcopy(source)
         proposed['entities'][0]['summary'] = 'changed'
         proposed['attributes'].reverse()
-        proposal = {'entityId': 'C-ALPHA', 'fieldPath': 'summary',
+        proposal = {'entityId': 'character-ALPHA', 'fieldPath': 'summary',
                     'expectedOldExists': False, 'expectedOldValue': None, 'newValue': 'changed',
-                    'reason': 'test', 'evidence': [{'fragmentId': 'SF-LIFE',
+                    'reason': 'test', 'evidence': [{'fragmentId': 'fact-LIFE',
                                                   'quote': '他独自守过城门。'}],
                     'approval': {'actorId': 'author', 'evidence': 'declared',
                                  'verifiedHuman': False}}
@@ -153,8 +153,8 @@ class CanonMutationGuardTests(unittest.TestCase):
         `refactor_rename_entity`, every one of these still needs a reviewed proposal.
         """
         source = load_structure(self.root)
-        source['relations'] = [{'relationId': 'REL-ALPHA-BETA', 'fromEntity': 'C-ALPHA',
-                                'toEntity': 'C-BETA', 'kind': 'protects', 'status': 'active', 'notes': ''}]
+        source['relations'] = [{'relationId': 'relation-ALPHA-BETA', 'fromEntity': 'character-ALPHA',
+                                'toEntity': 'character-BETA', 'kind': 'protects', 'status': 'active', 'notes': ''}]
         from scripts.core.structure_store import save_structure
         save_structure(self.root, source)
 
@@ -165,13 +165,13 @@ class CanonMutationGuardTests(unittest.TestCase):
             return proposed
 
         cases = (
-            ('attributes', 'attributeId', 'AT-HEIGHT', 'values', [{'valueId': 'FV-HEIGHT', 'value': '一米九二',
+            ('attributes', 'attributeId', 'attribute-HEIGHT', 'values', [{'valueId': 'value-HEIGHT', 'value': '一米九二',
                                                                    'state': 'known'}]),
-            ('fragments', 'fragmentId', 'SF-HEIGHT', 'text', '他身高两米。'),
-            ('fragments', 'fragmentId', 'SF-HEIGHT', 'contentRole', 'plan'),
-            ('relations', 'relationId', 'REL-ALPHA-BETA', 'kind', 'resents'),
-            ('entities', 'entityId', 'C-ALPHA', 'summary', 'rewritten through a rename plan'),
-            ('entities', 'entityId', 'C-ALPHA', 'entityType', 'prop'),
+            ('fragments', 'fragmentId', 'fact-HEIGHT', 'text', '他身高两米。'),
+            ('fragments', 'fragmentId', 'fact-HEIGHT', 'contentRole', 'plan'),
+            ('relations', 'relationId', 'relation-ALPHA-BETA', 'kind', 'resents'),
+            ('entities', 'entityId', 'character-ALPHA', 'summary', 'rewritten through a rename plan'),
+            ('entities', 'entityId', 'character-ALPHA', 'entityType', 'prop'),
         )
         for collection, key, rid, field, value in cases:
             with self.subTest(collection=collection, field=field):
@@ -180,10 +180,10 @@ class CanonMutationGuardTests(unittest.TestCase):
 
         # A field definition that is still referenced by an attribute has its own,
         # stricter gate; an unreferenced one falls through to the Canon guard.
-        self.assert_blocked(touch('fieldDefinitions', 'fieldId', 'FD-HEIGHT', 'label', '身高（改）'),
+        self.assert_blocked(touch('fieldDefinitions', 'fieldId', 'field-HEIGHT', 'label', '身高（改）'),
                             'FIELD_DEFINITION_MIGRATION_REQUIRED', operation='refactor_rename_entity')
         added = deepcopy(source)
-        added['fieldDefinitions'].append({'fieldId': 'FD-NEW', 'key': 'appearance.new',
+        added['fieldDefinitions'].append({'fieldId': 'field-NEW', 'key': 'appearance.new',
                                           'label': '新字段', 'valueType': 'text',
                                           'appliesTo': ['character']})
         self.assert_blocked(added, 'CANON_PROPOSAL_REQUIRED', operation='refactor_rename_entity')
@@ -191,11 +191,11 @@ class CanonMutationGuardTests(unittest.TestCase):
     def test_entity_refactor_exemption_still_allows_what_it_grants(self):
         """The exemption is narrow, but it is real: a display rename must go through."""
         from scripts.core.refactor import commit_refactor, preview_rename_entity
-        preview = preview_rename_entity(self.root, selector='C-ALPHA', new_name='人物壹',
+        preview = preview_rename_entity(self.root, selector='character-ALPHA', new_name='人物壹',
                                         keep_old_name_as_alias=True)
         commit_refactor(self.root, operation_id=preview['operationId'], plan_hash=preview['planHash'],
                         approved=True, actor='test')
-        entity = next(row for row in load_structure(self.root)['entities'] if row['entityId'] == 'C-ALPHA')
+        entity = next(row for row in load_structure(self.root)['entities'] if row['entityId'] == 'character-ALPHA')
         self.assertEqual((entity['name'], entity['aliases']), ('人物壹', ['人物甲']))
 
 

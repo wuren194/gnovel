@@ -6,14 +6,14 @@ from pathlib import Path
 
 from scripts.continuation_context import ContinuationContextError, _entities, _plot_line, _relations, build_continuation_context
 from scripts.core.structure_store import load_structure, save_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class ContinuationContextTests(unittest.TestCase):
     def test_context_uses_stable_ids_and_arc_links(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             ctx = build_continuation_context(root, fixture["chapterIds"][0])
             self.assertEqual(ctx["targetChapter"], fixture["chapterIds"][0])
             self.assertEqual(ctx["targetDisplayCode"], "CH001")
@@ -31,7 +31,7 @@ class ContinuationContextTests(unittest.TestCase):
     def test_entity_projection_includes_character_prop_location_hook(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             state, _ = __import__("scripts.state_cache", fromlist=["load"]).load(root)
             ids = {item["entityId"] for item in _entities(state)}
             self.assertTrue({fixture["characterId"], fixture["propId"], fixture["locationId"], fixture["hookId"]}.issubset(ids))
@@ -40,7 +40,7 @@ class ContinuationContextTests(unittest.TestCase):
     def test_plot_line_is_display_order_not_id_order(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             state, _ = __import__("scripts.state_cache", fromlist=["load"]).load(root)
             state["chapters"] = list(reversed(state["chapters"]))
             line = _plot_line(state)
@@ -49,16 +49,16 @@ class ContinuationContextTests(unittest.TestCase):
     def test_unknown_pov_does_not_fallback_to_all_states(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             with self.assertRaises(ContinuationContextError) as caught:
-                build_continuation_context(root, fixture["chapterIds"][0], pov_character="C-NOT-FOUND")
+                build_continuation_context(root, fixture["chapterIds"][0], pov_character="character-NOT-FOUND")
             self.assertIn("POV_CHARACTER_NOT_FOUND", str(caught.exception))
 
 
     def test_station_view_omits_unbounded_collections(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root, chapter_count=2)
+            fixture = create_current_project(root, chapter_count=2)
             ctx = build_continuation_context(
                 root, fixture["chapterIds"][1], task_type="writer", view="station"
             )
@@ -71,6 +71,6 @@ class ContinuationContextTests(unittest.TestCase):
     def test_invalid_view_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root, chapter_count=1)
+            fixture = create_current_project(root, chapter_count=1)
             with self.assertRaises(ContinuationContextError):
                 build_continuation_context(root, fixture["chapterIds"][0], view="oversized")

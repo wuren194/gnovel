@@ -26,7 +26,7 @@ class TransportContractTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'TOOL_NOT_FOUND')
         with self.assertRaises(StructureError) as caught:
             call_operation('structure.batch-preview', ROOT, {'steps': [
-                {'op': 'update-entity', 'selector': 'C-EXAMPLE', 'changes': {'name': '改名'}}]})
+                {'op': 'update-entity', 'selector': 'character-EXAMPLE', 'changes': {'name': '改名'}}]})
         self.assertEqual(caught.exception.code, 'ARGUMENTS_INVALID')
         for relative in ('scripts/dashboard_server.py',):
             self.assertNotIn('/api/entity/timespan/preview', (ROOT/relative).read_text())

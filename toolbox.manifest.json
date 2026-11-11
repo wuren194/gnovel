@@ -1,9 +1,9 @@
 {
   "name": "govel",
-  "version": "0.7.0",
-  "schemaVersion": 5,
-  "workflowVersion": "5.0",
-  "compatibilityVersion": 5,
+  "version": "0.8.0",
+  "schemaVersion": 6,
+  "workflowVersion": "6.0",
+  "compatibilityVersion": 6,
   "language": "zh-CN",
   "skills": [
     "govel-composer",
@@ -92,7 +92,11 @@
       "scripts/core/candidate_batch.py",
       "scripts/core/diagnostic_inputs.py",
       "scripts/core/relationship_causality.py",
-      "scripts/core/behavior_review.py"
+      "scripts/core/behavior_review.py",
+      "scripts/core/source_ids.py",
+      "scripts/core/source_cognition.py",
+      "scripts/core/source_profile.py",
+      "scripts/core/character_operations.py"
     ]
   },
   "classification": {
@@ -127,7 +131,7 @@
   },
   "projectVersionPolicy": {
     "supportedSchemaVersions": [
-      5
+      6
     ],
     "unsupportedErrorCode": "UNSUPPORTED_PROJECT_VERSION"
   },

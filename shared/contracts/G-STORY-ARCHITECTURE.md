@@ -1,7 +1,7 @@
 ---
 id: G-STORY-ARCHITECTURE
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 世界规则、主题、卷弧规划、信息差和伏笔的适用边界与源记录职责。
 ---
 

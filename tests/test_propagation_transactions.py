@@ -19,7 +19,7 @@ from scripts.core.settings import query_settings
 from scripts.core.source_changes import preview_source_change
 from scripts.core.structure_commands import commit_plan, undo_operation
 from scripts.core.structure_store import StructureError, load_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,7 +29,7 @@ class PropagationTransactionTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
 
     def commit(self, plan):
         return commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
@@ -93,7 +93,7 @@ class PropagationTransactionTests(unittest.TestCase):
 
     def test_typed_fields_do_not_invent_or_overwrite_author_relations(self):
         source = load_structure(self.root)
-        source['relations'] = [{'relationId': 'REL-AUTHOR', 'fromEntity': self.fixture['propId'],
+        source['relations'] = [{'relationId': 'relation-AUTHOR', 'fromEntity': self.fixture['propId'],
             'toEntity': self.fixture['characterId'], 'kind': 'owns', 'origin': 'author'}]
         write_json(self.root/'.govel/structure.json', source)
         self.commit(self.plan())
@@ -124,8 +124,8 @@ class DurableWriteSetTests(unittest.TestCase):
         for stop in range(1, 4):
             with self.subTest(stop=stop), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve()
-                from tests.fixtures_current import create_schema5_project
-                create_schema5_project(root, chapter_count=0)
+                from tests.fixtures_current import create_current_project
+                create_current_project(root, chapter_count=0)
                 (root / 'update').write_text('before'); (root / 'delete').write_text('before')
                 script = """import os,sys
 from pathlib import Path
@@ -160,8 +160,8 @@ with project_lock(Path(sys.argv[1])):
     def test_unknown_post_crash_edits_block_all_recovery(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
-            from tests.fixtures_current import create_schema5_project
-            create_schema5_project(root, chapter_count=0)
+            from tests.fixtures_current import create_current_project
+            create_current_project(root, chapter_count=0)
             (root / 'a').write_text('before')
             def fail(phase, relative=None):
                 if phase == 'write':

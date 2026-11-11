@@ -20,7 +20,7 @@ from scripts.core.tool_catalog import list_capabilities
 from scripts.novelctl import build_parser
 from scripts.story_summarizer import _commit_summary, _prepare_context, StorySummarizerError
 from scripts.mcp_server import handle
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class InterfaceConsistencyTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class InterfaceConsistencyTests(unittest.TestCase):
         self.root = Path(temp.name).resolve()
 
     def test_summary_prepare_commit_all_readers_agree_and_preserve_old_on_bad_versions(self):
-        fixture = create_schema5_project(self.root)
+        fixture = create_current_project(self.root)
         before = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
         prepared = _prepare_context(self.root, view='model')
         self.assertEqual(before, {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()})

@@ -30,15 +30,15 @@ class AggregateQueryTests(unittest.TestCase):
         return commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
 
     def test_character_burden_reuses_current_review_statuses(self):
-        report = query_aggregates(self.root, kind='character-reviews', characterId='C-ALPHA')
+        report = query_aggregates(self.root, kind='character-reviews', characterId='character-ALPHA')
         self.assertEqual(report['items'][0]['byStatus'], {'unreviewed': 4})
-        selected = query_reviews(self.root, recordIds=['SF-HEIGHT'])['items'][0]
+        selected = query_reviews(self.root, recordIds=['fact-HEIGHT'])['items'][0]
         quote = self.source['fragments'][0]['text']
         submit_review(self.root, requestId='review-height', reviews=[{
             'recordId': selected['recordId'], 'inputHash': selected['inputHash'],
             'contentHash': selected['contentHash'], 'decision': 'compatible', 'reason': '逐项核对',
             'evidence': [{'start': 0, 'end': len(quote), 'text': quote}]}])
-        report = query_aggregates(self.root, kind='character-reviews', characterId='C-ALPHA')
+        report = query_aggregates(self.root, kind='character-reviews', characterId='character-ALPHA')
         self.assertEqual(report['items'][0]['itemCount'], 3)
         source = load_structure(self.root)
         source['attributes'][0]['values'][0]['value']['number'] = 185
@@ -46,15 +46,15 @@ class AggregateQueryTests(unittest.TestCase):
         report = query_aggregates(self.root, kind='character-reviews', view='items')
         actual = {row['recordId']: row['status'] for row in report['items']}
         inputs, review = ReviewInputs(source), read_review(self.root)
-        self.assertEqual(actual['SF-HEIGHT'], fragment_review_status(inputs, review, 'SF-HEIGHT'))
-        self.assertEqual(actual['SF-HEIGHT'], 'stale')
+        self.assertEqual(actual['fact-HEIGHT'], fragment_review_status(inputs, review, 'fact-HEIGHT'))
+        self.assertEqual(actual['fact-HEIGHT'], 'stale')
         self.assertFalse(report['coverage']['semanticReviewComplete'])
         self.assertNotIn('passed', report)
 
     def test_chapter_pending_scope_is_plan_closure_not_whole_catalog(self):
         report = query_aggregates(self.root, kind='chapter-issues', chapterId=self.cid, view='items')
         review_ids = {row['recordId'] for row in report['items'] if row['kind'] == 'source-review'}
-        self.assertEqual(review_ids, {'SF-PLAN'})
+        self.assertEqual(review_ids, {'plan-PLAN'})
         self.source['chapters'][0]['status'] = 'review'
         write_json(self.root / '.govel/structure.json', self.source)
         report = query_aggregates(self.root, kind='chapter-issues', chapterId=self.cid, view='items')
@@ -63,17 +63,17 @@ class AggregateQueryTests(unittest.TestCase):
         self.assertEqual({row['code'] for row in report['items'] if row['kind'] == 'workflow-blocker'}, expected)
 
     def test_perspective_scope_never_leaks_fact_or_other_recognition(self):
-        for rid, perspective in [('SF-ALPHA-BELIEF', 'C-ALPHA'), ('SF-BETA-BELIEF', 'C-BETA')]:
-            self.source['fragments'].append({'fragmentId': rid, 'ownerId': 'C-ALPHA', 'text': '独立认识内容。',
-                'order': len(self.source['fragments']) + 1, 'contentBindings': ['AT-HEIGHT'],
+        for rid, perspective in [('belief-ALPHA-BELIEF', 'character-ALPHA'), ('belief-BETA-BELIEF', 'character-BETA')]:
+            self.source['fragments'].append({'fragmentId': rid, 'ownerId': 'character-ALPHA', 'text': '独立认识内容。',
+                'order': len(self.source['fragments']) + 1, 'contentBindings': ['attribute-HEIGHT'],
                 'contentRole': 'belief', 'perspectiveId': perspective})
         validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
-        selection = {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}
+        selection = {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}
         report = query_aggregates(self.root, kind='character-reviews', view='items', selection=selection)
-        self.assertEqual([row['recordId'] for row in report['items']], ['SF-ALPHA-BELIEF'])
+        self.assertEqual([row['recordId'] for row in report['items']], ['belief-ALPHA-BELIEF'])
         encoded = json.dumps(report, ensure_ascii=False)
-        self.assertNotIn('SF-BETA-BELIEF', encoded)
-        self.assertNotIn('SF-HEIGHT', encoded)
+        self.assertNotIn('belief-BETA-BELIEF', encoded)
+        self.assertNotIn('fact-HEIGHT', encoded)
         chapter = query_aggregates(self.root, kind='chapter-issues', chapterId=self.cid, selection=selection)
         self.assertTrue(chapter['coverage']['authorDomainsOmitted'])
         for kind in ('setting-impact', 'decision-plans'):
@@ -82,7 +82,7 @@ class AggregateQueryTests(unittest.TestCase):
             self.assertEqual(caught.exception.code, 'AGGREGATE_AUTHOR_SCOPE_REQUIRED')
 
     def test_setting_impact_keeps_recorded_scope_and_is_historical(self):
-        plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        plan = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
         self.commit(plan)
         report = query_aggregates(self.root, kind='setting-impact', operationId=plan['operationId'])
         counts = {key: len(value) for key, value in plan['impact'].items() if isinstance(value, list)}
@@ -94,7 +94,7 @@ class AggregateQueryTests(unittest.TestCase):
         self.assertNotIn('proposedStructure', json.dumps(items))
 
     def test_setting_impact_cursor_binds_undo_receipt_membership(self):
-        plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        plan = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
         self.commit(plan)
         arguments = {'kind': 'setting-impact', 'view': 'items', 'operationId': plan['operationId'], 'limit': 1}
         first = query_aggregates(self.root, **arguments)
@@ -118,7 +118,7 @@ class AggregateQueryTests(unittest.TestCase):
         return plan['parameters']['decisionId']
 
     def test_decision_plans_reuse_global_and_registered_dependency_scopes(self):
-        first = self.create_decision(['AT-HEIGHT'])
+        first = self.create_decision(['attribute-HEIGHT'])
         second = self.create_decision([], [first])
         for did in (first, second):
             plan = preview_decision_change(self.root, action='approve', expectedRevision=load_structure(self.root)['revision'],
@@ -172,9 +172,9 @@ class AggregateQueryTests(unittest.TestCase):
         from unittest.mock import patch
         from scripts.core import aggregate_queries, chapter_status, structure_store
         second = deepcopy(self.chapter)
-        second.update({'chapterId': 'CH-NEXT', 'title': '换岗', 'displayOrdinal': 2, 'filePath': '正文/换岗.md'})
+        second.update({'chapterId': 'chapter-NEXT', 'title': '换岗', 'displayOrdinal': 2, 'filePath': '正文/换岗.md'})
         self.source['chapters'].append(second)
-        self.source['chapterArcLinks'].append({'chapterId': 'CH-NEXT', 'arcId': self.source['arcs'][0]['arcId'],
+        self.source['chapterArcLinks'].append({'chapterId': 'chapter-NEXT', 'arcId': self.source['arcs'][0]['arcId'],
                                                'role': 'primary'})
         self.source['chapters'][0]['status'] = 'review'
         validate_structure(self.source)

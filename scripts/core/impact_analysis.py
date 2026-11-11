@@ -108,9 +108,9 @@ def archive_impact(structure: dict, chapter_id: str) -> dict:
 
 def merge_entity_impact(structure: dict, source_id: str, target_id: str) -> dict:
     redirected = [ref for ref in structure.get("references", []) if ref.get("targetId") == source_id]
+    chapter_ids = {row['chapterId'] for row in structure['chapters']}
     chapters = sorted({
-        ref.get("sourceId") for ref in redirected
-        if isinstance(ref.get("sourceId"), str) and ref.get("sourceId", "").startswith("CH-")
+        ref['sourceId'] for ref in redirected if ref.get('sourceId') in chapter_ids
     })
     relations = [
         rel for rel in structure.get("relations", [])
@@ -128,11 +128,9 @@ def merge_entity_impact(structure: dict, source_id: str, target_id: str) -> dict
 
 def entity_change_impact(structure: dict, entity_id: str, changes: dict) -> dict:
     direct = [ref for ref in structure.get("references", []) if ref.get("targetId") == entity_id]
-    # 只把章 ID 当章节候选：结构校验已禁止非章 sourceId，这里再滤一道，保证即使真有
-    # 历史遗留数据，staleCandidates 也不会混进实体/卷 ID（与 merge_entity_impact 一致）。
+    chapter_ids = {row['chapterId'] for row in structure['chapters']}
     chapters = sorted({
-        ref.get("sourceId") for ref in direct
-        if isinstance(ref.get("sourceId"), str) and ref.get("sourceId", "").startswith("CH-")
+        ref['sourceId'] for ref in direct if ref.get('sourceId') in chapter_ids
     })
     return {
         "entityId": entity_id,

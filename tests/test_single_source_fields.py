@@ -49,13 +49,10 @@ SOURCE_FILES = [
 PRODUCTION_SOURCES = {str(path.relative_to(ROOT)): path.read_text(encoding='utf-8')
                       for path in SOURCE_FILES if path.is_relative_to(ROOT / 'scripts')}
 
-# schema 5 字面量的两种形态：
-# - 比较形态（`== 5` / `!= 5`）覆盖 scripts/ 与 tests/ 全树；
-# - 写入形态（`"schemaVersion": 5`）只覆盖源码树 scripts/——tests 里大量构造 schema 5
-#   的 fixture 数据，那是测试输入而非真源漂移（机制 38 接线 state_cache/summary_status
-#   后新增，此前这两种形态都不在守卫内）。
-_SCHEMA_LITERAL = re.compile(r'schemaVersion[\"\'\)\]]*\s*[!=]=\s*5\b')
-_SCHEMA_WRITE_LITERAL = re.compile(r'[\"\']schemaVersion[\"\']\s*:\s*5\b')
+# Guard the current project version; fixture writes are test inputs.
+_SCHEMA_NUMBER = str(current_schema_version())
+_SCHEMA_LITERAL = re.compile(r"""schemaVersion["')\]]*\s*[!=]=\s*""" + _SCHEMA_NUMBER + r"\b")
+_SCHEMA_WRITE_LITERAL = re.compile(r"""["']schemaVersion["']\s*:\s*""" + _SCHEMA_NUMBER + r"\b")
 
 
 def _schema_literal_hits(path: Path) -> list[str]:
@@ -65,13 +62,11 @@ def _schema_literal_hits(path: Path) -> list[str]:
         hits += [line.strip() for line in lines if _SCHEMA_WRITE_LITERAL.search(line)]
     return hits
 
-# schema 5 字面量比较的显式豁免登记：只放「与项目 schema 无关的其它格式版本比较」，
+# 当前项目 schema 字面量比较的显式豁免登记：只放「与项目 schema 无关的其它格式版本比较」，
 # 值 = (理由, 该文件内此类比较的登记数量)。新增条目必须在这里登记，评审时可见。
 # 曾按行内注释「与项目 schema 无关」豁免整行——那是自然语言子串匹配，任意一行补上
 # 这七个字即可绕过守卫（机制 36 审计的变异 M6 借此在全部守卫测试上存活），故不认注释。
-SCHEMA_LITERAL_EXEMPT_FILES = {
-    "scripts/text/ai_patterns.py": ("文本规则注册表自身的格式版本，与项目 schema 无关", 1),
-}
+SCHEMA_LITERAL_EXEMPT_FILES = {}
 
 # Full paths only: another container's identically named leaf gains no exemption.
 # These are descriptive protocol declarations, not purported runtime switches.
@@ -208,7 +203,7 @@ class ManifestSingleSourceTests(unittest.TestCase):
     def test_schema_version_has_single_source(self) -> None:
         """schema 版本只经访问器出现；源码不得再写字面量（比较形态 + 源码树写入形态，豁免须显式登记）。"""
         self.assertEqual(current_schema_version(), MANIFEST["projectVersionPolicy"]["supportedSchemaVersions"][0])
-        self.assertEqual(supported_schema_versions(), [5])
+        self.assertEqual(supported_schema_versions(), [current_schema_version()])
         offenders = {}
         for path in SOURCE_FILES:
             relative = str(path.relative_to(ROOT))

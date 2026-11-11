@@ -8,18 +8,9 @@ from typing import Iterable
 
 from .structure_store import StructureError, is_time_ordinal
 
-PREFIX_BY_TYPE = {
-    "character": "C",
-    "prop": "P",
-    "location": "L",
-    "event": "E",
-    "faction": "FC",
-    "rule": "RU",
-    "secret": "IA",
-    "hook": "HK",
-    "soft_limit": "LF",
-    "time_anchor": "TA",
-}
+from .project import source_model_policy
+
+PREFIX_BY_TYPE = source_model_policy()['entityPrefixes']
 
 CARD_ORIGIN = "card"
 UNSPECIFIED_KIND = "unspecified"

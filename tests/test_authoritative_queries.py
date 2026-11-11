@@ -11,7 +11,7 @@ from pathlib import Path
 from scripts.core.jsonio import write_json
 from scripts.core.settings import query_settings
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.source_query_fixture import declare_field, set_field
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +22,7 @@ class AuthoritativeQueryTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         self.structure = self.fixture['structure']
         self.entity = self.structure['entities'][0]
         set_field(self.structure, self.entity['entityId'], '声纹禁词', '当前值')

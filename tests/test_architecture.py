@@ -25,7 +25,7 @@ def run_cli(args: list[str]) -> tuple[int, dict]:
 
 
 class VersionSourceTests(unittest.TestCase):
-    def test_manifest_is_schema5_source(self) -> None:
+    def test_manifest_declares_current_project_format(self) -> None:
         manifest = json.loads((ROOT / "toolbox.manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schemaVersion"], current_schema_version())
         from scripts.core.structure_store import WORKFLOW_VERSION

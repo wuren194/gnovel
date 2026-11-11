@@ -1,7 +1,7 @@
 ---
 id: G-CHARACTER-TRANSITION
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 人物变化过程的责任与判断边界。
 ---
 

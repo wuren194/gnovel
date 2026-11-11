@@ -448,14 +448,14 @@ class ReviewFormEditsTests(unittest.TestCase):
         # This is a real current-form payload plus declared rows, not source text inspection.
         payload = self.form('stage_a_review', view='full')['payload']
         payload['relationshipCausalityReviews'] = [{'id': 'R-ONE', 'conclusion': '', 'evidence': []}]
-        payload['behaviorReviews'] = [{'id': 'L-ONE', 'kind': 'living', 'origin': 'plan',
-            'disposition': 'needs_material', 'conclusion': '', 'evidence': [], 'basisIds': ['C-TEST-ALPHA']}]
+        payload['behaviorReviews'] = [{'id': 'location-ONE', 'kind': 'living', 'origin': 'plan',
+            'disposition': 'needs_material', 'conclusion': '', 'evidence': [], 'basisIds': ['character-TEST-ALPHA']}]
         result = apply_semantic_edits(payload, 'stage_a_review', {'relationshipCausalityReviews': [{
             'id': 'R-ONE', 'conclusion': '当前材料仍不足。'}], 'behaviorReviews': []})
         self.assertEqual(result['relationshipCausalityReviews'][0]['conclusion'], '当前材料仍不足。')
         self.assertEqual(result['behaviorReviews'], payload['behaviorReviews'])
         for edits in ({'relationshipCausalityReviews': [{'id': 'R-TWO', 'conclusion': 'pass'}]},
-                      {'behaviorReviews': [{'id': 'L-ONE', 'basisIds': []}]}, {'append': {'findings': []}}):
+                      {'behaviorReviews': [{'id': 'location-ONE', 'basisIds': []}]}, {'append': {'findings': []}}):
             with self.assertRaises(StructureError):
                 apply_semantic_edits(payload, 'stage_a_review', edits)
 

@@ -13,12 +13,12 @@ class EvidenceReadContinuationTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve(); self.source = source_fixture(self.root)
-        self.args = {'kind': 'review', 'recordIds': ['SF-HEIGHT', 'SF-MIXED'], 'includeContext': True, 'limit': 1}
+        self.args = {'kind': 'review', 'recordIds': ['fact-HEIGHT', 'fact-MIXED'], 'includeContext': True, 'limit': 1}
 
     def prepare(self, **extra):
         return call_operation('evidence.prepare', self.root, {**self.args, **extra})
 
-    def submit(self, page, rid='SF-HEIGHT', request='first'):
+    def submit(self, page, rid='fact-HEIGHT', request='first'):
         packed = call_operation('evidence.pack', self.root, {'snapshotRef': page['snapshotRef'], 'requestId': request,
             'decisions': [{'recordId': rid, 'decision': 'not_checked', 'reason': 'Explicitly deferred fixture', 'quotes': []}]})
         result = call_operation('evidence.submit', self.root, {'submissionRef': packed['submissionRef']})
@@ -40,27 +40,27 @@ class EvidenceReadContinuationTests(unittest.TestCase):
                 self.assertFalse(next_page['approvalGranted'])
 
     def test_aggregate_scope_and_progress_can_resume_across_two_own_submissions(self):
-        aggregate = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'C-ALPHA'})
+        aggregate = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'character-ALPHA'})
         self.args['aggregateRef'] = aggregate['selectionRef']
         page = self.prepare()
         self.submit(page)
         next_page = self.prepare(cursor=page['nextCursor'], resumeRequestIds=['first'])
-        self.submit(page, 'SF-MIXED', 'second')
+        self.submit(page, 'fact-MIXED', 'second')
         resumed = self.prepare(cursor=next_page['nextCursor'], resumeRequestIds=['first', 'second'])
         self.assertEqual(resumed['continuation']['recordedCount'], 2)
         self.assertFalse(resumed['semanticReviewComplete'])
 
     def test_unrelated_review_changes_cannot_be_folded_into_the_baseline(self):
         page = self.prepare(); self.submit(page)
-        other = call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['SF-LIFE']})
-        self.submit(other, 'SF-LIFE', 'unrelated')
+        other = call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['fact-LIFE']})
+        self.submit(other, 'fact-LIFE', 'unrelated')
         for requests in (['first'], ['first', 'unrelated']):
             with self.assertRaises(StructureError):
                 self.prepare(cursor=page['nextCursor'], resumeRequestIds=requests)
 
     def test_source_scope_budget_and_missing_history_remain_protected(self):
         page = self.prepare(); self.submit(page)
-        for overrides in ({'recordIds': ['SF-HEIGHT']}, {'limit': 2}, {'selection': {'ownerIds': ['C-BETA']}},
+        for overrides in ({'recordIds': ['fact-HEIGHT']}, {'limit': 2}, {'selection': {'ownerIds': ['character-BETA']}},
                           {'resumeRequestIds': []}, {'resumeRequestIds': ['missing']}):
             with self.subTest(overrides=overrides), self.assertRaises(StructureError):
                 self.prepare(cursor=page['nextCursor'], **{'resumeRequestIds': ['first'], **overrides})
@@ -70,10 +70,10 @@ class EvidenceReadContinuationTests(unittest.TestCase):
             self.prepare(cursor=page['nextCursor'], resumeRequestIds=['first'])
 
     def test_tampered_request_and_replaced_aggregate_are_rejected(self):
-        aggregate = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'C-ALPHA'})
+        aggregate = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'character-ALPHA'})
         self.args['aggregateRef'] = aggregate['selectionRef']
         page = self.prepare(); self.submit(page)
-        other = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'C-ALPHA'})
+        other = call_operation('query.aggregate', self.root, {'kind': 'character-reviews', 'characterId': 'character-ALPHA'})
         with self.assertRaises(StructureError):
             self.prepare(cursor=page['nextCursor'], resumeRequestIds=['first'], aggregateRef=other['selectionRef'])
         path = self.root / '.govel/source-review-receipts.json'

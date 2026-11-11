@@ -19,7 +19,7 @@ class VoiceDiagnosticsAttributionTests(unittest.TestCase):
             draft, design = root / 'draft.md', root / 'design.json'
             draft.write_text(text, encoding='utf-8')
             design.write_text(json.dumps({'characters': [{
-                'characterId': 'C-A', 'name': '林舟',
+                'characterId': 'character-A', 'name': '林舟',
                 'voiceProfile': {'bannedPhrasesForRole': ['随便']},
             }]}, ensure_ascii=False), encoding='utf-8')
             process = subprocess.run([sys.executable, str(ROOT / 'scripts/aggregate_diagnostics.py'),

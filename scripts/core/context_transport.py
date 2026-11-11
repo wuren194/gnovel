@@ -215,6 +215,8 @@ def task_model_response(report: dict) -> dict:
             'modelContext': deepcopy(report.get('context', {}).get('modelContext')),
             'readList': reads, 'outlineFacts': outline,
             'bootstrap': deepcopy(report.get('bootstrap')),
+            **({'sourceActions': deepcopy(report['sourceActions'])}
+               if any(report.get('sourceActions', {}).values()) else {}),
             'reading': reading, 'readingTools': {
                 # The full schema already lives in the prepared snapshot and
                 # the single-operation catalogue. A repeated top-level required

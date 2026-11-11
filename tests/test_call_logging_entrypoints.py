@@ -20,7 +20,7 @@ from scripts.core.artifacts import sha256_text
 from scripts.core.jsonio import write_json
 from scripts.core.prose_binding import seal_binding
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +35,7 @@ class CallLoggingEntrypointTests(unittest.TestCase):
         self.directory = Path(self.temp.name).resolve()
         self.project = self.directory / "book"
         self.logs = self.directory / "diagnostics"
-        self.fixture = create_schema5_project(self.project, chapter_count=1)
+        self.fixture = create_current_project(self.project, chapter_count=1)
         environment = patch.dict(os.environ, {
             "GOVEL_LOG_DIR": str(self.logs),
             "GOVEL_LOG_MODE": "full",
@@ -350,7 +350,7 @@ class CallLoggingEntrypointTests(unittest.TestCase):
                            for index, value in enumerate(values)],
             'artifacts': [{'artifactType': f'ART-{index}', 'accessToken': value, 'ordinaryValue': value}
                           for index, value in enumerate(values)],
-            'chapters': [{'chapterId': f'CH-{index}', 'chapterTitle': '应当保留的普通章节标题',
+            'chapters': [{'chapterId': f'chapter-{index}', 'chapterTitle': '应当保留的普通章节标题',
                           'ordinaryChapterCount': 735291} for index in range(5)]}
         original = deepcopy(payload)
         with patch.object(mcp_server, 'call_tool', return_value=payload):
@@ -551,7 +551,7 @@ novelctl.main(sys.argv[1:])
         filtered = self._list("--task", "writer", "--chapter", chapter, "--since", lower, "--until", upper)
         self.assertEqual([row["callId"] for row in filtered["calls"]], [path.name])
         self.assertEqual(self._list("--task", "editor")["calls"], [])
-        self.assertEqual(self._list("--chapter", "CH-ANOTHER")["calls"], [])
+        self.assertEqual(self._list("--chapter", "chapter-ANOTHER")["calls"], [])
         self.assertEqual(self._list("--since", upper)["calls"], [])
         self.assertEqual(self._list("--until", lower)["calls"], [])
 

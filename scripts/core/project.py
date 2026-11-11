@@ -476,17 +476,39 @@ def _validated_source_model(policy: object) -> dict:
         re.compile(pattern)
     except re.error as exc:
         raise ValueError('invalid source ID suffix pattern') from exc
+    import uuid
+    suffix_length = policy.get('generatedSuffixLength')
+    if (type(suffix_length) is not int or not 0 < suffix_length <= len(uuid.UUID(int=0).hex)
+            or not re.fullmatch(pattern, '0' * suffix_length)):
+        raise ValueError('invalid generated source ID suffix length')
     collections = policy.get('collections')
     if not isinstance(collections, dict) or not collections:
         raise ValueError('source model needs collection specifications')
     ids, prefixes = set(), set()
+    for name in ('entityPrefixes', 'objectPrefixes', 'fragmentPrefixes', 'receiptPrefixes'):
+        mapping = policy.get(name)
+        if not isinstance(mapping, dict) or not mapping:
+            raise ValueError('source model needs typed prefixes: ' + name)
+        for kind, prefix in mapping.items():
+            if (not isinstance(kind, str) or not isinstance(prefix, str)
+                    or not re.fullmatch('[a-z]+', prefix) or prefix in prefixes):
+                raise ValueError('invalid or duplicate source prefix: ' + name)
+            prefixes.add(prefix)
+    if set(policy['fragmentPrefixes']) != set(policy['contentRoles']):
+        raise ValueError('fragment prefixes must cover every content role')
     for name, spec in collections.items():
-        if not isinstance(name, str) or not isinstance(spec, dict) or set(spec) != {'idField', 'prefix'}:
+        expected = {'idField'} if name == 'fragments' else {'idField', 'prefix'}
+        if not isinstance(name, str) or not isinstance(spec, dict) or set(spec) != expected:
             raise ValueError('invalid source collection specification')
-        key, prefix = spec['idField'], spec['prefix']
-        if not isinstance(key, str) or not key.endswith('Id') or key in ids or not isinstance(prefix, str) or not prefix.isascii() or not prefix.isalnum() or prefix in prefixes:
+        key = spec['idField']
+        if not isinstance(key, str) or not key.endswith('Id') or key in ids:
             raise ValueError('invalid or duplicate source collection identity')
-        ids.add(key); prefixes.add(prefix)
+        ids.add(key)
+        if name != 'fragments':
+            prefix = spec['prefix']
+            if not isinstance(prefix, str) or not re.fullmatch('[a-z]+', prefix) or prefix in prefixes:
+                raise ValueError('invalid or duplicate source collection prefix')
+            prefixes.add(prefix)
     prefix = policy.get('valueIdPrefix')
     if not isinstance(prefix, str) or not prefix.isascii() or not prefix.isalnum() or prefix in prefixes:
         raise ValueError('invalid source value identity prefix')
@@ -507,7 +529,8 @@ def _validated_source_model(policy: object) -> dict:
         prefixes.add(spec['idPrefix'])
     for name in ('valueTypes', 'valueStates', 'contentRoles', 'recordStatuses', 'presentationKinds',
                  'ruleMethods', 'ruleEnforcements', 'ruleActions', 'ruleIssueStatuses',
-                 'timeSpecKinds', 'knowledgeModes', 'placementScopes', 'unitMemberTypes'):
+                 'timeSpecKinds', 'knowledgeModes', 'placementScopes', 'unitMemberTypes',
+                 'profileTopics', 'recallTopics', 'cognitionAttitudes', 'checkStatuses'):
         values = policy.get(name)
         if not isinstance(values, list) or not values or any(not isinstance(v, str) or not v for v in values) or len(values) != len(set(values)):
             raise ValueError('invalid source model enumeration: ' + name)

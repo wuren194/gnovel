@@ -311,7 +311,7 @@ def _commit_locked(root: Path, *, operation_id: str, plan_hash: str, approved: b
                'existingFiles': [r['path'] for r in rows if r['before']['exists']],
                'createdFiles': [r['path'] for r in rows if not r['before']['exists'] and r['after']['exists']],
                'writtenIndexes': [r['path'] for r in rows if r['owner'].endswith('-index')], 'refusedIndexes': [],
-               'committedAt': utc_now(), 'reversible': True}
+               'committedAt': utc_now(), 'reversible': current['checks'] == proposed['checks']}
     journal['changedFiles'] = [r['path'] for r in rows if r['before'] != r['after']]
     journal['unchangedFiles'] = [r['path'] for r in rows if r['before'] == r['after']]
     if local_approval is not None:
@@ -679,6 +679,8 @@ def _undo_evidence_prefix(root: Path, operation_id: str, journal: dict,
                              'a durable transaction manifest is still on disk; run workflow recover first',
                              {'operationId': operation_id})
     backup, before = _undo_target_structure(root, operation_id, journal)
+    from .source_cognition import require_check_transition
+    require_check_transition(current, before, {'operation': 'undo'})
     # Top-of-chain 是硬条件（契约 §13）：当前结构内容必须仍等于该 operation 的 after 态。
     # 任何后续提交（无论是否进 ledger）都已经把它推下顶端，此时撤销会部分覆盖它的结果。
     from .author_decisions import undo_content_equivalent

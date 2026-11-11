@@ -14,6 +14,8 @@ from .source_review import fingerprint, source_snapshot
 from .structure_commands import _base_plan, _write_plan
 from .structure_store import StructureError, canonical_json, validate_structure
 
+MUTABLE_FIELDS = {'kind', 'validDuring', 'perspectiveId', 'basisIds'}
+
 
 def _ref(source: dict, relation: dict, chapter_id: str | None) -> str:
     payload = {'sourceHash': snapshot_hash(source), 'relationId': relation['relationId'],
@@ -124,10 +126,9 @@ def build_relation_change(source: dict, *, sessionRef: str, expectedOldRecord=MI
         raise StructureError('EXPECTED_OLD_VALUE_CONFLICT', 'relation changed before proposal',
                              {'relationId': current['relationId'], 'currentHash': fingerprint(current)})
     if newRecord is not None and (not isinstance(newRecord, dict) or
-                                  set(newRecord) != set(current) or
-                                  any(newRecord.get(key) != value for key, value in current.items()
-                                      if key != 'kind')):
-        raise StructureError('RELATION_PROPOSAL_INVALID', 'only the relation kind may change; identity, endpoints and provenance are immutable')
+                                  {key: value for key, value in newRecord.items() if key not in MUTABLE_FIELDS} !=
+                                  {key: value for key, value in current.items() if key not in MUTABLE_FIELDS}):
+        raise StructureError('RELATION_PROPOSAL_INVALID', 'preserve relation identity, direction and provenance')
     if newRecord == current:
         raise StructureError('RELATION_CHANGE_EMPTY', 'new relation equals current relation')
     if not isinstance(reason, str) or not reason.strip() or not isinstance(approvalActor, str) or \

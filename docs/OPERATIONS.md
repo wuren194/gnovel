@@ -260,7 +260,7 @@ Sepia 量测在聚合报告 `calibration` 中，精确位置和段落统计在 r
 已选定多个同类记录时，用 `source content-resolve-batch` 在同一快照上解析，支持 attribute、fact、planning 三种 kind。它返回紧凑绑定和每条记录的 `recordRef`／`readAction`，不重复返回完整长记录；未找到或不在章节范围内的目标标为 `not_found`，不给写入绑定。数量与分页沿用 query 策略，不提高预算。
 
 ```bash
-python3 scripts/novelctl.py project source content-resolve-batch --project-root /path/to/书 --kind planning --record-ids SF-FIRST --record-ids SF-SECOND
+python3 scripts/novelctl.py project source content-resolve-batch --project-root /path/to/书 --kind planning --record-ids plan-FIRST --record-ids plan-SECOND
 ```
 
 后续页保持 kind、recordIds 顺序、chapterId 和预算，仅增加返回的 cursor。续页复用已解析快照，源、授权或工具规则变化则拒绝；原文仍须经 readAction 阅读。
@@ -268,7 +268,7 @@ python3 scripts/novelctl.py project source content-resolve-batch --project-root 
 将返回的 `resolutionRef` 保存为 `RESOLUTION_REF`。规划补丁文件只需给出原文与替换，不必逐项转写 hash：
 
 ```json
-[{"action":"patch","collection":"fragments","id":"SF-FIRST","patch":[{"op":"text","path":["text"],"original":"已读取的唯一原文","replacement":"已确定的新文"}]}]
+[{"action":"patch","collection":"fragments","id":"plan-FIRST","patch":[{"op":"text","path":["text"],"original":"已读取的唯一原文","replacement":"已确定的新文"}]}]
 ```
 
 ```bash
@@ -405,7 +405,7 @@ python3 scripts/novelctl.py project tools execute --project-root /path/to/书 --
 ```bash
 python3 scripts/novelctl.py project workflow repair-context --project-root /path/to/书 --chapter-id CH001
 python3 scripts/novelctl.py project review report-view --project-root /path/to/书 --chapter-id CH001
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids SF-HEIGHT
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids fact-HEIGHT
 python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind prose --chapter-id CH001
 python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind continuity --chapter-id CH001 --paths .govel/aux/story-summary.json
 ```
@@ -437,8 +437,8 @@ python3 scripts/novelctl.py project workflow patch-candidate --project-root /pat
 先从 `query aggregate` 选择 source-review 行，保存返回的 `selectionRef` 为 `AGGREGATE_REF`，再把选定 recordIds 一次交给原证据入口：
 
 ```bash
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --aggregate-ref "$AGGREGATE_REF" --record-ids SF-HEIGHT --record-ids SF-LIFE
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids SF-HEIGHT --include-context
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --aggregate-ref "$AGGREGATE_REF" --record-ids fact-HEIGHT --record-ids fact-LIFE
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids fact-HEIGHT --include-context
 ```
 
 材料包含当前原文、共享依赖、待填 decisionInput、历史结论及其失效原因、登记来源变更和相关规则。`packAction` 已填 snapshotRef，逐项语义决策仍使用原 evidence pack/submit。长材料继续分页；历史材料与当前原文分开标记，来源变更的 current 是当前值，不冒充操作当时的 after-image。缺失旧备份明确显示不可用。
@@ -469,7 +469,7 @@ snapshot 文件保存 prepare 返回的 `snapshot` 对象，decisions 文件保�
 复核材料尚未读完时，可以先登记已处理项，再以原 cursor 和明确的 resumeRequestIds 继续。CLI 每个请求重复一次 flag：
 
 ```bash
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids SF-HEIGHT --record-ids SF-LIFE --include-context --cursor "$CURSOR" --resume-request-ids 复核第一批
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids fact-HEIGHT --record-ids fact-LIFE --include-context --cursor "$CURSOR" --resume-request-ids 复核第一批
 ```
 
 保持原选择、aggregateRef（原来有时）、view 和分页预算。续页逐项验证请求属于同一 snapshot，当前两份复核状态文件的差异恰好由指定回执解释，其他源、授权、规则和历史变化仍拒绝。continuation 标明材料是准备时快照，currentProgressRef 可读取登记后的逐项进度；这不会把 not_checked 变成通过，也不授予批准。不传请求 ID 时保留原严格失效行为，不能用该参数转接其它材料选择。
@@ -479,13 +479,13 @@ python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书
 预计下一批有大量共享依赖、且能确认仍持有原材料时，在首次读取开启 `--hold-materials`。普通读取默认不签发该回执，不增加分页成本：
 
 ```bash
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids SF-HEIGHT --include-context --hold-materials
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids fact-HEIGHT --include-context --hold-materials
 ```
 
 沿 nextCursor 读完后，把末页的 `materialReadReceipt` 保存为 `MATERIAL_READ_RECEIPT`，下一批显式回传即可启用复用：
 
 ```bash
-python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids SF-LIFE --include-context --prior-receipt "$MATERIAL_READ_RECEIPT"
+python3 scripts/novelctl.py project evidence prepare --project-root /path/to/书 --kind review --record-ids fact-LIFE --include-context --prior-receipt "$MATERIAL_READ_RECEIPT"
 ```
 
 每条分页序列固定原 priorReceipt、持有选项和分页参数，只更新 cursor；不要把刚收到的回执替换进同一序列的 priorReceipt。游标绑定实际前一页回执，改偏移、删回执或拼接别的页都拒绝。新批次也可使用部分读取的回执，但只省略确实交付过的字符，Unicode／CRLF 的 start/end 保持原位置。

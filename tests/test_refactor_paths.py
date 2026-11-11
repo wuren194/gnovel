@@ -142,7 +142,7 @@ class PathProposalTests(unittest.TestCase):
                       'REFACTOR_TARGET_EXISTS' if one_file else 'REFACTOR_PATH_CANONICAL_COLLISION')
 
     def test_a_missing_source_only_matters_once_the_body_is_formal(self) -> None:
-        ghost = check_target(self.root, '正文/CH-000000000000.md', '正文/幽灵.md')
+        ghost = check_target(self.root, '正文/chapter-000000000000.md', '正文/幽灵.md')
         self.assertEqual(ghost['sourceState'], 'missing')
         self.assertEqual(ghost['action'], 'locator_only')
         chapter = load_structure(self.root)['chapters'][0]
@@ -185,15 +185,15 @@ class PathTransactionTests(unittest.TestCase):
                     if row['chapterId'] == chapter_id)
 
     def _seed_a_case_only_chapter(self) -> None:
-        """One stable chapter whose body is `正文/CH-case.md`, bytes `case\\n`."""
-        (self.root / '正文' / 'CH-case.md').write_bytes(b'case\n')
+        """One stable chapter whose body is `正文/chapter-case.md`, bytes `case\\n`."""
+        (self.root / '正文' / 'chapter-case.md').write_bytes(b'case\n')
         structure = load_structure(self.root)
-        structure['chapters'].append({'chapterId': 'CH-CASE00000001', 'displayOrdinal': 4,
+        structure['chapters'].append({'chapterId': 'chapter-CASE00000001', 'displayOrdinal': 4,
                                       'displayCode': 'CH004', 'title': 'Case',
                                       'placement': {'scope': 'volume', 'volumeId': self.info['volumeA']},
-                                      'filePath': '正文/CH-case.md',
+                                      'filePath': '正文/chapter-case.md',
                                       'status': 'stable', 'storyTimeStartId': None, 'storyTimeEndId': None})
-        structure['chapterArcLinks'].append({'chapterId': 'CH-CASE00000001', 'arcId': self.info['arcMain'],
+        structure['chapterArcLinks'].append({'chapterId': 'chapter-CASE00000001', 'arcId': self.info['arcMain'],
                                              'role': 'primary', 'weight': 1.0, 'phaseId': None, 'notes': ''})
         from scripts.core.prose_binding import seal_binding
         from scripts.core.artifacts import file_sha256
@@ -247,7 +247,7 @@ class PathTransactionTests(unittest.TestCase):
         self._seed_a_case_only_chapter()
         before = {p.relative_to(self.root).as_posix(): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
         with self.assertRaises(StructureError) as caught:
-            preview_relocate_chapter_paths(self.root, chapter_id='CH-CASE00000001', file_path='正文/CH-Case.md')
+            preview_relocate_chapter_paths(self.root, chapter_id='chapter-CASE00000001', file_path='正文/chapter-Case.md')
         self.assertEqual(caught.exception.code, 'REFACTOR_CASE_ONLY_RENAME_DEFERRED')
         self.assertEqual(before, {p.relative_to(self.root).as_posix(): p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
 
@@ -295,7 +295,7 @@ class HardLinkAliasTests(unittest.TestCase):
     is skipped because the machine cannot express the case.
     """
 
-    CHAPTER = 'CH-HARDLINK0001'
+    CHAPTER = 'chapter-HARDLINK0001'
     PAYLOAD = b'case\n'
 
     def setUp(self) -> None:
@@ -367,8 +367,8 @@ class HardLinkAliasTests(unittest.TestCase):
         """Every hard-link shape this volume can physically hold: (label, source, target)."""
         decomposed, composed = 'cafe\u0301.md', 'caf\u00e9.md'
         candidates = [
-            ('second name in the same directory', '正文/CH-case.md', '正文/CH-case-copy.md'),
-            ('same name in another directory', '正文/CH-case.md', '规划/CH-case.md'),
+            ('second name in the same directory', '正文/chapter-case.md', '正文/chapter-case-copy.md'),
+            ('same name in another directory', '正文/chapter-case.md', '规划/chapter-case.md'),
             ('case-only spelling', '正文/CaseName.md', '正文/casename.md'),
             ('normalization-only spelling', f'正文/{decomposed}', f'正文/{composed}'),
         ]
@@ -410,8 +410,8 @@ class HardLinkAliasTests(unittest.TestCase):
         undo it. So this walks the formal preview and asserts the absence of every part
         of that outcome, not just the error code.
         """
-        source_relative = self._seed_chapter('CH-case.md')
-        target_relative = '正文/CH-case-copy.md'
+        source_relative = self._seed_chapter('chapter-case.md')
+        target_relative = '正文/chapter-case-copy.md'
         linked = self._linked(source_relative, target_relative)
         if linked is None:
             self.skipTest('this volume refuses the hard link itself, so the shape cannot be built')
@@ -427,8 +427,8 @@ class HardLinkAliasTests(unittest.TestCase):
         inode exists by the time the rename runs, `os.rename` would succeed as a no-op and
         the write set would land a locator the disk does not hold.
         """
-        source_relative = self._seed_chapter('CH-case.md')
-        target_relative = '正文/CH-case-copy.md'
+        source_relative = self._seed_chapter('chapter-case.md')
+        target_relative = '正文/chapter-case-copy.md'
         source, target = self.root / source_relative, self.root / target_relative
         source.write_bytes(self.PAYLOAD)
         os.link(source, target)
@@ -452,8 +452,8 @@ class HardLinkAliasTests(unittest.TestCase):
         (`--x` keeps the file stat-able and breaks enumeration alone); the folded-spelling
         half needs a volume that folds.
         """
-        source_relative = self._seed_chapter('CH-case.md')
-        target_relative = '正文/CH-case-copy.md'
+        source_relative = self._seed_chapter('chapter-case.md')
+        target_relative = '正文/chapter-case-copy.md'
         source, target = self.root / source_relative, self.root / target_relative
         os.link(source, target)
         body = self.root / '正文'
@@ -464,9 +464,9 @@ class HardLinkAliasTests(unittest.TestCase):
         with self.assertRaises(RefactorPathError) as caught:
             check_target(self.root, source_relative, target_relative)
         self.assertEqual(caught.exception.code, 'REFACTOR_TARGET_EXISTS')
-        if (self.root / '正文' / 'CH-Case.md').exists():
+        if (self.root / '正文' / 'chapter-Case.md').exists():
             with self.assertRaises(RefactorPathError) as folded:
-                check_target(self.root, source_relative, '正文/CH-Case.md')
+                check_target(self.root, source_relative, '正文/chapter-Case.md')
             self.assertEqual(folded.exception.code, 'REFACTOR_TARGET_EXISTS',
                              'a folding volume may not be trusted to be folding when it cannot be listed')
 

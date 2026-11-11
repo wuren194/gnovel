@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import uuid
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -13,24 +12,16 @@ from typing import Any
 from .clock import utc_now
 from .jsonio import read_json, write_json
 from .project import current_schema_version, source_model_policy, toolbox_manifest
+from .source_ids import identity_pattern, new_id
 
 # 唯一真源是 toolbox.manifest.json 的 projectVersionPolicy.supportedSchemaVersions；
 # 禁止在本文件写字面量（AGENTS.md 真源纪律第 2 条）。
 PROJECT_SCHEMA_VERSION = current_schema_version()
 WORKFLOW_VERSION = str(toolbox_manifest()["workflowVersion"])
-ENTITY_TYPES = {
-    "character", "prop", "location", "event", "faction", "rule",
-    "secret", "hook", "soft_limit", "time_anchor",
-}
+ENTITY_TYPES = set(source_model_policy()['entityPrefixes'])
 ARC_ROLES = {"primary", "secondary", "intersection"}
 LIFECYCLE_STATUSES = {"planned", "planning_required", "draft", "review", "stable", "stale", "archived"}
-ID_PATTERNS = {
-    "volume": re.compile(r"^VOL-[A-Z0-9][A-Z0-9-]{1,63}$"),
-    "arc": re.compile(r"^ARC-[A-Z0-9][A-Z0-9-]{1,63}$"),
-    "chapter": re.compile(r"^CH-[A-Z0-9][A-Z0-9-]{1,63}$"),
-    "entity": re.compile(r"^(?:AX|TH|FC|IA|HK|RU|LF|C|P|L|E|TA)-[A-Z0-9][A-Z0-9-]{1,63}$"),
-    "relation": re.compile(r"^REL-[A-Z0-9][A-Z0-9-]{1,63}$"),
-}
+ID_PATTERNS = {kind: identity_pattern(kind) for kind in ('volume', 'arc', 'chapter', 'entity', 'relation')}
 
 
 class StructureError(ValueError):
@@ -47,18 +38,6 @@ def is_time_ordinal(value: Any) -> bool:
 
 def structure_path(root: Path) -> Path:
     return root.expanduser().resolve() / ".govel" / "structure.json"
-
-
-def new_id(kind: str) -> str:
-    prefixes = {"volume": "VOL", "arc": "ARC", "chapter": "CH", "relation": "REL"}
-    policy = source_model_policy()
-    prefixes.update({spec['idField'].removesuffix('Id'): spec['prefix'] for spec in policy['collections'].values()})
-    prefixes['value'] = policy['valueIdPrefix']
-    prefixes['planning_candidate'] = policy['planningCandidates']['idPrefix']
-    prefixes['author_decision'] = policy['authorDecisions']['idPrefix']
-    prefixes['pair'] = policy['pairClassification']['idPrefix']
-    prefix = prefixes.get(kind, kind.upper())
-    return f"{prefix}-{uuid.uuid4().hex[:12].upper()}"
 
 
 def canonical_json(data: Any) -> str:
@@ -165,8 +144,8 @@ def validate_structure(data: dict) -> None:
             errors.append({"code": "DUPLICATE_ID", "path": name, "id": duplicate})
         pattern = ID_PATTERNS[kind]
         for item in items:
-            item_id = str(item.get(field, ""))
-            if not pattern.fullmatch(item_id):
+            item_id = item.get(field)
+            if not isinstance(item_id, str) or not pattern.fullmatch(item_id):
                 detail = {"code": "INVALID_ID", "path": name, "id": item_id, "expectedPattern": pattern.pattern}
                 if name == 'entities':
                     from .entity_registry import PREFIX_BY_TYPE
@@ -174,9 +153,13 @@ def validate_structure(data: dict) -> None:
                     detail.update(entityType=entity_type, generatedPrefix=PREFIX_BY_TYPE.get(entity_type) if isinstance(entity_type, str) else None,
                                   guidance='使用实体创建预览自动分配 ID；源批量新增可省略 ID 或使用 $临时引用。')
                 errors.append(detail)
+                continue
             if item_id in all_ids:
                 errors.append({"code": "GLOBAL_ID_COLLISION", "id": item_id, "paths": [all_ids[item_id], name]})
             all_ids[item_id] = name
+
+    if errors:
+        raise StructureError('STRUCTURE_INVALID', 'structure validation failed', {'errors': errors})
 
     volumes = {v.get("volumeId") for v in data.get("volumes", [])}
     arcs = {a.get("arcId") for a in data.get("arcs", [])}
@@ -250,6 +233,9 @@ def validate_structure(data: dict) -> None:
         entity_id = entity.get("entityId")
         if entity.get("entityType") not in ENTITY_TYPES:
             errors.append({"code": "INVALID_ENTITY_TYPE", "entityId": entity_id})
+        elif not identity_pattern(entity['entityType']).fullmatch(entity_id):
+            errors.append({'code': 'ENTITY_ID_TYPE_MISMATCH', 'entityId': entity_id,
+                           'entityType': entity['entityType']})
         ordinal = entity.get("timeOrdinal")
         if ordinal is not None and not is_time_ordinal(ordinal):
             errors.append({"code": "INVALID_TIME_ORDINAL", "entityId": entity_id, "value": ordinal})
@@ -278,11 +264,7 @@ def validate_structure(data: dict) -> None:
         if reference.get("sourceId") not in all_ids or reference.get("targetId") not in all_ids:
             errors.append({"code": "DANGLING_REFERENCE", "reference": reference})
             continue
-        # 边方向固定「章 → 实体」，就在写入边界上校验。消费者都把 `sourceId` 当章读
-        # （`task_prepare` 的章节范围、`impact_analysis` 的 staleCandidates），反过来的边
-        # 会被静默忽略，或把实体/卷 ID 当成章节候选写进影响报告；靠每个使用点自行
-        # 防御既易漏（此前 `entity_change_impact` 就没有 `CH-` 过滤），也无法阻止导入器
-        # 把僵尸反向边写进真源。§ CHANGELOG 机制版本 31「章→实体边归故事线」。
+        # References express chapter → entity scope; consumers trust this direction.
         if reference.get("sourceId") not in chapters:
             errors.append({"code": "REFERENCE_SOURCE_NOT_CHAPTER", "reference": reference})
         if reference.get("targetId") not in entities:

@@ -49,12 +49,12 @@ class TaskExecutionTests(unittest.TestCase):
     def test_task_inputs_reach_model_context_and_pov_is_not_bypassed(self):
         result = call_operation('task.execute', self.root, {
             'task': 'editor', 'chapterId': self.chapter, 'authorization': 'read',
-            'povCharacter': 'C-TEST-ALPHA', 'chapterGoal': '关系推进', 'knowledgeMode': 'curated'})
+            'povCharacter': 'character-TEST-ALPHA', 'chapterGoal': '关系推进', 'knowledgeMode': 'curated'})
         prepared = next(row['result'] for row in result['executed'] if row['operation'] == 'task.prepare')
-        self.assertEqual(prepared['scope']['povCharacter'], 'C-TEST-ALPHA')
+        self.assertEqual(prepared['scope']['povCharacter'], 'character-TEST-ALPHA')
         if prepared['modelContext'] is not None:
             self.assertEqual(prepared['modelContext']['task'], 'editor')
-            self.assertEqual(prepared['modelContext']['pov'], 'C-TEST-ALPHA')
+            self.assertEqual(prepared['modelContext']['pov'], 'character-TEST-ALPHA')
         self.assertFalse(any(row['operation'].startswith('query.') for row in result['executed']))
         self.assertTrue(any('POV' in row['reason'] for row in result['skipped']))
 

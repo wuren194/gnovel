@@ -31,12 +31,12 @@ class SourceContextTests(unittest.TestCase):
 
     def test_station_context_routes_to_bounded_source_queries(self):
         context = build_continuation_context(self.root, self.cid, task_type='writer',
-                                             pov_character='C-ALPHA', view='station', read_only=True)
+                                             pov_character='character-ALPHA', view='station', read_only=True)
         source = context['sourceContext']
         self.assertTrue(source['planReady'])
         self.assertEqual(source['planQuery']['tool'], 'query_source_chapter_plan')
         self.assertEqual(source['contentQuery']['selection'],
-                         {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA'],
+                         {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA'],
                           'unknownTime': 'exclude', 'asOf': None})
         self.assertEqual(source['coverage']['perspectiveTime']['status'], 'unavailable')
         self.assertFalse(source['coverage']['contentInjected'])
@@ -46,25 +46,25 @@ class SourceContextTests(unittest.TestCase):
     def test_prepared_pov_reads_only_beliefs_available_at_chapter_start(self):
         from scripts.core.source_query import query_source
         from scripts.core.source_reading import source_materials
-        self.chapter['storyTimeStartId'] = 'TA-START'
-        for suffix, period in [('NOW', {'fromId': 'TA-START'}),
-                               ('FUTURE', {'fromId': 'TA-LATER'}),
-                               ('UNRESOLVED', {'fromId': 'TA-UNKNOWN'})]:
-            self.source['fragments'].append({'fragmentId': 'SF-KNOW-' + suffix,
-                'ownerId': 'C-ALPHA', 'text': '认知材料-' + suffix, 'order': 1,
-                'contentRole': 'belief', 'perspectiveId': 'C-ALPHA',
-                'contentBindings': ['AT-LIFE'], 'validDuring': period,
+        self.chapter['storyTimeStartId'] = 'time-START'
+        for suffix, period in [('NOW', {'fromId': 'time-START'}),
+                               ('FUTURE', {'fromId': 'time-LATER'}),
+                               ('UNRESOLVED', {'fromId': 'time-UNKNOWN'})]:
+            self.source['fragments'].append({'fragmentId': 'belief-KNOW-' + suffix,
+                'ownerId': 'character-ALPHA', 'text': '认知材料-' + suffix, 'order': 1,
+                'contentRole': 'belief', 'perspectiveId': 'character-ALPHA',
+                'contentBindings': ['attribute-LIFE'], 'validDuring': period,
                 'sourceRefs': [{'note': 'AUTHOR-ONLY-EXPLANATION'}]})
         self.save()
         context = build_continuation_context(self.root, self.cid, task_type='writer',
-                                             pov_character='C-ALPHA', view='station', read_only=True)
+                                             pov_character='character-ALPHA', view='station', read_only=True)
         query = context['sourceContext']['contentQuery']
         result = query_source(self.root, selection=query['selection'], view='detail')
-        self.assertEqual([row['id'] for row in result['items']], ['SF-KNOW-NOW'])
+        self.assertEqual([row['id'] for row in result['items']], ['belief-KNOW-NOW'])
         self.assertEqual(result['coverage']['unknownTimeCount'], 1)
         self.assertEqual(result['coverage']['excludedByTimeCount'], 2)
         chunks, coverage = source_materials(self.root, query,
-            {'readingScope': {'povCharacter': 'C-ALPHA'}}, 0)
+            {'readingScope': {'povCharacter': 'character-ALPHA'}}, 0)
         text = '\n'.join(row['text'] for row in chunks)
         self.assertIn('认知材料-NOW', text)
         for hidden in ('FUTURE', 'UNRESOLVED', 'AUTHOR-ONLY-EXPLANATION'):
@@ -73,45 +73,45 @@ class SourceContextTests(unittest.TestCase):
 
     def test_undated_pov_keeps_unbounded_beliefs_without_changing_author_reads(self):
         from scripts.core.source_query import query_source
-        self.source['fragments'].append({'fragmentId': 'SF-FUTURE-KNOWLEDGE',
-            'ownerId': 'C-ALPHA', 'text': '未来才得知的钥匙位置。', 'order': 1,
-            'contentRole': 'belief', 'perspectiveId': 'C-ALPHA',
-            'contentBindings': ['AT-LIFE'], 'validDuring': {'fromId': 'TA-LATER'}})
-        self.source['fragments'].append({'fragmentId': 'SF-UNBOUNDED-KNOWLEDGE',
-            'ownerId': 'C-ALPHA', 'text': '他记得自己保管着门房钥匙。', 'order': 2,
-            'contentRole': 'belief', 'perspectiveId': 'C-ALPHA', 'contentBindings': ['AT-LIFE']})
+        self.source['fragments'].append({'fragmentId': 'belief-FUTURE-KNOWLEDGE',
+            'ownerId': 'character-ALPHA', 'text': '未来才得知的钥匙位置。', 'order': 1,
+            'contentRole': 'belief', 'perspectiveId': 'character-ALPHA',
+            'contentBindings': ['attribute-LIFE'], 'validDuring': {'fromId': 'time-LATER'}})
+        self.source['fragments'].append({'fragmentId': 'belief-UNBOUNDED-KNOWLEDGE',
+            'ownerId': 'character-ALPHA', 'text': '他记得自己保管着门房钥匙。', 'order': 2,
+            'contentRole': 'belief', 'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-LIFE']})
         self.save()
         context = build_continuation_context(self.root, self.cid, task_type='writer',
-                                             pov_character='C-ALPHA', view='station', read_only=True)
+                                             pov_character='character-ALPHA', view='station', read_only=True)
         source = context['sourceContext']
         result = query_source(self.root, selection=source['contentQuery']['selection'], view='detail')
-        self.assertEqual([row['id'] for row in result['items']], ['SF-UNBOUNDED-KNOWLEDGE'])
+        self.assertEqual([row['id'] for row in result['items']], ['belief-UNBOUNDED-KNOWLEDGE'])
         self.assertEqual(result['coverage']['unknownTimeCount'], 1)
         self.assertEqual(result['coverage']['temporalScope'], 'undetermined')
         self.assertTrue(source['coverage']['perspectiveTime']['timeLimitedBeliefsWithheld'])
-        author = query_source(self.root, selection={'ownerIds': ['C-ALPHA']}, view='detail')
-        self.assertIn('SF-FUTURE-KNOWLEDGE', [row['id'] for row in author['items']])
+        author = query_source(self.root, selection={'ownerIds': ['character-ALPHA']}, view='detail')
+        self.assertIn('belief-FUTURE-KNOWLEDGE', [row['id'] for row in author['items']])
 
     def test_pov_occurrence_window_uses_proven_validity_without_inventing_a_date(self):
         from scripts.core.source_query import query_source
         for number in (3, 5, 8, 12):
-            self.source['entities'].append({'entityId': f'TA-DAY{number}', 'entityType': 'time_anchor',
+            self.source['entities'].append({'entityId': f'time-DAY{number}', 'entityType': 'time_anchor',
                                            'name': f'第{number}天', 'timeOrdinal': number})
-        self.source['entities'].append({'entityId': 'TA-WINDOW', 'entityType': 'time_anchor',
-            'name': '抵达时点', 'timeSpec': {'kind': 'range', 'afterId': 'TA-DAY3', 'beforeId': 'TA-DAY5'}})
-        self.chapter['storyTimeStartId'] = 'TA-WINDOW'
-        self.source['fragments'].append({'fragmentId': 'SF-TIMED-BELIEF',
-            'ownerId': 'C-ALPHA', 'text': '他认为门房钥匙放在抽屉里。', 'order': 1,
-            'contentRole': 'belief', 'perspectiveId': 'C-ALPHA', 'contentBindings': ['AT-LIFE'],
-            'validDuring': {'fromId': 'TA-START', 'toId': 'TA-LATER'}})
-        for after_id, before_id, expected in [('TA-DAY3', 'TA-DAY5', 'inside'),
-                                             ('TA-DAY8', 'TA-DAY12', 'unknown'),
-                                             ('TA-LATER', 'TA-DAY12', 'outside')]:
+        self.source['entities'].append({'entityId': 'time-WINDOW', 'entityType': 'time_anchor',
+            'name': '抵达时点', 'timeSpec': {'kind': 'range', 'afterId': 'time-DAY3', 'beforeId': 'time-DAY5'}})
+        self.chapter['storyTimeStartId'] = 'time-WINDOW'
+        self.source['fragments'].append({'fragmentId': 'belief-TIMED-BELIEF',
+            'ownerId': 'character-ALPHA', 'text': '他认为门房钥匙放在抽屉里。', 'order': 1,
+            'contentRole': 'belief', 'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-LIFE'],
+            'validDuring': {'fromId': 'time-START', 'toId': 'time-LATER'}})
+        for after_id, before_id, expected in [('time-DAY3', 'time-DAY5', 'inside'),
+                                             ('time-DAY8', 'time-DAY12', 'unknown'),
+                                             ('time-LATER', 'time-DAY12', 'outside')]:
             with self.subTest(expected=expected):
                 self.source['entities'][-1]['timeSpec'].update(afterId=after_id, beforeId=before_id)
                 self.save()
                 context = build_continuation_context(self.root, self.cid, task_type='writer',
-                    pov_character='C-ALPHA', view='station', read_only=True)
+                    pov_character='character-ALPHA', view='station', read_only=True)
                 selection = context['sourceContext']['contentQuery']['selection']
                 result = query_source(self.root, selection=selection, view='detail')
                 self.assertEqual(bool(result['items']), expected == 'inside')
@@ -123,22 +123,22 @@ class SourceContextTests(unittest.TestCase):
         from scripts.core.source_model import SourceIndex
         from scripts.core.source_selection import time_match
         self.source['entities'].extend([
-            {'entityId': 'TA-RELSTART', 'entityType': 'time_anchor', 'name': '未定开始'},
-            {'entityId': 'TA-RELEND', 'entityType': 'time_anchor', 'name': '十天后',
-             'timeSpec': {'kind': 'relative', 'anchorId': 'TA-RELSTART', 'offset': 10}},
-            {'entityId': 'TA-RELMID', 'entityType': 'time_anchor', 'name': '五天后',
-             'timeSpec': {'kind': 'relative', 'anchorId': 'TA-RELSTART', 'offset': 5}}])
+            {'entityId': 'time-RELSTART', 'entityType': 'time_anchor', 'name': '未定开始'},
+            {'entityId': 'time-RELEND', 'entityType': 'time_anchor', 'name': '十天后',
+             'timeSpec': {'kind': 'relative', 'anchorId': 'time-RELSTART', 'offset': 10}},
+            {'entityId': 'time-RELMID', 'entityType': 'time_anchor', 'name': '五天后',
+             'timeSpec': {'kind': 'relative', 'anchorId': 'time-RELSTART', 'offset': 5}}])
         self.save()
-        record = {'validDuring': {'fromId': 'TA-RELSTART', 'toId': 'TA-RELEND'}}
+        record = {'validDuring': {'fromId': 'time-RELSTART', 'toId': 'time-RELEND'}}
         index = SourceIndex.build(self.source)
-        for as_of, expected in [('TA-RELSTART', 'inside'), ('TA-RELMID', 'inside'),
-                                 ('TA-RELEND', 'outside'), ('TA-UNKNOWN', 'unknown')]:
+        for as_of, expected in [('time-RELSTART', 'inside'), ('time-RELMID', 'inside'),
+                                 ('time-RELEND', 'outside'), ('time-UNKNOWN', 'unknown')]:
             with self.subTest(as_of=as_of):
                 self.assertEqual(time_match(index, record, as_of), expected)
-        self.assertEqual(index.time_states['TA-RELMID']['status'], 'unknown')
+        self.assertEqual(index.time_states['time-RELMID']['status'], 'unknown')
         from unittest.mock import patch
         with patch('scripts.core.source_time.time_point_order', side_effect=AssertionError('repeat solve')):
-            self.assertEqual(time_match(index, record, 'TA-RELMID'), 'inside')
+            self.assertEqual(time_match(index, record, 'time-RELMID'), 'inside')
 
     def test_station_context_carries_knowledge_and_dependency_hashes(self):
         from tests.fixtures_knowledge import staged_reference
@@ -153,16 +153,16 @@ class SourceContextTests(unittest.TestCase):
         self.assertTrue(context['dependencyManifest']['sourceHash'])
 
     def test_applicable_required_rule_blocks_context_for_its_action(self):
-        self.source['entities'].append({'entityId': 'RU-CONTEXT', 'entityType': 'rule', 'name': '审校认知',
+        self.source['entities'].append({'entityId': 'rule-CONTEXT', 'entityType': 'rule', 'name': '审校认知',
             'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
                          'scopeIds': [self.source['projectId']], 'actions': ['review'],
-                         'inputIds': ['SF-PLAN']}})
+                         'inputIds': ['plan-PLAN']}})
         self.save()
         context = build_continuation_context(self.root, self.cid, task_type='editor',
                                              view='full', read_only=True)
         self.assertFalse(context['readiness']['ready'])
         self.assertIn('SOURCE_RULES_BLOCKED', context['readiness']['reasons'])
-        self.assertEqual(context['sourceContext']['ruleSummary']['blockingRuleIds'], ['RU-CONTEXT'])
+        self.assertEqual(context['sourceContext']['ruleSummary']['blockingRuleIds'], ['rule-CONTEXT'])
 
 
 if __name__ == '__main__':

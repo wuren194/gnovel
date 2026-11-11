@@ -55,6 +55,15 @@ def dependency_edges(source: dict) -> list[tuple[str, str, str]]:
     for fid, fragment in index.fragments.items():
         edges.extend((target, fid, 'depends_on') for target in fragment.get('dependsOn', []))
         edges.extend((target, fid, 'content_binding') for target in fragment['contentBindings'])
+        cognition = fragment.get('cognition')
+        if cognition:
+            edges.append((cognition['holderId'], fid, 'cognition_holder'))
+            edges.append((cognition['targetId'], fid, 'cognition_target'))
+            edges.extend((target, fid, 'cognition_basis') for target in cognition['basisIds'])
+            if cognition['acquiredAtId']:
+                edges.append((cognition['acquiredAtId'], fid, 'cognition_acquisition'))
+    for pool in source.get('recallPools', []):
+        edges.extend((facet['fragmentId'], pool['poolId'], 'recall_facet') for facet in pool['facets'])
     for reference in source.get('references', []):
         edges.append((reference['targetId'], reference['sourceId'], 'chapter_reference'))
     for collection, identity, fields in (
@@ -80,6 +89,11 @@ def dependency_edges(source: dict) -> list[tuple[str, str, str]]:
     for relation in source.get('relations', []):
         for endpoint in ('fromEntity', 'toEntity'):
             edges.append((relation['relationId'], relation[endpoint], 'relation_endpoint'))
+        edges.extend((rid, relation['relationId'], 'relation_basis') for rid in relation.get('basisIds', []))
+    for entity in source['entities']:
+        for designation in entity.get('designations', []):
+            edges.extend((rid, entity['entityId'], 'designation_time')
+                         for rid in designation['validDuring'].values() if rid is not None)
     for record_id, record in index.records.items():
         period = record.get('validDuring') or {}
         for anchor in period.values():

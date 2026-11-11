@@ -159,7 +159,7 @@ class DocumentedCommandTests(unittest.TestCase):
         text = ('python3 scripts/novelctl.py project doctor\n'
                 'python3 scripts/other.py\n'
                 'python3 scripts/novelctl.py project \\\n'
-                '  candidate list-versions --chapter-id CH-1\n'
+                '  candidate list-versions --chapter-id chapter-1\n'
                 '`novelctl project structure` then `novelctl project workflow`\n')
         self.assertEqual(list(documented_invocations(text)),
                          [(1, 'project doctor'), (3, 'project candidate list-versions'),

@@ -17,7 +17,7 @@ from scripts.core.project import continuation_policy
 from scripts.core.settings import settings_schema
 from scripts.core.structure_store import load_structure, save_structure
 from scripts.core.task_prepare import prepare_task
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import review_ready_project
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +30,7 @@ class TaskPrepareTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root, chapter_count=2)
+        self.fixture = create_current_project(self.root, chapter_count=2)
         self.chapter_id = self.fixture["chapterIds"][0]
 
     def codes(self, task="writer", **kwargs):
@@ -40,10 +40,10 @@ class TaskPrepareTests(unittest.TestCase):
     def fill_source(self, entity_id=None):
         entity_id = entity_id or self.fixture['locationId']
         source = load_structure(self.root)
-        source['fieldDefinitions'].append({'fieldId': 'FD-PREPARE-DETAIL', 'key': 'location.detail', 'label': '地点详情',
+        source['fieldDefinitions'].append({'fieldId': 'field-PREPARE-DETAIL', 'key': 'location.detail', 'label': '地点详情',
                                           'valueType': 'text', 'appliesTo': ['location']})
-        source['attributes'].append({'attributeId': 'AT-PREPARE-DETAIL', 'ownerId': entity_id, 'fieldId': 'FD-PREPARE-DETAIL',
-                                     'values': [{'valueId': 'FV-PREPARE-DETAIL', 'value': '仓库位于东侧'}]})
+        source['attributes'].append({'attributeId': 'attribute-PREPARE-DETAIL', 'ownerId': entity_id, 'fieldId': 'field-PREPARE-DETAIL',
+                                     'values': [{'valueId': 'value-PREPARE-DETAIL', 'value': '仓库位于东侧'}]})
         source['references'].append({'sourceId': self.chapter_id, 'targetId': entity_id, 'kind': 'located_in'})
         write_json(self.root/'.govel/structure.json', source)
         return source
@@ -76,11 +76,11 @@ class TaskPrepareTests(unittest.TestCase):
 
     def test_chapter_references_scope_current_entities(self):
         source = load_structure(self.root)
-        source['entities'].append({'entityId': 'C-NEW', 'entityType': 'character', 'name': '新角色', 'aliases': [], 'status': 'active'})
-        source['references'].append({'sourceId': self.chapter_id, 'targetId': 'C-NEW', 'kind': 'features'})
+        source['entities'].append({'entityId': 'character-NEW', 'entityType': 'character', 'name': '新角色', 'aliases': [], 'status': 'active'})
+        source['references'].append({'sourceId': self.chapter_id, 'targetId': 'character-NEW', 'kind': 'features'})
         write_json(self.root/'.govel/structure.json', source)
         report, _ = self.codes('writer')
-        self.assertIn('C-NEW', report['scope']['entities'])
+        self.assertIn('character-NEW', report['scope']['entities'])
         self.assertTrue(report['reading']['sourceReads'])
 
     def test_context_status_is_reported_and_flags_pov_scoping(self):
@@ -162,11 +162,11 @@ class TaskPrepareTests(unittest.TestCase):
     def test_unreferenced_entity_does_not_expand_chapter_scope(self):
         self.fill_source()
         source = load_structure(self.root)
-        source['entities'].append({'entityId': 'C-UNRELATED', 'entityType': 'character', 'name': '路人', 'aliases': [], 'status': 'active'})
+        source['entities'].append({'entityId': 'character-UNRELATED', 'entityType': 'character', 'name': '路人', 'aliases': [], 'status': 'active'})
         write_json(self.root/'.govel/structure.json', source)
         report, _ = self.codes('writer')
         self.assertIn(self.fixture['locationId'], report['scope']['entities'])
-        self.assertNotIn('C-UNRELATED', report['scope']['entities'])
+        self.assertNotIn('character-UNRELATED', report['scope']['entities'])
 
     def test_source_read_credential_refuses_changed_source(self):
         from scripts.core.operations import call_operation

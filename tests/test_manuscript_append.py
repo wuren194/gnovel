@@ -277,7 +277,7 @@ class ManuscriptAppendTests(unittest.TestCase):
         link.symlink_to(self.source)
         self.assert_code('IMPORT_SOURCE_INVALID', self.preview, source=str(link))
         self.assert_code('PLACEMENT_ARGUMENT_INVALID', self.preview, placement={'scope': 'project'})
-        self.assert_code('VOLUME_NOT_FOUND', self.preview, volumeId='VOL-MISSING')
+        self.assert_code('VOLUME_NOT_FOUND', self.preview, volumeId='volume-MISSING')
         self.assert_code('APPEND_SOURCE_OVERLAP', self.preview, source=str(self.root))
         self.assert_code('APPEND_SOURCE_OVERLAP', self.preview, source=str(self.root / '正文'))
         self.assert_code('APPEND_SOURCE_OVERLAP', self.preview, source=str(self.root / '.govel'))

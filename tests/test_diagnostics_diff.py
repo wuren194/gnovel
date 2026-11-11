@@ -144,7 +144,7 @@ class DiagnosticsDiffCommandTests(unittest.TestCase):
         spare = self.root / "工作台" / "spare.json"
         write_json(spare, {"findings": []})
         result = cli("project", "workflow", "diagnostics-diff", "--project-root", str(self.root),
-                     "--chapter-id", "CH-999", "--current", str(spare))
+                     "--chapter-id", "chapter-999", "--current", str(spare))
         self.assertFalse(result["ok"])
         self.assertEqual(result["code"], "DIAGNOSTICS_BASELINE_MISSING")
 
@@ -160,7 +160,7 @@ class DiagnosticsDiffCommandTests(unittest.TestCase):
         spare = self.root / "工作台" / "spare.json"
         write_json(spare, {"findings": []})
         result = cli("project", "workflow", "diagnostics-diff", "--project-root", str(self.root),
-                     "--chapter-id", "CH-999", "--current", str(spare))
+                     "--chapter-id", "chapter-999", "--current", str(spare))
         self.assertFalse(result["ok"])
         self.assertEqual(result["code"], "DIAGNOSTICS_BASELINE_MISSING")
 
@@ -227,7 +227,7 @@ class ChapterStatusBoardTests(unittest.TestCase):
 
     def test_unknown_chapter_rejected(self):
         result = cli("project", "workflow", "chapter-status", "--project-root", str(self.root),
-                     "--chapter-id", "CH-404")
+                     "--chapter-id", "chapter-404")
         self.assertFalse(result["ok"])
         self.assertEqual(result["code"], "CHAPTER_NOT_FOUND")
 

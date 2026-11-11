@@ -38,13 +38,13 @@ class MaintenanceResumeTests(unittest.TestCase):
         self.document = self.root / '工作台/方案.md'
         self.document.write_text('Z-1：统一身高。\nZ-2：调整经历。')
         self.checklist = {'source': {'path': '工作台/方案.md', 'sha256': digest(self.document.read_bytes())}, 'items': [
-            {'itemId': 'Z-1', 'quote': 'Z-1：统一身高。', 'recordIds': ['SF-HEIGHT'], 'operationIds': []},
-            {'itemId': 'Z-2', 'quote': 'Z-2：调整经历。', 'recordIds': ['SF-LIFE'], 'operationIds': []}]}
+            {'itemId': 'Z-1', 'quote': 'Z-1：统一身高。', 'recordIds': ['fact-HEIGHT'], 'operationIds': []},
+            {'itemId': 'Z-2', 'quote': 'Z-2：调整经历。', 'recordIds': ['fact-LIFE'], 'operationIds': []}]}
         write_json(self.root / '工作台/清单.json', self.checklist)
         self.reference = {'checklistPath': '工作台/清单.json', 'itemIds': ['Z-1', 'Z-2']}
         self.args = {'sourceHash': snapshot_hash(load_structure(self.root)), 'patches': [
-            {'recordId': 'SF-HEIGHT', 'replacements': [{'old': '一米九', 'new': '一米八'}], 'reason': '方案 Z-1'},
-            {'recordId': 'SF-LIFE', 'replacements': [{'old': '独自', 'new': '与同伴一起'}], 'reason': '方案 Z-2'}],
+            {'recordId': 'fact-HEIGHT', 'replacements': [{'old': '一米九', 'new': '一米八'}], 'reason': '方案 Z-1'},
+            {'recordId': 'fact-LIFE', 'replacements': [{'old': '独自', 'new': '与同伴一起'}], 'reason': '方案 Z-2'}],
             'approvalActor': 'author', 'approvalEvidence': '作者要求按定稿方案修订', 'requestId': 'batch-1',
             'maintenanceReference': self.reference}
 
@@ -217,8 +217,8 @@ class MaintenanceResumeTests(unittest.TestCase):
 
     def test_generic_source_and_content_proposal_share_item_linkage(self):
         source = load_structure(self.root)
-        record = deepcopy(source['fragments'][0]); record['fragmentId'] = 'SF-PLAN'; record['contentRole'] = 'plan'; record['order'] = 99
-        self.checklist['items'][0]['recordIds'] = ['SF-PLAN']
+        record = deepcopy(source['fragments'][0]); record['fragmentId'] = 'plan-PLAN'; record['contentRole'] = 'plan'; record['order'] = 99
+        self.checklist['items'][0]['recordIds'] = ['plan-PLAN']
         write_json(self.root / '工作台/清单.json', self.checklist)
         args = dict(changes=[{'action': 'put', 'collection': 'fragments', 'record': record}],
                     requestId='plan-1', baseRevision=source['revision'], reason='方案 Z-1',
@@ -226,10 +226,10 @@ class MaintenanceResumeTests(unittest.TestCase):
         plan = preview_source_change(self.root, **args); self.commit(plan)
         self.assertEqual(preview_source_change(self.root, **args)['operationState'], 'committed')
         self.assertEqual(self.check()['summary']['submittedItemCount'], 1)
-        resolved = resolve_content_target(self.root, recordId='SF-LIFE', kind='fact')
+        resolved = resolve_content_target(self.root, recordId='fact-LIFE', kind='fact')
         new = deepcopy(resolved['record']); new['text'] += '后来离开。'
         plan = preview_content_change(self.root, sessionRef=resolved['sessionRef'], expectedOldRecord=resolved['record'],
-            newRecord=new, reason='方案 Z-2', evidence=[{'fragmentId': 'SF-LIFE', 'quote': resolved['record']['text']}],
+            newRecord=new, reason='方案 Z-2', evidence=[{'fragmentId': 'fact-LIFE', 'quote': resolved['record']['text']}],
             approvalActor='author', approvalEvidence='明确授权',
             maintenanceReference={'checklistPath': '工作台/清单.json', 'itemIds': ['Z-2']})
         self.commit(plan)
@@ -254,7 +254,7 @@ class MaintenanceResumeTests(unittest.TestCase):
             for item in self.check()['items']:
                 for row in item['currentReviews']:
                     self.assertEqual(row['status'], expected[row['recordId']])
-        self.assertEqual(expected['SF-HEIGHT'], 'stale')
+        self.assertEqual(expected['fact-HEIGHT'], 'stale')
 
     def test_cli_and_mcp_preparation_agree(self):
         from scripts.mcp_server import handle

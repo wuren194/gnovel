@@ -53,7 +53,7 @@ class SemanticViewTests(unittest.TestCase):
     def build(self, size='small', task='planner', **kwargs):
         chapter, goal = fixture(self.root, size)
         return builder.build_station_context(self.root, chapter, task_type=task, chapter_goal=goal,
-                                             pov_character='C-ALPHA', view='station', read_only=True, **kwargs)
+                                             pov_character='character-ALPHA', view='station', read_only=True, **kwargs)
 
     def test_all_sizes_and_stations_preserve_semantics_and_machine_evidence(self):
         for size in ('small', 'medium', 'edge'):
@@ -159,7 +159,7 @@ class SemanticViewTests(unittest.TestCase):
         source = json.loads((self.root / '.govel/structure.json').read_text())
         source['entities'][0]['summary'] += '依赖已变化。'
         save_context_source(self.root, source)
-        new = builder.build_station_context(self.root, chapter, chapter_goal=goal, pov_character='C-ALPHA',
+        new = builder.build_station_context(self.root, chapter, chapter_goal=goal, pov_character='character-ALPHA',
                                             view='station', read_only=True)
         self.assertFalse(assess_context(new, expectedHash=ctx['contextHash'])['ready'])
 
@@ -167,7 +167,7 @@ class SemanticViewTests(unittest.TestCase):
         for task in ('planner', 'writer', 'editor'):
             chapter, goal = fixture(self.root, 'medium')
             args = {'projectRoot': str(self.root), 'chapterId': chapter, 'taskType': task,
-                    'chapterGoal': goal, 'povCharacter': 'C-ALPHA'}
+                    'chapterGoal': goal, 'povCharacter': 'character-ALPHA'}
             request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
                        'params': {'name': 'read_continuation_context', 'arguments': args}}
             result = handle(request)['result']
@@ -182,7 +182,7 @@ class SemanticViewTests(unittest.TestCase):
             proof = get(self.root, result['_meta']['contextProofRef'], kind='context-proof')
             self.assertTrue(proof['dependencyManifest']['sourceHash'])
             ctx = builder.build_station_context(self.root, chapter, task_type=task, chapter_goal=goal,
-                                                pov_character='C-ALPHA', view='station', read_only=True)
+                                                pov_character='character-ALPHA', view='station', read_only=True)
             assert_semantics(self, ctx, model['modelContext'])
             request['params']['arguments']['view'] = 'station'
             debug = handle(request)['result']
@@ -209,30 +209,30 @@ class SemanticViewTests(unittest.TestCase):
         chapter, goal = fixture(self.root, 'small')
         for task in ('planner', 'writer', 'editor'):
             cli = run_cli('task', 'context', '--project-root', str(self.root), '--chapter-id', chapter,
-                          '--task-type', task, '--pov-character', 'C-ALPHA', '--chapter-goal', goal, '--view', 'model')
+                          '--task-type', task, '--pov-character', 'character-ALPHA', '--chapter-goal', goal, '--view', 'model')
             direct_cli = run_cli('context', '--project-root', str(self.root), '--chapter-id', chapter,
-                                 '--task-type', task, '--pov-character', 'C-ALPHA', '--chapter-goal', goal, '--view', 'model')
+                                 '--task-type', task, '--pov-character', 'character-ALPHA', '--chapter-goal', goal, '--view', 'model')
             args = {'projectRoot': str(self.root), 'chapterId': chapter, 'taskType': task,
-                    'chapterGoal': goal, 'povCharacter': 'C-ALPHA', 'view': 'model'}
+                    'chapterGoal': goal, 'povCharacter': 'character-ALPHA', 'view': 'model'}
             result = handle({'id': 1, 'method': 'tools/call', 'params': {
                 'name': 'read_continuation_context', 'arguments': args}})['result']
             self.assertEqual(cli, direct_cli)
             self.assertEqual(cli, result['structuredContent'])
             self.assertIn('contextProofRef', result['_meta'])
         prepare_args = {'projectRoot': str(self.root), 'chapterId': chapter, 'task': 'planner',
-                        'chapterGoal': goal, 'povCharacter': 'C-ALPHA', 'view': 'model'}
+                        'chapterGoal': goal, 'povCharacter': 'character-ALPHA', 'view': 'model'}
         result = handle({'id': 1, 'method': 'tools/call', 'params': {
             'name': 'prepare_task', 'arguments': prepare_args}})['result']
         self.assertFalse(result['isError'])
         self.assertIn('contextProofRef', result['_meta'])
         prepared = run_cli('prepare', '--project-root', str(self.root), '--chapter-id', chapter,
-                           '--task', 'planner', '--chapter-goal', goal, '--pov-character', 'C-ALPHA', '--view', 'model')
+                           '--task', 'planner', '--chapter-goal', goal, '--pov-character', 'character-ALPHA', '--view', 'model')
         self.assertEqual(prepared['modelContext'], result['structuredContent']['modelContext'])
 
     def test_discovered_reads_preserve_model_view_and_private_proof(self):
         from scripts.core.transport_cache import get
         chapter, goal = fixture(self.root, 'small')
-        base = {'chapterId': chapter, 'chapterGoal': goal, 'povCharacter': 'C-ALPHA'}
+        base = {'chapterId': chapter, 'chapterGoal': goal, 'povCharacter': 'character-ALPHA'}
         for operation, name, extra in (('context.read', 'read_continuation_context', {'taskType': 'planner'}),
                                         ('task.prepare', 'prepare_task', {'task': 'planner'})):
             for view in (None, 'model', 'station'):
@@ -284,8 +284,8 @@ class SemanticViewTests(unittest.TestCase):
     def test_optional_prose_absence_and_empty_knowledge_are_preserved(self):
         ctx = self.build('edge')
         (self.root / '正文/甲—城门🌙.md').unlink()
-        absent = builder.build_station_context(self.root, 'CH-AAA', task_type='writer',
-                                               chapter_goal='completely-unrelated-query', pov_character='C-ALPHA',
+        absent = builder.build_station_context(self.root, 'chapter-AAA', task_type='writer',
+                                               chapter_goal='completely-unrelated-query', pov_character='character-ALPHA',
                                                view='station', read_only=True)
         model, proof = semantic_view(absent)
         self.assertEqual(model['referenceKnowledge'], [])

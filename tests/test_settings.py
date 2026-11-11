@@ -42,30 +42,30 @@ class SourceSettingsTests(unittest.TestCase):
     def test_source_selectors_and_field_projection_are_stable(self):
         self.source['entities'][0]['aliases'] = ['守门人']
         write_json(self.root/'.govel/structure.json', self.source)
-        for selector in ('C-ALPHA', '人物甲', '守门人'):
+        for selector in ('character-ALPHA', '人物甲', '守门人'):
             with self.subTest(selector=selector):
                 report = query_settings(self.root, selector=selector, fields=['肤色'])
                 self.assertEqual(report['matchedCount'], 1)
                 row = report['matches'][0]
-                self.assertEqual(row['entityId'], 'C-ALPHA')
+                self.assertEqual(row['entityId'], 'character-ALPHA')
                 self.assertEqual(row['valueSource'], '.govel/structure.json')
-                self.assertEqual(row['fields']['appearance.skin'], '白皙\nsource-fragment:SF-LOOK')
-                self.assertEqual([f['id'] for f in row['fragments']], ['SF-LOOK'])
+                self.assertEqual(row['fields']['appearance.skin'], '白皙\nsource-fragment:fact-LOOK')
+                self.assertEqual([f['id'] for f in row['fragments']], ['fact-LOOK'])
 
     def test_field_ids_keys_and_labels_resolve_identically(self):
-        rows = [query_settings(self.root, selector='C-ALPHA', fields=[field])['matches']
-                for field in ('FD-HEIGHT', 'appearance.height', '身高')]
+        rows = [query_settings(self.root, selector='character-ALPHA', fields=[field])['matches']
+                for field in ('field-HEIGHT', 'appearance.height', '身高')]
         self.assertEqual(rows[0], rows[1]); self.assertEqual(rows[1], rows[2])
         value = rows[0][0]['fields']['appearance.height']
         self.assertIn('"number":190', value)
         self.assertIn('validDuring', value)
-        self.assertIn('source-fragment:SF-HEIGHT', value)
+        self.assertIn('source-fragment:fact-HEIGHT', value)
 
     def test_exports_do_not_supply_missing_or_changed_field_truth(self):
         path = self.root/'设定/人物设定.md'; path.parent.mkdir()
         path.write_text('# 人物甲\n\n肤色：绿色。\n')
         before = inventory(self.root)
-        result = query_settings(self.root, selector='C-ALPHA', fields=['肤色'])
+        result = query_settings(self.root, selector='character-ALPHA', fields=['肤色'])
         self.assertNotIn('绿色', json.dumps(result, ensure_ascii=False))
         self.assertEqual(inventory(self.root), before)
         source_path = self.root/'.govel/structure.json'; source_path.unlink()
@@ -91,14 +91,14 @@ class SourceSettingsTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'SOURCE_FIELD_SELECTOR_INVALID')
 
     def test_four_dimension_queries_use_registered_definitions(self):
-        result = query_project(self.root, 'attributes', selector='C-ALPHA', field=['肤色'])
-        self.assertEqual(result['items'][0]['fields']['appearance.skin'], '白皙\nsource-fragment:SF-LOOK')
+        result = query_project(self.root, 'attributes', selector='character-ALPHA', field=['肤色'])
+        self.assertEqual(result['items'][0]['fields']['appearance.skin'], '白皙\nsource-fragment:fact-LOOK')
         schema = query_project(self.root, 'attributes', view='schema')
         fields = {row['field']: row['fieldKind'] for row in schema['items']}
         self.assertEqual(fields, {'appearance.height': 'measurement', 'appearance.skin': 'text', 'biography.experience': 'prose'})
 
     def test_cli_query_and_check_return_current_source_results(self):
-        for args, code in ((['show', 'C-ALPHA', '--field', '肤色'], 'SETTINGS_QUERY'), (['check'], 'SETTINGS_CHECKED')):
+        for args, code in ((['show', 'character-ALPHA', '--field', '肤色'], 'SETTINGS_QUERY'), (['check'], 'SETTINGS_CHECKED')):
             result = subprocess.run([sys.executable, str(ROOT/'scripts/novelctl.py'), 'project', 'settings', *args,
                 '--project-root', str(self.root)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

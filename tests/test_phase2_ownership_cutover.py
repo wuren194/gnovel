@@ -110,12 +110,12 @@ def binding_project(root: Path, *, chapter_id: str = fx.CHAPTER_B, state: str = 
     structure["chapters"] = [row]
     structure["chapterArcLinks"] = [{"chapterId": chapter_id, "arcId": fx.ARC_MAIN, "role": "primary",
                                      "weight": 1.0, "phaseId": None, "notes": ""}]
-    structure['fieldDefinitions'] = [{'fieldId': 'FD-BINDING-PLAN', 'key': 'plot.plan', 'label': '章节计划',
+    structure['fieldDefinitions'] = [{'fieldId': 'field-BINDING-PLAN', 'key': 'plot.plan', 'label': '章节计划',
                                      'valueType': 'topic', 'appliesTo': ['chapter']}]
-    structure['attributes'] = [{'attributeId': 'AT-BINDING-PLAN', 'ownerId': chapter_id,
-                               'fieldId': 'FD-BINDING-PLAN', 'values': []}]
-    structure['fragments'] = [{'fragmentId': 'SF-BINDING-PLAN', 'ownerId': chapter_id, 'order': 1,
-                              'contentRole': 'plan', 'contentBindings': ['AT-BINDING-PLAN'],
+    structure['attributes'] = [{'attributeId': 'attribute-BINDING-PLAN', 'ownerId': chapter_id,
+                               'fieldId': 'field-BINDING-PLAN', 'values': []}]
+    structure['fragments'] = [{'fragmentId': 'plan-BINDING-PLAN', 'ownerId': chapter_id, 'order': 1,
+                              'contentRole': 'plan', 'contentBindings': ['attribute-BINDING-PLAN'],
                               'text': '主角核对钥匙来源。', 'chapterContract': {'targetRange': [1, 1000],
                               'mode': 'plot', 'intensityLevel': 1, 'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}}]
     structure["projectId"] = fx.PROJECT_ID
@@ -146,7 +146,7 @@ def review_ready_binding_project(root: Path, *,              chapter_id: str = f
     return load_structure(root)
 
 
-def review_ready_schema5_project(root: Path, *, state: str = "unbound",
+def review_ready_current_project(root: Path, *, state: str = "unbound",
                                  prose: str = NEW_PROSE) -> dict:
     """Current-format review fixture with the same ownership transitions."""
     return review_ready_binding_project(root, state=state, prose=prose)
@@ -841,8 +841,9 @@ class ManagedMoveTests(SyntheticProjectCase):
     def test_e7_pure_locator_move_creates_no_creative_source_impact(self) -> None:
         plan = refactor.preview_relocate_chapter_paths(self.root, chapter_id=fx.CHAPTER_A,
                                                        file_path="正文/搬家.md")
-        self.assertEqual(plan["impact"]["staleCandidates"], [])
-        self.assertEqual(plan["impact"]["approvalInvalidations"], [])
+        frozen = read_json(_operation_paths(self.root, plan['operationId'])[0])
+        self.assertEqual(frozen["impact"]["staleCandidates"], [])
+        self.assertEqual(frozen["impact"]["approvalInvalidations"], [])
 
     def test_e7b_preview_reports_the_whole_ownership_token(self) -> None:
         # 契约 §62：预览必须给出章、旧/新定位符、代次、期望摘要、观测摘要与观测状态。
@@ -1161,10 +1162,10 @@ class Schema5ParityTests(TempRootCase):
     """同一个 current-binding 运行时在 single-source 布局（schema 5）上同样成立。"""
 
     def _project(self, *, state: str = "unbound", prose: str = NEW_PROSE) -> str:
-        structure = review_ready_schema5_project(self.root, state=state, prose=prose)
+        structure = review_ready_current_project(self.root, state=state, prose=prose)
         return structure["chapters"][0]["chapterId"]
 
-    def test_s5_observation_and_move_work_on_schema5(self) -> None:
+    def test_s5_observation_and_move_work_on_current(self) -> None:
         chapter_id = self._project(state="managed", prose=NEW_PROSE)
         self.assertEqual(self.observation(chapter_id)["state"], prose_binding.OWNED_CLEAN)
         plan = refactor.preview_relocate_chapter_paths(self.root, chapter_id=chapter_id,
@@ -1174,7 +1175,7 @@ class Schema5ParityTests(TempRootCase):
         self.assertEqual(self.chapter(chapter_id)["filePath"], "正文/搬家.md")
         self.assertTrue(is_current_binding(load_structure(self.root)))
 
-    def test_s5_first_finalization_works_on_schema5(self) -> None:
+    def test_s5_first_finalization_works_on_current(self) -> None:
         chapter_id = self._project()
         self.assertEqual(self.chapter(chapter_id)["proseBinding"]["state"], "unbound")
         finalize_chapter(self.root, chapter_id, skip_title=True,
@@ -1182,7 +1183,7 @@ class Schema5ParityTests(TempRootCase):
         self.assertEqual(self.chapter(chapter_id)["proseBinding"]["state"], "managed")
         self.assertTrue((self.root / self.chapter(chapter_id)["filePath"]).is_file())
 
-    def test_s5_accept_external_preview_works_and_commit_fails_closed_on_schema5(self) -> None:
+    def test_s5_accept_external_preview_works_and_commit_fails_closed_on_current(self) -> None:
         chapter_id = self._project(state="managed", prose=NEW_PROSE)
         body = self.root / self.chapter(chapter_id)["filePath"]
         body.write_text("外部改过\n", encoding="utf-8")

@@ -25,7 +25,7 @@ class EvidenceReferenceTests(unittest.TestCase):
         self.root = Path(temp.name).resolve()
         self.source = source_fixture(self.root)
         base = self.source['fragments'][0]
-        self.rows = [{**deepcopy(base), 'fragmentId': f'SF-EFF{i:03d}', 'text': f'第{i}项明确的测试事实。'} for i in range(40)]
+        self.rows = [{**deepcopy(base), 'fragmentId': f'fact-EFF{i:03d}', 'text': f'第{i}项明确的测试事实。'} for i in range(40)]
         self.source['fragments'] = self.rows
         write_json(self.root / '.govel/structure.json', self.source)
 
@@ -226,9 +226,9 @@ class EvidenceReferenceTests(unittest.TestCase):
     def test_prose_duplicates_cannot_hide_across_batches(self):
         from tests.test_source_evidence import ProseEvidenceTests
         fixture = ProseEvidenceTests(); fixture.setUp(); self.addCleanup(fixture.doCleanups)
-        prepared = call_operation('evidence.prepare', fixture.root, {'kind': 'prose', 'chapterId': 'CH-ALPHA'})
+        prepared = call_operation('evidence.prepare', fixture.root, {'kind': 'prose', 'chapterId': 'chapter-ALPHA'})
         text = prepared['materials'][0]['text']
-        decisions = [{'quote': {'text': text}, 'targetIds': ['AT-HEIGHT'], 'kind': 'depends_on', 'reason': '明确引用'}]
+        decisions = [{'quote': {'text': text}, 'targetIds': ['attribute-HEIGHT'], 'kind': 'depends_on', 'reason': '明确引用'}]
         with self.assertRaises(StructureError):
             call_operation('evidence.pack', fixture.root, {'snapshotRef': prepared['snapshotRef'],
                 'decisions': decisions * 2, 'requestId': 'duplicate-prose', 'maxBytes': 800})
@@ -255,7 +255,7 @@ class EvidenceReferenceTests(unittest.TestCase):
         result = call_operation('evidence.submit', self.root, {'submissionRef': packed['submissionRef']})
         self.assertEqual(result['recordedCount'], 1); self.assertEqual(result['notSelectedCount'], 1)
         self.assertEqual({row['itemId']: row['status'] for row in result['items']},
-                         {'SF-EFF000': 'recorded', 'SF-EFF001': 'not_selected'})
+                         {'fact-EFF000': 'recorded', 'fact-EFF001': 'not_selected'})
 
     def test_snapshot_reference_is_project_bound_and_explicit_snapshot_remains_callable(self):
         prepared = self.prepared(1)

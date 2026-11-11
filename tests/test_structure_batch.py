@@ -1,6 +1,8 @@
 """Batch structure plans: one preview, one commit, one undo, no extra authority."""
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import json
 import subprocess
 import sys
@@ -39,7 +41,7 @@ class StructureBatchTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         StructureCommandTests()._project(self.root)
-        write_json(self.root / ".govel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0",
+        write_json(self.root / ".govel/project.json", {"schemaVersion": current_schema_version(), "workflowVersion": '6.0',
                                                          "projectId": "project-1", "bookName": "测试"})
         data = load_structure(self.root)
         from scripts.core.structure_commands import preview_insert_chapter
@@ -136,7 +138,7 @@ class SingleSourceBatchTests(unittest.TestCase):
             root = Path(temp)
             source_fixture(root)
             with self.assertRaises(StructureError) as ctx:
-                preview_structure_batch(root, steps=[{"op": "update-entity", "selector": "C-ALPHA", "changes": {"name": "新名"}}])
+                preview_structure_batch(root, steps=[{"op": "update-entity", "selector": "character-ALPHA", "changes": {"name": "新名"}}])
             self.assertEqual(ctx.exception.details["stepCode"], "STRUCTURE_BATCH_OPERATION_INVALID")
 
 

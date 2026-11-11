@@ -1,6 +1,8 @@
 """Display chapter codes resolve to stable IDs at the CLI/MCP boundary, never by guessing."""
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import json
 import subprocess
 import sys
@@ -29,7 +31,7 @@ class ChapterReferenceTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         self.data = StructureCommandTests()._project(self.root)
-        write_json(self.root / ".govel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0",
+        write_json(self.root / ".govel/project.json", {"schemaVersion": current_schema_version(), "workflowVersion": '6.0',
                                                          "projectId": "project-1", "bookName": "测试"})
         self.first, self.second = (row["chapterId"] for row in self.data["chapters"])
 

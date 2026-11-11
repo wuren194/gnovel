@@ -29,17 +29,17 @@ class ChapterFactsTests(unittest.TestCase):
         self.cid = source['chapters'][0]['chapterId']
         self.prose_path = self.root / source['chapters'][0]['filePath']
         source['entities'] = [
-            {'entityId': 'C-FACT-OWNER', 'entityType': 'character', 'name': '守门人', 'aliases': [], 'status': 'active'},
-            {'entityId': 'C-FACT-NEW', 'entityType': 'character', 'name': '门房', 'aliases': [], 'status': 'active'},
+            {'entityId': 'character-FACT-OWNER', 'entityType': 'character', 'name': '守门人', 'aliases': [], 'status': 'active'},
+            {'entityId': 'character-FACT-NEW', 'entityType': 'character', 'name': '门房', 'aliases': [], 'status': 'active'},
         ]
         source['fieldDefinitions'] += [
-            {'fieldId': 'FD-FACT-TOPIC', 'key': 'history.gates', 'label': '守门经历', 'valueType': 'topic',
+            {'fieldId': 'field-FACT-TOPIC', 'key': 'history.gates', 'label': '守门经历', 'valueType': 'topic',
              'appliesTo': ['character', 'chapter']},
-            {'fieldId': 'FD-FACT-NUMBER', 'key': 'history.count', 'label': '次数', 'valueType': 'number',
+            {'fieldId': 'field-FACT-NUMBER', 'key': 'history.count', 'label': '次数', 'valueType': 'number',
              'appliesTo': ['character']},
         ]
-        source['attributes'].append({'attributeId': 'AT-FACT-TOPIC', 'ownerId': 'C-FACT-OWNER',
-                                     'fieldId': 'FD-FACT-TOPIC', 'values': []})
+        source['attributes'].append({'attributeId': 'attribute-FACT-TOPIC', 'ownerId': 'character-FACT-OWNER',
+                                     'fieldId': 'field-FACT-TOPIC', 'values': []})
         write_json(self.root / '.govel/structure.json', source)
         _walk_to_review(self.root, self.cid, self.prose)
         finalized = finalize_chapter(self.root, self.cid, skip_title=True,
@@ -51,7 +51,7 @@ class ChapterFactsTests(unittest.TestCase):
                           'reason': '本测试的短篇单章不需要独立全书摘要。'}})
 
     def fact(self, **overrides):
-        return {'ownerId': 'C-FACT-OWNER', 'field': 'history.gates', 'statement': '守门人关闭了城门。',
+        return {'ownerId': 'character-FACT-OWNER', 'field': 'history.gates', 'statement': '守门人关闭了城门。',
                 'quote': '他关上了城门。', 'reason': '正文明确写出关门动作。', **overrides}
 
     def prepare(self, facts=None, request='facts-1'):
@@ -67,7 +67,7 @@ class ChapterFactsTests(unittest.TestCase):
         original = (self.root / '.govel/structure.json').read_bytes()
         report = self.prepare()
         self.assertEqual((self.root / '.govel/structure.json').read_bytes(), original)
-        self.assertEqual(report['facts'][0]['attributeId'], 'AT-FACT-TOPIC')
+        self.assertEqual(report['facts'][0]['attributeId'], 'attribute-FACT-TOPIC')
         self.assertFalse(report['committed'])
         self.assertFalse(report['complete'])
         args = report['nextAction']['arguments']
@@ -96,7 +96,7 @@ class ChapterFactsTests(unittest.TestCase):
         self.assertEqual(len(query_evidence(self.root, chapterId=self.cid)['items']), 1)
 
     def test_new_topic_attribute_allocated_once_and_request_resumes_without_facts(self):
-        facts = [self.fact(ownerId='C-FACT-NEW'), self.fact(ownerId='C-FACT-NEW',
+        facts = [self.fact(ownerId='character-FACT-NEW'), self.fact(ownerId='character-FACT-NEW',
             statement='门房收到钥匙。', quote='他把钥匙交给门房。')]
         report = self.prepare(facts)
         identities = report['facts']
@@ -108,7 +108,7 @@ class ChapterFactsTests(unittest.TestCase):
         self.assertEqual(replay['operationState'], 'committed')
         self.assertEqual(replay['facts'], identities)
         source = load_structure(self.root)
-        self.assertEqual(len([row for row in source['attributes'] if row['ownerId'] == 'C-FACT-NEW']), 1)
+        self.assertEqual(len([row for row in source['attributes'] if row['ownerId'] == 'character-FACT-NEW']), 1)
         self.assertEqual(len([row for row in source['fragments'] if row['fragmentId'] in
                               {item['fragmentId'] for item in identities}]), 2)
         with self.assertRaises(StructureError) as caught:
@@ -142,8 +142,8 @@ class ChapterFactsTests(unittest.TestCase):
     def test_field_owner_dependency_and_quote_are_not_inferred(self):
         cases = [({'field': 'history.count'}, 'CHAPTER_FACTS_TOPIC_REQUIRED'),
                  ({'field': 'invented.field'}, 'CHAPTER_FACTS_FIELD_INVALID'),
-                 ({'ownerId': 'C-UNKNOWN'}, 'CHAPTER_FACTS_OWNER_INVALID'),
-                 ({'dependsOn': ['SF-UNKNOWN']}, 'CHAPTER_FACTS_DEPENDENCY_INVALID'),
+                 ({'ownerId': 'character-UNKNOWN'}, 'CHAPTER_FACTS_OWNER_INVALID'),
+                 ({'dependsOn': ['fact-UNKNOWN']}, 'CHAPTER_FACTS_DEPENDENCY_INVALID'),
                  ({'quote': '正文中没有这句话。'}, 'EVIDENCE_QUOTE_MISSING')]
         original = (self.root / '.govel/structure.json').read_bytes()
         for index, (overrides, code) in enumerate(cases):
@@ -340,7 +340,7 @@ class ChapterFactsTests(unittest.TestCase):
         # budget its complete audit remains accessible through task.snapshot.
         if report.get('responseCompacted'):
             saved = get(self.root, report['reportRef'], kind='authoring-report')
-            self.assertEqual(saved['facts'][0]['fragmentId'][:3], 'SF-')
+            self.assertTrue(saved['facts'][0]['fragmentId'].startswith('fact-'))
             self.assertEqual(report['detailsAction']['operation'], 'task.snapshot')
         self.commit(report)
         self.assertTrue(complete_chapter_facts(self.root, requestId='facts-1', registerEvidence=True)['complete'])

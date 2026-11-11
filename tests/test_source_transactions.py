@@ -26,7 +26,7 @@ class SourceTransactionTests(unittest.TestCase):
         (self.root / '设定/人物设定.md').write_text('作者曾经保存的阅读文件。')
 
     def preview(self, *, key='change-1', height=185, base=None):
-        return attribute_value_proposal(self.root, 'AT-HEIGHT', height)
+        return attribute_value_proposal(self.root, 'attribute-HEIGHT', height)
 
     def commit(self, plan):
         return commit(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True, actor='test')
@@ -37,19 +37,19 @@ class SourceTransactionTests(unittest.TestCase):
         self.assertEqual({r['path'] for r in plan['writeSet']}, {'.govel/structure.json', REVIEW_PATH})
         self.assertFalse((self.root / REVIEW_PATH).exists())
         self.assertEqual(load_structure(self.root)['attributes'][0]['values'][0]['value']['number'], 190)
-        self.assertIn('SF-HEIGHT', plan['impact']['reviewFragmentIds'])
+        self.assertIn('fact-HEIGHT', plan['impact']['reviewFragmentIds'])
         result = self.commit(plan)
         self.assertEqual(result['afterRevision'], 1)
         self.assertEqual(load_structure(self.root)['attributes'][0]['values'][0]['value']['number'], 185)
-        self.assertEqual(read_json(self.root / REVIEW_PATH)['items']['SF-HEIGHT']['status'], 'pending')
+        self.assertEqual(read_json(self.root / REVIEW_PATH)['items']['fact-HEIGHT']['status'], 'pending')
         self.assertEqual({p: p.read_bytes() for p in self.root.rglob('*.md')}, original)
         self.assertFalse(result['impact']['proseWrite'])
         self.assertFalse(result['impact']['coverage']['proseScanned'])
 
     def test_idempotent_preview_and_commit_retry_keep_one_identity(self):
         changes = [{'action': 'put', 'collection': 'fragments', 'record': {
-            'fragmentId': '$new-fragment', 'ownerId': 'C-ALPHA', 'text': '$new-fragment',
-            'order': 5, 'contentRole': 'fact', 'contentBindings': ['AT-LIFE']}}]
+            'fragmentId': '$new-fragment', 'ownerId': 'character-ALPHA', 'text': '$new-fragment',
+            'order': 5, 'contentRole': 'fact', 'contentBindings': ['attribute-LIFE']}}]
         args = dict(changes=changes, requestId='new-fragment', baseRevision=0, reason='新增经历')
         plan = preview_source_change(self.root, **args)
         replay = preview_source_change(self.root, **args)
@@ -66,11 +66,11 @@ class SourceTransactionTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 'SOURCE_REQUEST_REUSED')
 
     def test_idempotent_delete_retry_is_valid_after_target_is_gone(self):
-        self.source['fragments'].append({'fragmentId': 'SF-DELETABLE-PLAN', 'ownerId': 'C-ALPHA',
+        self.source['fragments'].append({'fragmentId': 'plan-DELETABLE-PLAN', 'ownerId': 'character-ALPHA',
                                          'text': '尚未实施的设想。', 'order': 9, 'contentRole': 'plan',
-                                         'contentBindings': ['AT-LIFE']})
+                                         'contentBindings': ['attribute-LIFE']})
         write_json(self.root / '.govel/structure.json', self.source)
-        args = dict(changes=[{'action': 'delete', 'collection': 'fragments', 'id': 'SF-DELETABLE-PLAN'}],
+        args = dict(changes=[{'action': 'delete', 'collection': 'fragments', 'id': 'plan-DELETABLE-PLAN'}],
                     requestId='delete-fragment', baseRevision=0, reason='删除经历')
         plan = preview_source_change(self.root, **args)
         self.commit(plan)
@@ -78,9 +78,9 @@ class SourceTransactionTests(unittest.TestCase):
 
     def test_same_batch_forward_references_allocate_every_id_once(self):
         changes = [
-            {'action': 'put', 'collection': 'fragments', 'record': {'fragmentId': '$text', 'ownerId': 'C-ALPHA',
+            {'action': 'put', 'collection': 'fragments', 'record': {'fragmentId': '$text', 'ownerId': 'character-ALPHA',
              'text': '他喜欢独处。', 'order': 5, 'contentRole': 'fact', 'contentBindings': ['$attribute']}},
-            {'action': 'put', 'collection': 'attributes', 'record': {'attributeId': '$attribute', 'ownerId': 'C-ALPHA',
+            {'action': 'put', 'collection': 'attributes', 'record': {'attributeId': '$attribute', 'ownerId': 'character-ALPHA',
              'fieldId': '$field', 'values': []}},
             {'action': 'put', 'collection': 'fieldDefinitions', 'record': {'fieldId': '$field', 'key': 'personality.preference',
              'label': '偏好', 'valueType': 'topic', 'appliesTo': ['character']}},
@@ -94,7 +94,7 @@ class SourceTransactionTests(unittest.TestCase):
     def test_same_batch_entity_relation_returns_typed_endpoint_impact(self):
         changes = [
             {'action': 'put', 'collection': 'relations', 'record': {
-                'relationId': '$relationship', 'fromEntity': 'C-ALPHA',
+                'relationId': '$relationship', 'fromEntity': 'character-ALPHA',
                 'toEntity': '$new-person', 'kind': 'protects'}},
             {'action': 'put', 'collection': 'entities', 'record': {
                 'entityId': '$new-person', 'entityType': 'character', 'name': '新人物',
@@ -104,7 +104,7 @@ class SourceTransactionTests(unittest.TestCase):
                                      baseRevision=0, reason='登记人物关系')
         identity = plan['parameters']['identityMap']
         self.assertEqual(plan['impact']['relationChanges'][0]['after'], {
-            'fromEntity': 'C-ALPHA', 'toEntity': identity['$new-person'], 'kind': 'protects'})
+            'fromEntity': 'character-ALPHA', 'toEntity': identity['$new-person'], 'kind': 'protects'})
         self.commit(plan)
         relation = load_structure(self.root)['relations'][0]
         self.assertEqual(relation['relationId'], identity['$relationship'])
@@ -112,7 +112,7 @@ class SourceTransactionTests(unittest.TestCase):
     def test_dangling_delete_and_revision_race_write_nothing(self):
         before = (self.root / '.govel/structure.json').read_bytes()
         with self.assertRaises(StructureError):
-            preview_source_change(self.root, changes=[{'action': 'delete', 'collection': 'attributes', 'id': 'AT-HEIGHT'}],
+            preview_source_change(self.root, changes=[{'action': 'delete', 'collection': 'attributes', 'id': 'attribute-HEIGHT'}],
                                   requestId='bad-delete', baseRevision=0, reason='删除属性')
         self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         plan = self.preview()
@@ -127,7 +127,7 @@ class SourceTransactionTests(unittest.TestCase):
         source = load_structure(self.root)
         self.assertEqual(source['attributes'][0]['values'][0]['value']['number'], 190)
         self.assertEqual(source['revision'], 2)
-        self.assertEqual(read_json(self.root / REVIEW_PATH)['items']['SF-HEIGHT']['status'], 'pending')
+        self.assertEqual(read_json(self.root / REVIEW_PATH)['items']['fact-HEIGHT']['status'], 'pending')
         self.assertTrue(list((self.root / '.govel/undo-receipts').glob('*.json')))
         self.assertEqual((self.root / '设定/人物设定.md').read_text(), '作者曾经保存的阅读文件。')
 
@@ -157,8 +157,8 @@ class SourceTransactionTests(unittest.TestCase):
 
     def test_retry_does_not_return_plan_after_direct_source_edit(self):
         args = dict(changes=[{'action': 'put', 'collection': 'fragments', 'record': {
-            'fragmentId': '$retry', 'ownerId': 'C-ALPHA', 'text': '新增经历。', 'order': 9,
-            'contentRole': 'fact', 'contentBindings': ['AT-LIFE']}}],
+            'fragmentId': '$retry', 'ownerId': 'character-ALPHA', 'text': '新增经历。', 'order': 9,
+            'contentRole': 'fact', 'contentBindings': ['attribute-LIFE']}}],
             requestId='stale-retry', baseRevision=0, reason='新增经历')
         preview_source_change(self.root, **args)
         self.source['entities'][0]['name'] = '修改了人物名称'

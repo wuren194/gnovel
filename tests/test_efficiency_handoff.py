@@ -1,4 +1,6 @@
 """End-to-end regressions for prepared reading, long text and scoped repairs."""
+
+from scripts.core.project import current_schema_version
 import copy
 import json
 import subprocess
@@ -20,7 +22,7 @@ from scripts.core.reading_batch import read_batch
 from scripts.core.structure_store import StructureError
 from scripts.core.tool_catalog import list_capabilities
 from scripts.story_summarizer import _prepare_context, _commit_summary, StorySummarizerError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import review_ready_project
 
 
@@ -91,7 +93,7 @@ class LongEvidenceTests(unittest.TestCase):
     def test_long_prose_pages_reassemble_every_character_and_pack_absolute_quote(self):
         pages, cursor = [], None
         while True:
-            result = prepare_evidence(self.root, kind='prose', chapterId='CH-ALPHA', cursor=cursor)
+            result = prepare_evidence(self.root, kind='prose', chapterId='chapter-ALPHA', cursor=cursor)
             self.assertLessEqual(_size(result), query_policy()['maxBytes']['detail'])
             pages.extend(result['materials'])
             self.assertFalse(result['semanticReviewComplete'])
@@ -106,45 +108,45 @@ class LongEvidenceTests(unittest.TestCase):
         selected = next(row for row in pages if '独特引文' in row['text'])
         locator = {k: selected[k] for k in ('start', 'end', 'chunkHash')}
         report = pack_evidence(self.root, snapshot=result['snapshot'], requestId='long', decisions=[{
-            'quote': {'text': '独特引文', 'page': locator}, 'targetIds': ['AT-HEIGHT'], 'kind': 'depends_on', 'reason': '核对原文'}])
+            'quote': {'text': '独特引文', 'page': locator}, 'targetIds': ['attribute-HEIGHT'], 'kind': 'depends_on', 'reason': '核对原文'}])
         citation = report['arguments']['citations'][0]
         self.assertEqual(citation['start'], 4550)
         self.assertTrue(call_operation(report['operation'], self.root, report['arguments'])['ok'])
 
     def test_changed_prose_or_budget_rejects_continuation(self):
-        page = prepare_evidence(self.root, kind='prose', chapterId='CH-ALPHA')
+        page = prepare_evidence(self.root, kind='prose', chapterId='chapter-ALPHA')
         with self.assertRaises(StructureError) as error:
-            prepare_evidence(self.root, kind='prose', chapterId='CH-ALPHA', cursor=page['nextCursor'], maxBytes=8000)
+            prepare_evidence(self.root, kind='prose', chapterId='chapter-ALPHA', cursor=page['nextCursor'], maxBytes=8000)
         self.assertEqual(error.exception.code, 'CURSOR_QUERY_MISMATCH')
         self.prose.write_bytes((self.text + '改').encode())
         with self.assertRaises(StructureError) as error:
-            prepare_evidence(self.root, kind='prose', chapterId='CH-ALPHA', cursor=page['nextCursor'])
+            prepare_evidence(self.root, kind='prose', chapterId='chapter-ALPHA', cursor=page['nextCursor'])
         self.assertEqual(error.exception.code, 'CURSOR_STALE')
 
     def test_multi_record_reading_retains_remaining_work(self):
         source = read_json(self.root / '.govel/structure.json')
         source['fragments'][0]['text'] = '甲' * 9100
         write_json(self.root / '.govel/structure.json', source)
-        first = prepare_evidence(self.root, kind='review', recordIds=['SF-HEIGHT', 'SF-LOOK'], limit=1)
+        first = prepare_evidence(self.root, kind='review', recordIds=['fact-HEIGHT', 'fact-LOOK'], limit=1)
         self.assertEqual(first['coverage']['remainingMaterials'], 2)
         texts = []
         page = first
         while True:
             texts.extend((row['recordId'], row['text']) for row in page['materials'])
             if not page['hasMore']: break
-            page = prepare_evidence(self.root, kind='review', recordIds=['SF-HEIGHT', 'SF-LOOK'], limit=1, cursor=page['nextCursor'])
-        self.assertEqual(''.join(text for rid, text in texts if rid == 'SF-HEIGHT'), '甲' * 9100)
-        self.assertEqual(texts[-1], ('SF-LOOK', source['fragments'][1]['text']))
+            page = prepare_evidence(self.root, kind='review', recordIds=['fact-HEIGHT', 'fact-LOOK'], limit=1, cursor=page['nextCursor'])
+        self.assertEqual(''.join(text for rid, text in texts if rid == 'fact-HEIGHT'), '甲' * 9100)
+        self.assertEqual(texts[-1], ('fact-LOOK', source['fragments'][1]['text']))
 
     def test_page_quotes_reject_wrong_page_and_ambiguity(self):
         page = {'start': 0, 'end': 2, 'chunkHash': 'wrong'}
         with self.assertRaises(StructureError): quote_span('同句。同句。', {'text': '同句', 'page': page})
 
     def test_partial_review_pack_keeps_unprocessed_record_ids(self):
-        prepared = prepare_evidence(self.root, kind='review', recordIds=['SF-HEIGHT', 'SF-LOOK'])
+        prepared = prepare_evidence(self.root, kind='review', recordIds=['fact-HEIGHT', 'fact-LOOK'])
         report = pack_evidence(self.root, snapshot=prepared['snapshot'], requestId='partial', decisions=[{
-            'recordId': 'SF-HEIGHT', 'decision': 'compatible', 'reason': '复核本项', 'quotes': [{'text': '他身高一米九。'}]}])
-        self.assertEqual(report['pendingRecordIds'], ['SF-LOOK']); self.assertFalse(report['selectionComplete'])
+            'recordId': 'fact-HEIGHT', 'decision': 'compatible', 'reason': '复核本项', 'quotes': [{'text': '他身高一米九。'}]}])
+        self.assertEqual(report['pendingRecordIds'], ['fact-LOOK']); self.assertFalse(report['selectionComplete'])
         self.assertEqual(len(report['arguments']['reviews']), 1)
 
 
@@ -152,13 +154,13 @@ class SummaryIncrementTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
-        self.fixture = create_schema5_project(self.root, chapter_count=12)
+        self.fixture = create_current_project(self.root, chapter_count=12)
         self.initial = _prepare_context(self.root)
         self.commit(self.initial)
 
     def commit(self, context):
         summary = {k: context[k] for k in ('projectId', 'asOfChapterId', 'structureRevision', 'coveredChapterIds', 'inputSnapshot')}
-        summary.update(schemaVersion=5, storySummary='临时测试摘要', plotLine=[], characterSummaries=[])
+        summary.update(schemaVersion=current_schema_version(), storySummary='临时测试摘要', plotLine=[], characterSummaries=[])
         path = self.root / 'summary.json'; write_json(path, summary)
         return _commit_summary(self.root, str(path))
 
@@ -167,7 +169,7 @@ class SummaryIncrementTests(unittest.TestCase):
         callback(source); source['revision'] += 1; write_json(path, source)
 
     def test_unlinked_anchor_does_not_require_twelve_chapter_reread(self):
-        self.mutate(lambda source: source['entities'].append({'entityId': 'TA-UNRELATED', 'entityType': 'time_anchor',
+        self.mutate(lambda source: source['entities'].append({'entityId': 'time-UNRELATED', 'entityType': 'time_anchor',
                       'name': '未关联时间', 'timeOrdinal': 9000}))
         result = _prepare_context(self.root)
         self.assertTrue(result['upToDate']); self.assertEqual(result['chapters'], [])
@@ -183,15 +185,15 @@ class SummaryIncrementTests(unittest.TestCase):
 
     def test_append_reads_only_new_chapter(self):
         def append(source):
-            chapter = copy.deepcopy(source['chapters'][-1]); chapter.update(chapterId='CH-APPENDED', title='新章',
-                displayOrdinal=13, displayCode='CH013', filePath='正文/CH-APPENDED.md')
+            chapter = copy.deepcopy(source['chapters'][-1]); chapter.update(chapterId='chapter-APPENDED', title='新章',
+                displayOrdinal=13, displayCode='CH013', filePath='正文/chapter-APPENDED.md')
             source['chapters'].append(chapter)
             source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
             (self.root / chapter['filePath']).write_text('新章节正文。')
         self.mutate(append)
         result = _prepare_context(self.root)
         self.assertTrue(result['incremental'], result['refresh'])
-        self.assertEqual([row['chapterId'] for row in result['chapters']], ['CH-APPENDED'])
+        self.assertEqual([row['chapterId'] for row in result['chapters']], ['chapter-APPENDED'])
 
     def test_reorder_and_unscoped_setting_change_expand_review_keep_prior(self):
         def reorder(source):
@@ -202,7 +204,7 @@ class SummaryIncrementTests(unittest.TestCase):
         self.assertIn('priorSummary', result)
 
     def test_unscoped_setting_change_expands_review(self):
-        self.mutate(lambda source: source['entities'].append({'entityId': 'P-UNKNOWN', 'entityType': 'prop', 'name': '未知影响道具'}))
+        self.mutate(lambda source: source['entities'].append({'entityId': 'prop-UNKNOWN', 'entityType': 'prop', 'name': '未知影响道具'}))
         result = _prepare_context(self.root)
         self.assertTrue(result['refresh']['fullRefresh']); self.assertEqual(len(result['chapters']), 12)
 
@@ -240,10 +242,10 @@ class ScopedSummarySourceTests(unittest.TestCase):
         from tests.fixtures_source import source_fixture, single_source_chapter
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve(); source = source_fixture(root)
-            ids = ['CH-ONE', 'CH-TWO']
+            ids = ['chapter-ONE', 'chapter-TWO']
             source['chapters'] = [single_source_chapter(source, cid, ordinal=i + 1) for i, cid in enumerate(ids)]
             source['chapterArcLinks'] = [{'chapterId': cid, 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'} for cid in ids]
-            source['references'] = [{'sourceId': ids[0], 'targetId': 'SF-HEIGHT', 'kind': 'uses'}]
+            source['references'] = [{'sourceId': ids[0], 'targetId': 'fact-HEIGHT', 'kind': 'uses'}]
             (root / '正文').mkdir()
             for chapter in source['chapters']:
                 (root / chapter['filePath']).write_text('临时正文。')
@@ -255,9 +257,9 @@ class ScopedSummarySourceTests(unittest.TestCase):
 
     def test_invalid_prior_dependency_snapshot_expands_review(self):
         from scripts.core.summary_inputs import summary_delta
-        current = {'version': 1, 'chapterOrder': ['CH-ONE'], 'chapters': {}, 'records': {}, 'globalHash': 'x'}
+        current = {'version': 1, 'chapterOrder': ['chapter-ONE'], 'chapters': {}, 'records': {}, 'globalHash': 'x'}
         result = summary_delta({'version': 1}, current, [])
-        self.assertTrue(result['fullRefresh']); self.assertEqual(result['affectedChapterIds'], ['CH-ONE'])
+        self.assertTrue(result['fullRefresh']); self.assertEqual(result['affectedChapterIds'], ['chapter-ONE'])
 
 
 class CandidatePatchTests(unittest.TestCase):

@@ -15,14 +15,14 @@ from scripts.core.handoff_records import (
     stop_handoff,
 )
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class HandoffRecordTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name) / "book"
-        self.fixture = create_schema5_project(self.root, chapter_count=2)
+        self.fixture = create_current_project(self.root, chapter_count=2)
         self.chapter_id = self.fixture["structure"]["chapters"][0]["chapterId"]
 
     def tearDown(self) -> None:

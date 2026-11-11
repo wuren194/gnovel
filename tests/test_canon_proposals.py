@@ -22,7 +22,7 @@ class CanonProposalTests(unittest.TestCase):
         return preview_canon_change(self.root, sessionRef=ref, fieldPath='summary', expectedOldExists=False,
                                     expectedOldValue=None,
                                     newValue='曾经守过城门', reason='作者核对设定',
-                                    evidence=[{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}],
+                                    evidence=[{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}],
                                     approvalActor='author', approvalEvidence='本地确认', **changes)
 
     def test_scoped_resolution_old_value_and_atomic_commit(self):
@@ -42,45 +42,45 @@ class CanonProposalTests(unittest.TestCase):
     def test_unknown_target_and_wrong_old_value_fail_closed(self):
         self.assertEqual(resolve_canon_target(self.root, selector='不存在')['status'], 'not_found')
         self.assertNotIn('sessionRef', resolve_canon_target(self.root, selector='不存在'))
-        ref = resolve_canon_target(self.root, selector='C-ALPHA')['sessionRef']
+        ref = resolve_canon_target(self.root, selector='character-ALPHA')['sessionRef']
         with self.assertRaises(StructureError) as caught:
             preview_canon_change(self.root, sessionRef=ref, fieldPath='summary', expectedOldExists=False,
                                  expectedOldValue='错误旧值',
-                                 newValue='新值', reason='测试', evidence=[{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}],
+                                 newValue='新值', reason='测试', evidence=[{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}],
                                  approvalActor='author', approvalEvidence='本地确认')
         self.assertEqual(caught.exception.code, 'EXPECTED_OLD_VALUE_CONFLICT')
         with self.assertRaises(StructureError) as caught:
             preview_canon_change(self.root, sessionRef=ref, fieldPath='summary', expectedOldExists=True,
                                  expectedOldValue=None, newValue='新值', reason='测试',
-                                 evidence=[{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}],
+                                 evidence=[{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}],
                                  approvalActor='author', approvalEvidence='本地确认')
         self.assertEqual(caught.exception.code, 'EXPECTED_OLD_VALUE_CONFLICT')
         with self.assertRaises(StructureError) as caught:
             preview_canon_change(self.root, sessionRef=ref, fieldPath='summary', expectedOldExists=False,
                                  expectedOldValue=None,
-                                 newValue='新值', reason='测试', evidence=[{'fragmentId': 'SF-LIFE', 'quote': '不存在'}],
+                                 newValue='新值', reason='测试', evidence=[{'fragmentId': 'fact-LIFE', 'quote': '不存在'}],
                                  approvalActor='author', approvalEvidence='本地确认')
         self.assertEqual(caught.exception.code, 'CANON_EVIDENCE_INVALID')
         from scripts.core.structure_store import save_structure
         source = load_structure(self.root)
-        source['fragments'].append({'fragmentId': 'SF-UNRELATED', 'ownerId': 'C-BETA',
+        source['fragments'].append({'fragmentId': 'fact-UNRELATED', 'ownerId': 'character-BETA',
                                     'text': '乙走过城门。', 'order': 1, 'contentRole': 'fact',
-                                    'contentBindings': ['AT-BETA-HEIGHT']})
-        source['fragments'].append({'fragmentId': 'SF-PLAN-CLAIM', 'ownerId': 'C-ALPHA',
+                                    'contentBindings': ['attribute-BETA-HEIGHT']})
+        source['fragments'].append({'fragmentId': 'plan-PLAN-CLAIM', 'ownerId': 'character-ALPHA',
                                     'text': '将来可能守门。', 'order': 5, 'contentRole': 'plan',
-                                    'contentBindings': ['AT-LIFE']})
+                                    'contentBindings': ['attribute-LIFE']})
         save_structure(self.root, source)
-        new_ref = resolve_canon_target(self.root, selector='C-ALPHA')['sessionRef']
+        new_ref = resolve_canon_target(self.root, selector='character-ALPHA')['sessionRef']
         with self.assertRaises(StructureError) as caught:
             preview_canon_change(self.root, sessionRef=new_ref, fieldPath='summary', expectedOldExists=False,
                                  expectedOldValue=None, newValue='新值', reason='测试',
-                                 evidence=[{'fragmentId': 'SF-UNRELATED', 'quote': '乙走过城门。'}],
+                                 evidence=[{'fragmentId': 'fact-UNRELATED', 'quote': '乙走过城门。'}],
                                  approvalActor='author', approvalEvidence='本地确认')
         self.assertEqual(caught.exception.code, 'CANON_EVIDENCE_SCOPE_INVALID')
         with self.assertRaises(StructureError) as caught:
             preview_canon_change(self.root, sessionRef=new_ref, fieldPath='summary', expectedOldExists=False,
                                  expectedOldValue=None, newValue='新值', reason='测试',
-                                 evidence=[{'fragmentId': 'SF-PLAN-CLAIM', 'quote': '将来可能守门。'}],
+                                 evidence=[{'fragmentId': 'plan-PLAN-CLAIM', 'quote': '将来可能守门。'}],
                                  approvalActor='author', approvalEvidence='本地确认')
         self.assertEqual(caught.exception.code, 'CANON_EVIDENCE_INVALID')
 
@@ -91,11 +91,11 @@ class CanonProposalTests(unittest.TestCase):
             preview_source_change(self.root, changes=[{'action': 'put', 'collection': 'entities', 'record': edited}],
                                   requestId='raw-rename', baseRevision=source['revision'], reason='绕过')
         self.assertEqual(caught.exception.code, 'CANON_PROPOSAL_REQUIRED')
-        ref = resolve_canon_target(self.root, selector='C-ALPHA')['sessionRef']
+        ref = resolve_canon_target(self.root, selector='character-ALPHA')['sessionRef']
         preview = preview_canon_change(self.root, sessionRef=ref, fieldPath='aliases', expectedOldExists=True,
                                        expectedOldValue=[],
                                        newValue=['甲'], reason='作者确认称呼',
-                                       evidence=[{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}],
+                                       evidence=[{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}],
                                        approvalActor='author', approvalEvidence='本地确认')
         self.assertEqual(preview['operation'], 'canon_change_proposal')
 
@@ -103,7 +103,7 @@ class CanonProposalTests(unittest.TestCase):
         from tests.test_source_plan import planning_source
         from scripts.core.structure_store import save_structure
         source, chapter = planning_source(self.root)
-        source['references'] = [{'sourceId': chapter['chapterId'], 'targetId': 'C-ALPHA', 'kind': 'uses'}]
+        source['references'] = [{'sourceId': chapter['chapterId'], 'targetId': 'character-ALPHA', 'kind': 'uses'}]
         save_structure(self.root, source)
         self.assertEqual(resolve_canon_target(self.root, selector='人物乙', chapterId=chapter['chapterId'])['status'], 'not_found')
         selected = resolve_canon_target(self.root, selector='人物甲', chapterId=chapter['chapterId'])
@@ -112,5 +112,5 @@ class CanonProposalTests(unittest.TestCase):
         preview = self.proposal(selected['sessionRef'])
         self.assertEqual(preview['parameters']['canonProposal']['sourceChapterId'], chapter['chapterId'])
         with self.assertRaises(StructureError) as caught:
-            resolve_canon_target(self.root, selector='人物甲', chapterId='CH-MISSING')
+            resolve_canon_target(self.root, selector='人物甲', chapterId='chapter-MISSING')
         self.assertEqual(caught.exception.code, 'RESOLVER_SCOPE_UNKNOWN')

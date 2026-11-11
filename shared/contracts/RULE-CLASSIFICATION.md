@@ -1,7 +1,7 @@
 ---
 id: RULE-CLASSIFICATION
 version: 1.2.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 规则责任标签与证据边界。
 ---
 

@@ -535,6 +535,9 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
             'requiredInputs': ['title', 'volumeId', 'primaryArcId'], 'grantsWritingApproval': False,
             'instruction': '当前章仍按现有下一步处理；如需先规划后章，从此入口预览建章，不能跳过当前章收尾或范围批准。'})
     from .reading_handoff import handoff
+    if chapter is not None and task in {'planner', 'writer', 'editor'}:
+        from .source_profile import task_source_actions
+        result['sourceActions'] = task_source_actions(structure, chapter, task)
     result['reading'] = handoff(root, result, {'task': task, 'chapterId': chapter_id,
         'povCharacter': pov_character, 'chapterGoal': chapter_goal, 'knowledgeMode': knowledge_mode})
     from .operations import new_operations

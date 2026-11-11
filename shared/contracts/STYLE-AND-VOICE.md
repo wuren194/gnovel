@@ -1,7 +1,7 @@
 ---
 id: STYLE-AND-VOICE
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 作品文风、角色表达与视角一致性的责任边界。
 ---
 

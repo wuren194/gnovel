@@ -50,8 +50,8 @@ class StructureValidationTests(unittest.TestCase):
     def test_entity_names_and_aliases_are_global(self) -> None:
         data = self._valid()
         data["entities"] = [
-            {"entityId": "C-ALPHA", "entityType": "character", "name": "沈砚", "aliases": ["阿砚"], "status": "active"},
-            {"entityId": "P-KEY", "entityType": "prop", "name": "钥匙", "aliases": ["阿砚"], "status": "active"},
+            {"entityId": "character-ALPHA", "entityType": "character", "name": "沈砚", "aliases": ["阿砚"], "status": "active"},
+            {"entityId": "prop-KEY", "entityType": "prop", "name": "钥匙", "aliases": ["阿砚"], "status": "active"},
         ]
         with self.assertRaises(StructureError) as caught:
             validate_structure(data)
@@ -59,8 +59,8 @@ class StructureValidationTests(unittest.TestCase):
 
     def test_relations_must_resolve(self) -> None:
         data = self._valid()
-        data["entities"] = [{"entityId": "C-ALPHA", "entityType": "character", "name": "沈砚", "aliases": [], "status": "active"}]
-        data["relations"] = [{"relationId": "REL-ONE", "fromEntity": "C-ALPHA", "toEntity": "P-MISSING", "relationType": "owns"}]
+        data["entities"] = [{"entityId": "character-ALPHA", "entityType": "character", "name": "沈砚", "aliases": [], "status": "active"}]
+        data["relations"] = [{"relationId": "relation-ONE", "fromEntity": "character-ALPHA", "toEntity": "prop-MISSING", "relationType": "owns"}]
         with self.assertRaises(StructureError) as caught:
             validate_structure(data)
         self.assertIn("DANGLING_RELATION", {item["code"] for item in caught.exception.details["errors"]})

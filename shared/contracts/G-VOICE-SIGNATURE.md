@@ -1,7 +1,7 @@
 ---
 id: G-VOICE-SIGNATURE
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 角色口吻、表达意图和词面声纹证据的判断边界。
 ---
 

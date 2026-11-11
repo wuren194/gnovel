@@ -75,6 +75,42 @@ class CliMcpParityTests(unittest.TestCase):
     def fixture(self):
         return refactor_project(self.root)
 
+    def test_temporal_cognition_executes_through_cli_and_stdio_mcp(self):
+        from scripts.core.jsonio import write_json
+        from tests.fixtures_source import source_fixture
+        source = source_fixture(self.root)
+        target = source['attributes'][0]['values'][0]['valueId']
+        source['fragments'].append({'fragmentId': 'belief-CLI', 'ownerId': 'character-ALPHA',
+            'text': '他认为书脊上的记号属于自己。', 'order': 6, 'contentRole': 'belief',
+            'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-LIFE'],
+            'cognition': {'holderId': 'character-ALPHA', 'targetId': target, 'attitude': 'believes',
+                          'acquiredAtId': 'time-START', 'basisIds': []}})
+        write_json(self.root / '.govel/structure.json', source)
+        expected = self.cli('source', 'cognition', '--project-root', str(self.root), '--holder-id',
+                            'character-ALPHA', '--target-id', target, '--as-of', 'time-START')
+        actual = self.mcp('query_source_cognition', {'projectRoot': str(self.root), 'holderId': 'character-ALPHA',
+                          'targetId': target, 'asOf': 'time-START'})
+        self.assertEqual(actual, expected)
+        self.assertEqual(actual['state'], 'recorded_belief')
+
+    def test_profile_sample_replays_the_cli_receipt_through_stdio_mcp(self):
+        from scripts.core.jsonio import write_json
+        from tests.fixtures_source import source_fixture
+        source = source_fixture(self.root)
+        source['fragments'].append({'fragmentId': 'fact-PREFERENCE', 'ownerId': 'character-ALPHA',
+            'text': '喜欢保留用惯的旧物。', 'order': 6, 'contentRole': 'fact', 'topic': 'preference',
+            'contentBindings': ['attribute-LIFE']})
+        source['recallPools'].append({'poolId': 'pool-CLI', 'characterId': 'character-ALPHA', 'count': 1,
+                                     'facets': [{'fragmentId': 'fact-PREFERENCE', 'weight': 2}]})
+        write_json(self.root / '.govel/structure.json', source)
+        first = self.cli('source', 'profile-sample', '--project-root', str(self.root), '--pool-id', 'pool-CLI',
+                         '--request-id', 'actual-writing-request')
+        replay = self.mcp('sample_source_character_profile', {'projectRoot': str(self.root), 'poolId': 'pool-CLI',
+                          'requestId': 'actual-writing-request'})
+        self.assertTrue(replay['replayed'])
+        self.assertEqual(replay['sampleId'], first['sampleId'])
+        self.assertEqual(replay['facets'], first['facets'])
+
     def test_every_project_cli_leaf_has_one_registered_and_callable_mcp_schema(self):
         specs = operations()
         leaves = {path[1:]: parser for path, parser in cli_leaves(build_parser()) if path[0] == 'project'}

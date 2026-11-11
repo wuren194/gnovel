@@ -1,7 +1,7 @@
 ---
 id: G-RHYTHM
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 场景节奏、句段变化与观察距离的判断依据；机械阈值由注册表提供。
 ---
 

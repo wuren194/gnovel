@@ -17,7 +17,7 @@ from scripts.core.finalization import pending_transactions, recover_transactions
 from scripts.core.jsonio import read_json
 from scripts.core.locks import current_thread_owns_lock, project_lock, project_lock_reentrant, project_lock_observation
 from scripts.core.structure_store import StructureError
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -26,7 +26,7 @@ class PreservationSafetyTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name).resolve(); self.root = self.base/'book'
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         self.chapter = self.fixture['chapterIds'][0]
         self.relative = '正文/guarded.md'; self.path = self.root/self.relative
         self.path.write_bytes(b'old')

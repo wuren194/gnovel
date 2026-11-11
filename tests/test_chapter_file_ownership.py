@@ -179,7 +179,7 @@ class FinalizationOwnershipTests(unittest.TestCase):
         self.assertEqual(self._snapshot(), before)
 
     def test_another_chapter_cannot_claim_the_same_locator(self):
-        source = load_structure(self.root); chapter = dict(source['chapters'][0]); chapter['chapterId'] = 'CH-ANOTHER'
+        source = load_structure(self.root); chapter = dict(source['chapters'][0]); chapter['chapterId'] = 'chapter-ANOTHER'
         chapter['displayOrdinal'] = 2; chapter['displayCode'] = 'CH002'
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})

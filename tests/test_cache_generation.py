@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import tempfile
 import threading
 import unittest
@@ -54,7 +56,7 @@ class CacheGenerationTests(unittest.TestCase):
         structure = load_structure(self.root)
         self.assertTrue(state_cache.is_fresh(self.root))
         for projection in (state, design):
-            self.assertEqual(projection["schemaVersion"], 5)
+            self.assertEqual(projection["schemaVersion"], current_schema_version())
             self.assertEqual(projection["structureRevision"], structure["revision"])
             self.assertEqual(projection["entities"], structure["entities"])
         self.assertEqual(state["structureHash"], design["structureHash"])
@@ -158,7 +160,7 @@ class CacheGenerationTests(unittest.TestCase):
         for relative in (state_cache.STATE_REL, state_cache.DESIGN_REL):
             with self.subTest(relative=relative):
                 data = read_json(self.root / relative)
-                data["entities"] = [{"entityId": "TA-CORRUPT", "entityType": "time_anchor"}]
+                data["entities"] = [{"entityId": "time-CORRUPT", "entityType": "time_anchor"}]
                 write_json(self.root / relative, data)
                 self.assertFalse(state_cache.is_fresh(self.root))
                 self._assert_current()
@@ -190,7 +192,7 @@ class CacheGenerationTests(unittest.TestCase):
     def test_same_revision_different_structure_cannot_share_generation(self) -> None:
         old_state = read_json(self.root / state_cache.STATE_REL)
         structure = load_structure(self.root)
-        structure["entities"].append({"entityId": "TA-NEW", "entityType": "time_anchor", "name": "同修订新实体"})
+        structure["entities"].append({"entityId": "time-NEW", "entityType": "time_anchor", "name": "同修订新实体"})
         save_structure(self.root, structure)
         state_cache.rebuild(self.root)
         self.assertEqual(old_state["structureRevision"], structure["revision"])
@@ -200,7 +202,7 @@ class CacheGenerationTests(unittest.TestCase):
 
     def test_corrupt_or_unbound_manifest_is_rebuilt(self) -> None:
         path = self.root / state_cache.MANIFEST_REL
-        for data in (None, [], {"schemaVersion": 5}):
+        for data in (None, [], {"schemaVersion": current_schema_version()}):
             with self.subTest(data=data):
                 write_json(path, data)
                 self.assertFalse(state_cache.is_fresh(self.root))
@@ -263,11 +265,11 @@ class CacheGenerationTests(unittest.TestCase):
         self.assertFalse(state_cache.is_fresh(self.root))
         self._assert_current()
 
-    def test_public_builders_keep_schema5_api(self) -> None:
+    def test_public_builders_keep_current_api(self) -> None:
         state = state_cache.build_state(self.root)
         design = state_cache.build_design(self.root)
-        self.assertEqual(state["schemaVersion"], 5)
-        self.assertEqual(design["schemaVersion"], 5)
+        self.assertEqual(state["schemaVersion"], current_schema_version())
+        self.assertEqual(design["schemaVersion"], current_schema_version())
         self.assertEqual(state["structureHash"], design["structureHash"])
         self.assertEqual(state_cache.status(self.root)["status"], "fresh")
         (self.root / ".govel/structure.json").unlink()

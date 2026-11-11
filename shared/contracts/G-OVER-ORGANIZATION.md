@@ -1,7 +1,7 @@
 ---
 id: G-OVER-ORGANIZATION
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 核对叙述是否保留必要因果，并避免重复说明与过度限制读者理解。
 ---
 

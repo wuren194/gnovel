@@ -1,4 +1,6 @@
 """Neutral reproductions from two real authoring sessions; originals never mutate."""
+
+from scripts.core.project import current_schema_version
 from copy import deepcopy
 from pathlib import Path
 import json
@@ -29,18 +31,18 @@ from tests.fixtures_workflow import review_ready_project
 
 class AuthoringSurfaceTests(unittest.TestCase):
     def test_scope_uses_placement_and_does_not_merge_two_volumes_into_none(self):
-        source = {'schemaVersion': 5, 'chapters': [
-            {'chapterId': 'CH-A', 'displayOrdinal': 1, 'status': 'planned',
-             'placement': {'scope': 'volume', 'volumeId': 'VOL-A'}},
-            {'chapterId': 'CH-B', 'displayOrdinal': 2, 'status': 'planned',
-             'placement': {'scope': 'volume', 'volumeId': 'VOL-B'}}]}
+        source = {'schemaVersion': current_schema_version(), 'chapters': [
+            {'chapterId': 'chapter-A', 'displayOrdinal': 1, 'status': 'planned',
+             'placement': {'scope': 'volume', 'volumeId': 'volume-A'}},
+            {'chapterId': 'chapter-B', 'displayOrdinal': 2, 'status': 'planned',
+             'placement': {'scope': 'volume', 'volumeId': 'volume-B'}}]}
         with self.assertRaises(novelctl.NovelError) as caught:
-            novelctl._approval_scope(source, ['CH-A', 'CH-B'], allow_gaps=False, reason='')
+            novelctl._approval_scope(source, ['chapter-A', 'chapter-B'], allow_gaps=False, reason='')
         self.assertEqual(caught.exception.code, 'APPROVAL_RANGE_CROSSES_VOLUME')
-        scope = novelctl._approval_scope(source, ['CH-A'], allow_gaps=False, reason='')
-        self.assertEqual(scope['volumeIds'], ['VOL-A'])
+        scope = novelctl._approval_scope(source, ['chapter-A'], allow_gaps=False, reason='')
+        self.assertEqual(scope['volumeIds'], ['volume-A'])
         source['chapters'][1]['placement'] = {'scope': 'project'}
-        scope = novelctl._approval_scope(source, ['CH-B'], allow_gaps=False, reason='')
+        scope = novelctl._approval_scope(source, ['chapter-B'], allow_gaps=False, reason='')
         self.assertEqual(scope['volumeIds'], [])
         self.assertTrue(scope['includesProjectScope'])
 
@@ -48,10 +50,10 @@ class AuthoringSurfaceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             write_json(root / '.govel/structure.json', {'chapters': [
-                {'chapterId': 'CH-STABLE', 'displayOrdinal': 1, 'status': 'planned'}]})
+                {'chapterId': 'chapter-STABLE', 'displayOrdinal': 1, 'status': 'planned'}]})
             args = {'chapter_id': ['CH001']}
             resolved = resolve_chapter_arguments(root, args)
-            self.assertEqual(args['chapter_id'], ['CH-STABLE'])
+            self.assertEqual(args['chapter_id'], ['chapter-STABLE'])
             self.assertEqual(resolved[0]['reference'], 'CH001')
 
     def test_inline_character_dialogue_is_not_an_ai_refusal(self):
@@ -131,7 +133,7 @@ class SourceContractReplayTests(unittest.TestCase):
     def test_typed_contract_supports_short_story_and_hash_invalidation(self):
         before = chapter_plan(self.source, self.cid)['sourcePlanHash']
         contract = {'targetRange': [10, 50], 'beats': [{'id': 'B1', 'budget': 30}],
-                    'pov': 'C-ALPHA', 'mode': 'plot', 'intensityLevel': 1,
+                    'pov': 'character-ALPHA', 'mode': 'plot', 'intensityLevel': 1,
                     'requirements': ['值班员关门'], 'quotedTargets': ['明天再来']}
         self.source['fragments'][-1]['chapterContract'] = contract
         validate_structure(self.source)
@@ -140,7 +142,7 @@ class SourceContractReplayTests(unittest.TestCase):
         report = audit_chapter(self.root, self.source, self.cid, '值班员合上门，告诉来人明天再来。')
         self.assertTrue(report['passed'])
         self.assertEqual(report['quotedTargets'][0]['status'], 'literal_found')
-        self.assertEqual(report['pov']['characterId'], 'C-ALPHA')
+        self.assertEqual(report['pov']['characterId'], 'character-ALPHA')
         from scripts.core.source_render import render_source
         rendered = render_source(self.root)['markdown']
         self.assertIn('targetRange', rendered)
@@ -212,10 +214,10 @@ class SummaryHandoffTests(unittest.TestCase):
     def test_commit_returns_continuity_hash_and_explicit_reading_export(self):
         from scripts.story_summarizer import _prepare_context, _commit_summary
         from scripts.core.artifacts import file_sha256
-        from tests.fixtures_current import create_schema5_project
+        from tests.fixtures_current import create_current_project
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
-            create_schema5_project(root, chapter_count=1)
+            create_current_project(root, chapter_count=1)
             prepared = _prepare_context(root, view='model')
             payload = prepared['inputSkeleton']
             payload['storySummary'] = '甲先关门，再将钥匙交还。'

@@ -24,7 +24,7 @@ class ReviewMaterialPackageTests(unittest.TestCase):
 
     def aggregate(self, **kwargs):
         return call_operation('query.aggregate', self.root, {
-            'kind': 'character-reviews', 'characterId': 'C-ALPHA', 'view': 'items', **kwargs})
+            'kind': 'character-reviews', 'characterId': 'character-ALPHA', 'view': 'items', **kwargs})
 
     def materials(self, args):
         first, rows, cursor = None, [], None
@@ -47,14 +47,14 @@ class ReviewMaterialPackageTests(unittest.TestCase):
 
     def test_aggregate_selection_assembles_originals_dependencies_and_decision_inputs(self):
         pending = self.aggregate()
-        ids = ['SF-HEIGHT', 'SF-MIXED']
+        ids = ['fact-HEIGHT', 'fact-MIXED']
         before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
         page, rows = self.materials({'kind': 'review', 'recordIds': ids, 'aggregateRef': pending['selectionRef']})
         tasks = self.restored(rows, 'review-task')
         self.assertEqual({row['recordId'] for row in tasks}, set(ids))
         self.assertTrue(all(row['decisionInput']['decision'] is None for row in tasks))
         dependencies = self.restored(rows, 'dependency')
-        self.assertEqual(sum(row.get('attributeId') == 'AT-HEIGHT' for row in dependencies), 1)
+        self.assertEqual(sum(row.get('attributeId') == 'attribute-HEIGHT' for row in dependencies), 1)
         self.assertIn('snapshotRef', page)
         self.assertEqual(page['packAction']['arguments'], {'snapshotRef': page['snapshotRef']})
         self.assertFalse(page['coverage']['semanticReviewComplete'])
@@ -68,18 +68,18 @@ class ReviewMaterialPackageTests(unittest.TestCase):
         self.assertEqual(submitted['recordedCount'], 1)
 
     def test_prior_judgments_source_changes_and_rules_are_material_not_new_approval(self):
-        rid = 'SF-HEIGHT'
+        rid = 'fact-HEIGHT'
         selected = query_reviews(self.root, recordIds=[rid])['items'][0]
         text = next(row['text'] for row in self.source['fragments'] if row['fragmentId'] == rid)
         submit_review(self.root, requestId='old-review', reviews=[{
             **{key: selected[key] for key in ('recordId', 'inputHash', 'contentHash')},
             'decision': 'compatible', 'reason': 'Prior explicit decision', 'evidence': [{'start': 0, 'end': len(text), 'text': text}]}])
-        plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        plan = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         source = read_json(self.root / '.govel/structure.json')
-        source['entities'].append({'entityId': 'RU-HEIGHT', 'entityType': 'rule', 'name': 'Height consistency',
+        source['entities'].append({'entityId': 'rule-HEIGHT', 'entityType': 'rule', 'name': 'Height consistency',
             'ruleSpec': {'version': '1', 'method': 'semantic', 'enforcement': 'required',
-                        'scopeIds': ['C-ALPHA'], 'actions': ['review'], 'inputIds': ['AT-HEIGHT']}})
+                        'scopeIds': ['character-ALPHA'], 'actions': ['review'], 'inputIds': ['attribute-HEIGHT']}})
         validate_structure(source); write_json(self.root / '.govel/structure.json', source)
         page, rows = self.materials({'kind': 'review', 'recordIds': [rid], 'aggregateRef': self.aggregate()['selectionRef']})
         prior = self.restored(rows, 'prior-review')[0]
@@ -95,18 +95,18 @@ class ReviewMaterialPackageTests(unittest.TestCase):
 
     def test_pov_is_retained_when_dependencies_are_expanded(self):
         for rid, pov, text, dependencies in (
-            ('SF-KNOWN', 'C-ALPHA', 'Visible belief.', ['SF-HEIGHT', 'SF-SECRET', 'SF-KNOWN-DEP']),
-            ('SF-KNOWN-DEP', 'C-ALPHA', 'Visible dependency.', []),
-            ('SF-SECRET', 'C-BETA', 'OTHER PERSPECTIVE SECRET', [])):
-            self.source['fragments'].append({'fragmentId': rid, 'ownerId': 'C-ALPHA', 'text': text,
+            ('belief-KNOWN', 'character-ALPHA', 'Visible belief.', ['fact-HEIGHT', 'belief-SECRET', 'belief-KNOWN-DEP']),
+            ('belief-KNOWN-DEP', 'character-ALPHA', 'Visible dependency.', []),
+            ('belief-SECRET', 'character-BETA', 'OTHER PERSPECTIVE SECRET', [])):
+            self.source['fragments'].append({'fragmentId': rid, 'ownerId': 'character-ALPHA', 'text': text,
                 'order': len(self.source['fragments']) + 1, 'contentRole': 'belief', 'perspectiveId': pov,
-                'contentBindings': ['AT-HEIGHT'], 'dependsOn': dependencies})
+                'contentBindings': ['attribute-HEIGHT'], 'dependsOn': dependencies})
         validate_structure(self.source); write_json(self.root / '.govel/structure.json', self.source)
-        selection = {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}
+        selection = {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}
         pending = self.aggregate(selection=selection)
-        page, rows = self.materials({'kind': 'review', 'recordIds': ['SF-KNOWN'], 'aggregateRef': pending['selectionRef']})
+        page, rows = self.materials({'kind': 'review', 'recordIds': ['belief-KNOWN'], 'aggregateRef': pending['selectionRef']})
         encoded = json.dumps(rows, ensure_ascii=False)
-        for hidden in ('OTHER PERSPECTIVE SECRET', 'SF-SECRET', 'SF-HEIGHT'):
+        for hidden in ('OTHER PERSPECTIVE SECRET', 'belief-SECRET', 'fact-HEIGHT'):
             self.assertNotIn(hidden, encoded)
         self.assertIn('Visible dependency.', encoded)
         self.assertTrue(self.restored(rows, 'review-task')[0]['authorContextOmitted'])
@@ -114,12 +114,12 @@ class ReviewMaterialPackageTests(unittest.TestCase):
         snapshot = get(self.root, page['snapshotRef'], kind='evidence-snapshot')
         self.assertEqual(snapshot['selection']['knowledgeMode'], 'perspective')
         with self.assertRaises(StructureError):
-            call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['SF-HEIGHT'],
+            call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['fact-HEIGHT'],
                 'aggregateRef': pending['selectionRef']})
 
     def test_stale_aggregate_and_changed_pagination_cannot_silently_rebind(self):
         pending = self.aggregate()
-        args = {'kind': 'review', 'recordIds': ['SF-HEIGHT'], 'aggregateRef': pending['selectionRef']}
+        args = {'kind': 'review', 'recordIds': ['fact-HEIGHT'], 'aggregateRef': pending['selectionRef']}
         page = call_operation('evidence.prepare', self.root, {**args, 'maxBytes': 1800})
         self.source['fragments'][0]['text'] += ' Changed.'
         write_json(self.root / '.govel/structure.json', self.source)
@@ -131,14 +131,14 @@ class ReviewMaterialPackageTests(unittest.TestCase):
     def test_history_aggregates_cannot_be_treated_as_source_review_tasks(self):
         report = call_operation('query.aggregate', self.root, {'kind': 'decision-plans'})
         with self.assertRaises(StructureError) as caught:
-            call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['SF-HEIGHT'],
+            call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['fact-HEIGHT'],
                 'aggregateRef': report['selectionRef']})
         self.assertEqual(caught.exception.code, 'AGGREGATE_SELECTION_INVALID')
 
     def test_source_change_pages_bind_undo_receipt_membership(self):
-        plan = attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        plan = attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
         commit_plan(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
-        args = {'kind': 'review', 'recordIds': ['SF-HEIGHT'], 'includeContext': True, 'limit': 1}
+        args = {'kind': 'review', 'recordIds': ['fact-HEIGHT'], 'includeContext': True, 'limit': 1}
         page = call_operation('evidence.prepare', self.root, args)
         self.assertTrue(page['hasMore'])
         write_json(self.root / f'.govel/undo-receipts/{plan["operationId"]}-2.json', {'operationId': plan['operationId']})
@@ -148,14 +148,14 @@ class ReviewMaterialPackageTests(unittest.TestCase):
 
     def test_context_uses_existing_evidence_pages_and_rejects_hidden_direct_selection(self):
         with self.assertRaises(StructureError):
-            call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['SF-HEIGHT'],
-                'includeContext': True, 'selection': {'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}})
-        _, rows = self.materials({'kind': 'review', 'recordIds': ['SF-HEIGHT'], 'includeContext': True})
+            call_operation('evidence.prepare', self.root, {'kind': 'review', 'recordIds': ['fact-HEIGHT'],
+                'includeContext': True, 'selection': {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}})
+        _, rows = self.materials({'kind': 'review', 'recordIds': ['fact-HEIGHT'], 'includeContext': True})
         self.assertTrue(self.restored(rows, 'review-task'))
 
     def test_context_policy_changes_invalidate_unsubmitted_decisions(self):
-        page, _ = self.materials({'kind': 'review', 'recordIds': ['SF-HEIGHT'], 'includeContext': True})
-        decisions = [{'recordId': 'SF-HEIGHT', 'decision': 'not_checked', 'reason': 'Explicitly deferred', 'quotes': []}]
+        page, _ = self.materials({'kind': 'review', 'recordIds': ['fact-HEIGHT'], 'includeContext': True})
+        decisions = [{'recordId': 'fact-HEIGHT', 'decision': 'not_checked', 'reason': 'Explicitly deferred', 'quotes': []}]
         with patch('scripts.core.evidence_pack.review_policy_hash', return_value='changed'), self.assertRaises(StructureError) as caught:
             call_operation('evidence.pack', self.root, {'snapshotRef': page['snapshotRef'], 'decisions': decisions,
                 'requestId': 'old-context-policy'})

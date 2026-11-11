@@ -52,23 +52,23 @@ class FieldMigrationTests(unittest.TestCase):
 
     def height_item(self, *, field_patch=None, values=None):
         if values is None:
-            values = {'FV-HEIGHT': 190, 'FV-BETA-HEIGHT': 180}
-        return {'kind': 'field_migration', 'recordId': 'FD-HEIGHT',
+            values = {'value-HEIGHT': 190, 'value-BETA-HEIGHT': 180}
+        return {'kind': 'field_migration', 'recordId': 'field-HEIGHT',
                 'patch': field_patch if field_patch is not None else [
                     {'op': 'set', 'path': ['valueType'], 'value': 'number'},
                     {'op': 'set', 'path': ['description'], 'value': '以厘米计。'}],
                 'attributeMigrations': [
-                    {'attributeId': 'AT-HEIGHT', 'values': [
-                        {'valueId': 'FV-HEIGHT', 'value': deepcopy(values['FV-HEIGHT'])}],
-                     'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '他身高一米九。'}]},
-                    {'attributeId': 'AT-BETA-HEIGHT', 'values': [
-                        {'valueId': 'FV-BETA-HEIGHT', 'value': deepcopy(values['FV-BETA-HEIGHT'])}],
-                     'evidence': [{'recordHash': fingerprint(self.attribute('AT-BETA-HEIGHT'))}]}],
+                    {'attributeId': 'attribute-HEIGHT', 'values': [
+                        {'valueId': 'value-HEIGHT', 'value': deepcopy(values['value-HEIGHT'])}],
+                     'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '他身高一米九。'}]},
+                    {'attributeId': 'attribute-BETA-HEIGHT', 'values': [
+                        {'valueId': 'value-BETA-HEIGHT', 'value': deepcopy(values['value-BETA-HEIGHT'])}],
+                     'evidence': [{'recordHash': fingerprint(self.attribute('attribute-BETA-HEIGHT'))}]}],
                 'reason': '统一字段含义和现有值的记录方式', 'evidence': []}
 
     def unchanged_heights(self):
         return {row['values'][0]['valueId']: deepcopy(row['values'][0]['value'])
-                for row in self.source['attributes'] if row['fieldId'] == 'FD-HEIGHT'}
+                for row in self.source['attributes'] if row['fieldId'] == 'field-HEIGHT'}
 
     def key_item(self):
         return self.height_item(field_patch=[
@@ -117,7 +117,7 @@ class FieldMigrationTests(unittest.TestCase):
         preview = self.preview()
         self.assertEqual((self.root / '.govel/structure.json').read_bytes(), before)
         self.assertEqual({row['recordId'] for row in preview['diff']},
-                         {'FD-HEIGHT', 'AT-HEIGHT', 'AT-BETA-HEIGHT'})
+                         {'field-HEIGHT', 'attribute-HEIGHT', 'attribute-BETA-HEIGHT'})
         plan = read_json(self.plan_path(preview))
         row = plan['parameters']['proposals'][0]
         self.assertEqual(row['operation'], 'canon_field_migration_proposal')
@@ -125,7 +125,7 @@ class FieldMigrationTests(unittest.TestCase):
         self.assertEqual(proposal['expectedOldRecordHash'], fingerprint(self.source['fieldDefinitions'][0]))
         self.assertFalse(proposal['approval']['verifiedHuman'])
         bound = {item['attributeId']: item for item in proposal['attributeMigrations']}
-        self.assertEqual(set(bound), {'AT-HEIGHT', 'AT-BETA-HEIGHT'})
+        self.assertEqual(set(bound), {'attribute-HEIGHT', 'attribute-BETA-HEIGHT'})
         for aid, binding in bound.items():
             self.assertEqual(binding['expectedOldRecordHash'], fingerprint(self.attribute(aid)))
             self.assertEqual(binding['newRecordHash'], fingerprint(self.attribute(aid, plan['proposedStructure'])))
@@ -133,7 +133,7 @@ class FieldMigrationTests(unittest.TestCase):
         receipt = self.commit(preview)
         current = load_structure(self.root)
         self.assertEqual(current['fieldDefinitions'][0]['valueType'], 'number')
-        for aid, value in [('AT-HEIGHT', 190), ('AT-BETA-HEIGHT', 180)]:
+        for aid, value in [('attribute-HEIGHT', 190), ('attribute-BETA-HEIGHT', 180)]:
             old, new = self.attribute(aid), self.attribute(aid, current)
             expected = deepcopy(old)
             expected['values'][0]['value'] = value
@@ -154,9 +154,9 @@ class FieldMigrationTests(unittest.TestCase):
         self.assertEqual(source['attributes'], self.source['attributes'])
         self.assertEqual(source['fragments'], self.source['fragments'])
         by_key = query_source(self.root, selection={'includeFields': ['appearance.height_cm']}, view='detail')
-        by_id = query_source(self.root, selection={'includeFields': ['FD-HEIGHT']}, view='detail')
+        by_id = query_source(self.root, selection={'includeFields': ['field-HEIGHT']}, view='detail')
         self.assertEqual(by_key['items'], by_id['items'])
-        settings = query_settings_source(self.root, source, selector='C-ALPHA', fields=['FD-HEIGHT'])
+        settings = query_settings_source(self.root, source, selector='character-ALPHA', fields=['field-HEIGHT'])
         self.assertIn('appearance.height_cm', settings['matches'][0]['fields'])
         self.assertNotIn('appearance.height', settings['matches'][0]['fields'])
         with self.assertRaises(StructureError):
@@ -187,30 +187,30 @@ class FieldMigrationTests(unittest.TestCase):
                 self.assert_preview_rejected(item)
 
     def test_every_known_time_segment_is_explicit_and_unknown_states_are_preserved(self):
-        first = self.attribute('AT-HEIGHT')['values'][0]
+        first = self.attribute('attribute-HEIGHT')['values'][0]
         first['state'] = 'known'
-        first['validDuring']['toId'] = 'TA-LATER'
-        self.attribute('AT-HEIGHT')['values'].append({
-            'valueId': 'FV-HEIGHT-LATER', 'state': 'unknown', 'validDuring': {'fromId': 'TA-LATER'}})
-        self.source['attributes'].append({'attributeId': 'AT-EMPTY-HEIGHT', 'ownerId': 'TA-UNKNOWN',
-                                         'fieldId': 'FD-HEIGHT', 'values': []})
+        first['validDuring']['toId'] = 'time-LATER'
+        self.attribute('attribute-HEIGHT')['values'].append({
+            'valueId': 'value-HEIGHT-LATER', 'state': 'unknown', 'validDuring': {'fromId': 'time-LATER'}})
+        self.source['attributes'].append({'attributeId': 'attribute-EMPTY-HEIGHT', 'ownerId': 'time-UNKNOWN',
+                                         'fieldId': 'field-HEIGHT', 'values': []})
         self.source['fieldDefinitions'][0]['appliesTo'].append('time_anchor')
         self.install_fixture()
         item = self.height_item()
-        item['attributeMigrations'].append({'attributeId': 'AT-EMPTY-HEIGHT', 'values': [],
-            'evidence': [{'recordHash': fingerprint(self.attribute('AT-EMPTY-HEIGHT'))}]})
+        item['attributeMigrations'].append({'attributeId': 'attribute-EMPTY-HEIGHT', 'values': [],
+            'evidence': [{'recordHash': fingerprint(self.attribute('attribute-EMPTY-HEIGHT'))}]})
         self.commit(self.preview(items=[item]))
         current = load_structure(self.root)
-        before = self.attribute('AT-HEIGHT')['values']
-        after = self.attribute('AT-HEIGHT', current)['values']
+        before = self.attribute('attribute-HEIGHT')['values']
+        after = self.attribute('attribute-HEIGHT', current)['values']
         self.assertEqual(after[1], before[1])
         self.assertEqual(after[0]['validDuring'], before[0]['validDuring'])
         self.assertEqual(after[0]['state'], 'known')
-        self.assertEqual(self.attribute('AT-EMPTY-HEIGHT', current), self.attribute('AT-EMPTY-HEIGHT'))
+        self.assertEqual(self.attribute('attribute-EMPTY-HEIGHT', current), self.attribute('attribute-EMPTY-HEIGHT'))
 
     def test_unfilled_and_not_applicable_values_cannot_be_silently_reinterpreted(self):
-        self.attribute('AT-HEIGHT')['values'][0] = {'valueId': 'FV-HEIGHT', 'state': 'unfilled'}
-        self.attribute('AT-BETA-HEIGHT')['values'][0] = {'valueId': 'FV-BETA-HEIGHT', 'state': 'not_applicable'}
+        self.attribute('attribute-HEIGHT')['values'][0] = {'valueId': 'value-HEIGHT', 'state': 'unfilled'}
+        self.attribute('attribute-BETA-HEIGHT')['values'][0] = {'valueId': 'value-BETA-HEIGHT', 'state': 'not_applicable'}
         self.install_fixture()
         item = self.height_item()
         for entry in item['attributeMigrations']:
@@ -219,15 +219,15 @@ class FieldMigrationTests(unittest.TestCase):
         self.assertEqual(load_structure(self.root)['attributes'], self.source['attributes'])
 
     def test_multiple_known_values_keep_their_ids_and_temporal_order(self):
-        self.attribute('AT-HEIGHT')['values'][0]['validDuring']['toId'] = 'TA-LATER'
-        self.attribute('AT-HEIGHT')['values'].append({'valueId': 'FV-HEIGHT-LATER',
-            'value': {'number': 191, 'unit': 'cm'}, 'validDuring': {'fromId': 'TA-LATER'}})
+        self.attribute('attribute-HEIGHT')['values'][0]['validDuring']['toId'] = 'time-LATER'
+        self.attribute('attribute-HEIGHT')['values'].append({'valueId': 'value-HEIGHT-LATER',
+            'value': {'number': 191, 'unit': 'cm'}, 'validDuring': {'fromId': 'time-LATER'}})
         self.install_fixture()
         item = self.height_item()
-        item['attributeMigrations'][0]['values'].insert(0, {'valueId': 'FV-HEIGHT-LATER', 'value': 191})
+        item['attributeMigrations'][0]['values'].insert(0, {'valueId': 'value-HEIGHT-LATER', 'value': 191})
         self.commit(self.preview(items=[item]))
-        actual = self.attribute('AT-HEIGHT', load_structure(self.root))['values']
-        self.assertEqual([row['valueId'] for row in actual], ['FV-HEIGHT', 'FV-HEIGHT-LATER'])
+        actual = self.attribute('attribute-HEIGHT', load_structure(self.root))['values']
+        self.assertEqual([row['valueId'] for row in actual], ['value-HEIGHT', 'value-HEIGHT-LATER'])
         self.assertEqual([row['value'] for row in actual], [190, 191])
 
     def test_missing_extra_duplicate_and_archived_attribute_coverage_is_rejected(self):
@@ -235,21 +235,21 @@ class FieldMigrationTests(unittest.TestCase):
         self.install_fixture()
         mutations = [lambda entries: entries.pop(),
                      lambda entries: entries.append(deepcopy(entries[0])),
-                     lambda entries: entries[1].update(attributeId='AT-SKIN'),
-                     lambda entries: entries[1].update(attributeId='AT-MISSING')]
+                     lambda entries: entries[1].update(attributeId='attribute-SKIN'),
+                     lambda entries: entries[1].update(attributeId='attribute-MISSING')]
         for mutate in mutations:
             item = self.height_item()
             mutate(item['attributeMigrations'])
             with self.subTest(mutate=mutate):
                 self.assert_preview_rejected(item)
         self.commit(self.preview())
-        self.assertEqual(self.attribute('AT-BETA-HEIGHT', load_structure(self.root))['values'][0]['value'], 180)
+        self.assertEqual(self.attribute('attribute-BETA-HEIGHT', load_structure(self.root))['values'][0]['value'], 180)
 
     def test_missing_extra_duplicate_wrong_owner_and_unknown_value_mappings_are_rejected(self):
         mutations = [lambda values: values.clear(),
                      lambda values: values.append(deepcopy(values[0])),
-                     lambda values: values.append({'valueId': 'FV-NEW', 'value': 1}),
-                     lambda values: values[0].update(valueId='FV-BETA-HEIGHT'),
+                     lambda values: values.append({'valueId': 'value-NEW', 'value': 1}),
+                     lambda values: values[0].update(valueId='value-BETA-HEIGHT'),
                      lambda values: values[0].update(state='unknown'),
                      lambda values: values[0].update(validDuring={})]
         for mutate in mutations:
@@ -257,19 +257,19 @@ class FieldMigrationTests(unittest.TestCase):
             mutate(item['attributeMigrations'][0]['values'])
             with self.subTest(mutate=mutate):
                 self.assert_preview_rejected(item)
-        self.attribute('AT-HEIGHT')['values'][0] = {'valueId': 'FV-HEIGHT', 'state': 'unknown'}
+        self.attribute('attribute-HEIGHT')['values'][0] = {'valueId': 'value-HEIGHT', 'state': 'unknown'}
         self.install_fixture()
         self.assert_preview_rejected(self.height_item())
 
     def test_identity_owner_field_and_unsupported_metadata_are_not_input_authority(self):
-        for extra in [{'ownerId': 'C-BETA'}, {'fieldId': 'FD-SKIN'}, {'newRecord': {}},
-                      {'expectedOldRecordHash': fingerprint(self.attribute('AT-HEIGHT'))}]:
+        for extra in [{'ownerId': 'character-BETA'}, {'fieldId': 'field-SKIN'}, {'newRecord': {}},
+                      {'expectedOldRecordHash': fingerprint(self.attribute('attribute-HEIGHT'))}]:
             item = self.height_item()
             item['attributeMigrations'][0].update(extra)
             with self.subTest(extra=extra):
                 self.assert_preview_rejected(item)
         item = self.height_item()
-        item['patch'].append({'op': 'set', 'path': ['fieldId'], 'value': 'FD-RENAMED'})
+        item['patch'].append({'op': 'set', 'path': ['fieldId'], 'value': 'field-RENAMED'})
         self.assert_preview_rejected(item)
 
     def test_metadata_only_noop_and_top_level_fact_scope_do_not_use_migration(self):
@@ -277,7 +277,7 @@ class FieldMigrationTests(unittest.TestCase):
                         [{'op': 'set', 'path': ['key'], 'value': 'appearance.height'}]):
             self.assert_preview_rejected(self.height_item(field_patch=changes, values=self.unchanged_heights()))
         for extra in ({'chapterId': 'CH001'}, {'evidenceMode': 'author_declaration'},
-                      {'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]}):
+                      {'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]}):
             with self.subTest(extra=extra):
                 self.assert_preview_rejected({**self.height_item(), **extra})
 
@@ -286,12 +286,12 @@ class FieldMigrationTests(unittest.TestCase):
         item['attributeMigrations'][0]['values'][0]['value']['number'] = 191
         self.assert_preview_rejected(item, code='FIELD_MIGRATION_VALUE_CHANGE_FORBIDDEN')
         self.source['fieldDefinitions'][0]['valueType'] = 'number'
-        self.attribute('AT-HEIGHT')['values'][0]['value'] = 190
-        self.attribute('AT-BETA-HEIGHT')['values'][0]['value'] = 180
+        self.attribute('attribute-HEIGHT')['values'][0]['value'] = 190
+        self.attribute('attribute-BETA-HEIGHT')['values'][0]['value'] = 180
         self.install_fixture()
         for value in (190.0, True):
             if value is True:
-                self.attribute('AT-HEIGHT')['values'][0]['value'] = 1
+                self.attribute('attribute-HEIGHT')['values'][0]['value'] = 1
                 self.install_fixture()
             item = self.key_item()
             item['attributeMigrations'][0]['values'][0]['value'] = value
@@ -300,18 +300,18 @@ class FieldMigrationTests(unittest.TestCase):
 
     def test_explicit_boolean_conversion_records_actual_typed_values(self):
         self.source['fieldDefinitions'][0]['valueType'] = 'number'
-        self.attribute('AT-HEIGHT')['values'][0]['value'] = 1
-        self.attribute('AT-BETA-HEIGHT')['values'][0]['value'] = 0
+        self.attribute('attribute-HEIGHT')['values'][0]['value'] = 1
+        self.attribute('attribute-BETA-HEIGHT')['values'][0]['value'] = 0
         self.install_fixture()
         item = self.height_item(field_patch=[{'op': 'set', 'path': ['valueType'], 'value': 'boolean'}],
-                                values={'FV-HEIGHT': True, 'FV-BETA-HEIGHT': False})
+                                values={'value-HEIGHT': True, 'value-BETA-HEIGHT': False})
         preview = self.preview(items=[item])
         self.assertEqual({row['recordId'] for row in preview['diff']},
-                         {'FD-HEIGHT', 'AT-HEIGHT', 'AT-BETA-HEIGHT'})
+                         {'field-HEIGHT', 'attribute-HEIGHT', 'attribute-BETA-HEIGHT'})
         self.commit(preview)
         current = load_structure(self.root)
-        self.assertIs(self.attribute('AT-HEIGHT', current)['values'][0]['value'], True)
-        self.assertIs(self.attribute('AT-BETA-HEIGHT', current)['values'][0]['value'], False)
+        self.assertIs(self.attribute('attribute-HEIGHT', current)['values'][0]['value'], True)
+        self.assertIs(self.attribute('attribute-BETA-HEIGHT', current)['values'][0]['value'], False)
 
     def test_conversion_never_guesses_or_coerces_a_typed_value(self):
         for value in ('190', True, None, {'number': 190, 'unit': 'cm'}):
@@ -324,117 +324,119 @@ class FieldMigrationTests(unittest.TestCase):
         item = self.height_item(field_patch=[{'op': 'set', 'path': ['valueType'], 'value': 'topic'}],
                                 values=self.unchanged_heights())
         self.assert_preview_rejected(item)
-        item = {'kind': 'field_migration', 'recordId': 'FD-LIFE',
+        item = {'kind': 'field_migration', 'recordId': 'field-LIFE',
                 'patch': [{'op': 'set', 'path': ['valueType'], 'value': 'text'}],
-                'attributeMigrations': [{'attributeId': 'AT-LIFE', 'values': [],
-                    'evidence': [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}]}],
+                'attributeMigrations': [{'attributeId': 'attribute-LIFE', 'values': [],
+                    'evidence': [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}]}],
                 'reason': '保留空值槽，未来可填写文本', 'evidence': []}
         self.commit(self.preview(items=[item]))
         self.source = load_structure(self.root)
-        self.assertEqual(self.attribute('AT-LIFE')['values'], [])
+        self.assertEqual(self.attribute('attribute-LIFE')['values'], [])
         item['patch'][0]['value'] = 'topic'
         self.commit(self.preview(items=[item], requestId='restore-topic'))
-        self.assertEqual(self.attribute('AT-LIFE', load_structure(self.root))['values'], [])
+        self.assertEqual(self.attribute('attribute-LIFE', load_structure(self.root))['values'], [])
 
     def test_reference_conversion_updates_rendering_and_real_dependency_edges(self):
-        item = {'kind': 'field_migration', 'recordId': 'FD-SKIN',
+        item = {'kind': 'field_migration', 'recordId': 'field-SKIN',
                 'patch': [{'op': 'set', 'path': ['key'], 'value': 'appearance.comparison'},
                           {'op': 'set', 'path': ['valueType'], 'value': 'reference'}],
-                'attributeMigrations': [{'attributeId': 'AT-SKIN',
-                    'values': [{'valueId': 'FV-SKIN', 'value': 'C-BETA'}],
-                    'evidence': [{'fragmentId': 'SF-LOOK', 'quote': '他高大而白皙。'}]}],
+                'attributeMigrations': [{'attributeId': 'attribute-SKIN',
+                    'values': [{'valueId': 'value-SKIN', 'value': 'character-BETA'}],
+                    'evidence': [{'fragmentId': 'fact-LOOK', 'quote': '他高大而白皙。'}]}],
                 'reason': '以已登记人物记录对照对象', 'evidence': []}
         invalid = deepcopy(item)
-        invalid['attributeMigrations'][0]['values'][0]['value'] = 'C-MISSING'
+        invalid['attributeMigrations'][0]['values'][0]['value'] = 'character-MISSING'
         self.assert_preview_rejected(invalid)
         self.commit(self.preview(items=[item]))
         self.source = load_structure(self.root)
-        self.assertIn(('C-BETA', 'FV-SKIN', 'reference_value'), dependency_edges(self.source))
-        self.assertIn('肤色：人物乙', render_source(self.root, selection={'includeFields': ['FD-SKIN']})['markdown'])
+        self.assertIn(('character-BETA', 'value-SKIN', 'reference_value'), dependency_edges(self.source))
+        self.assertIn('肤色：人物乙', render_source(self.root, selection={'includeFields': ['field-SKIN']})['markdown'])
         item['patch'] = [{'op': 'set', 'path': ['valueType'], 'value': 'text'}]
         item['attributeMigrations'][0]['values'][0]['value'] = '人物乙'
         self.commit(self.preview(items=[item], requestId='reference-to-text'))
-        self.assertNotIn(('C-BETA', 'FV-SKIN', 'reference_value'), dependency_edges(load_structure(self.root)))
+        self.assertNotIn(('character-BETA', 'value-SKIN', 'reference_value'), dependency_edges(load_structure(self.root)))
 
     def test_valid_field_conversion_still_cannot_break_an_existing_count_rule(self):
         self.source['fieldDefinitions'][0]['valueType'] = 'number'
-        self.attribute('AT-HEIGHT')['values'][0]['value'] = 1
-        self.attribute('AT-BETA-HEIGHT')['values'][0]['value'] = 2
-        self.source['entities'].append({'entityId': 'RU-LIMIT', 'entityType': 'rule', 'name': '已登记上限',
+        self.attribute('attribute-HEIGHT')['values'][0]['value'] = 1
+        self.attribute('attribute-BETA-HEIGHT')['values'][0]['value'] = 2
+        self.source['entities'].append({'entityId': 'rule-LIMIT', 'entityType': 'rule', 'name': '已登记上限',
             'ruleSpec': {'version': '1', 'method': 'mechanical', 'enforcement': 'required',
-                'scopeIds': [self.source['projectId']], 'actions': ['publish'], 'inputIds': ['C-ALPHA'],
+                'scopeIds': [self.source['projectId']], 'actions': ['publish'], 'inputIds': ['character-ALPHA'],
                 'evaluation': {'kind': 'count_at_most', 'eventIds': [],
-                               'limitValueId': 'FV-HEIGHT', 'complete': True}}})
+                               'limitValueId': 'value-HEIGHT', 'complete': True}}})
         self.install_fixture()
         item = self.height_item(field_patch=[{'op': 'set', 'path': ['valueType'], 'value': 'text'}],
-                                values={'FV-HEIGHT': '1', 'FV-BETA-HEIGHT': '2'})
+                                values={'value-HEIGHT': '1', 'value-BETA-HEIGHT': '2'})
         error = self.assert_preview_rejected(item)
         self.assertIn('SOURCE_RULE_INVALID', json.dumps(error.details))
 
     def test_original_attribute_evidence_rules_apply_to_every_declared_attribute(self):
-        cases = [(0, []), (0, [{'recordHash': fingerprint(self.attribute('AT-HEIGHT'))}]),
-                 (0, [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}]),
-                 (0, [{'fragmentId': 'SF-HEIGHT', 'quote': '并不存在的引文'}]),
+        cases = [(0, []), (0, [{'recordHash': fingerprint(self.attribute('attribute-HEIGHT'))}]),
+                 (0, [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}]),
+                 (0, [{'fragmentId': 'fact-HEIGHT', 'quote': '并不存在的引文'}]),
                  (1, [{'recordHash': '0' * 64}])]
         for index, evidence in cases:
             item = self.height_item()
             item['attributeMigrations'][index]['evidence'] = evidence
             with self.subTest(index=index, evidence=evidence):
                 self.assert_preview_rejected(item)
-        self.source['fragments'][0]['contentRole'] = 'plan'
+        self.source['fragments'][0].update(fragmentId='plan-HEIGHT', contentRole='plan')
         self.install_fixture()
-        self.assert_preview_rejected(self.height_item())
+        item = self.height_item()
+        item['attributeMigrations'][0]['evidence'] = [{'fragmentId': 'plan-HEIGHT', 'quote': '他身高一米九。'}]
+        self.assert_preview_rejected(item)
 
     def test_each_attribute_can_use_a_resolved_chapter_scope_for_bound_fact_evidence(self):
-        chapter = single_source_chapter(self.source, 'CH-EVIDENCE',
+        chapter = single_source_chapter(self.source, 'chapter-EVIDENCE',
                                         volume_id=self.source['volumes'][0]['volumeId'])
         self.source['chapters'].append(chapter)
-        self.source['chapterArcLinks'].append({'chapterId': 'CH-EVIDENCE',
+        self.source['chapterArcLinks'].append({'chapterId': 'chapter-EVIDENCE',
             'arcId': self.source['arcs'][0]['arcId'], 'role': 'primary'})
-        self.source['references'].append({'sourceId': 'CH-EVIDENCE', 'targetId': 'C-BETA'})
-        self.source['fragments'].append({'fragmentId': 'SF-BETA-CHAPTER', 'ownerId': 'CH-EVIDENCE',
-            'contentRole': 'fact', 'order': 1, 'text': '人物乙身高一米八。', 'contentBindings': ['AT-BETA-HEIGHT']})
+        self.source['references'].append({'sourceId': 'chapter-EVIDENCE', 'targetId': 'character-BETA'})
+        self.source['fragments'].append({'fragmentId': 'fact-BETA-CHAPTER', 'ownerId': 'chapter-EVIDENCE',
+            'contentRole': 'fact', 'order': 1, 'text': '人物乙身高一米八。', 'contentBindings': ['attribute-BETA-HEIGHT']})
         self.install_fixture()
         item = self.height_item()
         entry = item['attributeMigrations'][1]
-        entry['evidence'] = [{'fragmentId': 'SF-BETA-CHAPTER', 'quote': '人物乙身高一米八。'}]
+        entry['evidence'] = [{'fragmentId': 'fact-BETA-CHAPTER', 'quote': '人物乙身高一米八。'}]
         self.assert_preview_rejected(item)
         entry['chapterId'] = 'CH001'
         preview = self.preview(items=[item])
         proposal = read_json(self.plan_path(preview))['parameters']['proposals'][0]['proposal']
-        saved = next(row for row in proposal['attributeMigrations'] if row['attributeId'] == 'AT-BETA-HEIGHT')
-        self.assertEqual(saved['sourceChapterId'], 'CH-EVIDENCE')
+        saved = next(row for row in proposal['attributeMigrations'] if row['attributeId'] == 'attribute-BETA-HEIGHT')
+        self.assertEqual(saved['sourceChapterId'], 'chapter-EVIDENCE')
         self.commit(preview)
 
     def test_unknown_or_unrelated_chapter_scope_is_rejected(self):
-        self.source['chapters'].append(single_source_chapter(self.source, 'CH-UNRELATED',
+        self.source['chapters'].append(single_source_chapter(self.source, 'chapter-UNRELATED',
                                       volume_id=self.source['volumes'][0]['volumeId']))
-        self.source['chapterArcLinks'].append({'chapterId': 'CH-UNRELATED',
+        self.source['chapterArcLinks'].append({'chapterId': 'chapter-UNRELATED',
             'arcId': self.source['arcs'][0]['arcId'], 'role': 'primary'})
         self.install_fixture()
-        for chapter in ('CH-MISSING', 'CH-UNRELATED'):
+        for chapter in ('chapter-MISSING', 'chapter-UNRELATED'):
             item = self.height_item()
             item['attributeMigrations'][1]['chapterId'] = chapter
             with self.subTest(chapter=chapter):
                 self.assert_preview_rejected(item)
 
     def test_mixed_fact_change_commits_with_migration_and_late_failure_writes_nothing(self):
-        fact = {'kind': 'fact', 'recordId': 'SF-HEIGHT', 'patch': [
+        fact = {'kind': 'fact', 'recordId': 'fact-HEIGHT', 'patch': [
                     {'op': 'text', 'path': ['text'], 'original': '一米九', 'replacement': '一百九十厘米'}],
-                'reason': '同步单位表述', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]}
+                'reason': '同步单位表述', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]}
         bad = deepcopy(fact)
         bad['evidence'][0]['quote'] = '不存在'
         self.assert_preview_rejected([self.height_item(), bad])
         self.commit(self.preview(items=[self.height_item(), fact]))
         source = load_structure(self.root)
-        self.assertEqual(self.attribute('AT-HEIGHT', source)['values'][0]['value'], 190)
+        self.assertEqual(self.attribute('attribute-HEIGHT', source)['values'][0]['value'], 190)
         self.assertEqual(source['fragments'][0]['text'], '他身高一百九十厘米。')
 
     def test_migration_reserves_unchanged_attributes_against_other_batch_items(self):
-        attr = {'kind': 'attribute', 'recordId': 'AT-HEIGHT',
+        attr = {'kind': 'attribute', 'recordId': 'attribute-HEIGHT',
                 'patch': [{'op': 'set', 'path': ['values', 0, 'value', 'number'], 'value': 185}],
-                'reason': '另改数值', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]}
-        metadata = {'kind': 'field_definition', 'recordId': 'FD-HEIGHT',
+                'reason': '另改数值', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]}
+        metadata = {'kind': 'field_definition', 'recordId': 'field-HEIGHT',
                     'patch': [{'op': 'set', 'path': ['label'], 'value': '人物高度'}],
                     'reason': '另改名称', 'evidence': []}
         for other in (attr, metadata, self.key_item()):
@@ -444,9 +446,9 @@ class FieldMigrationTests(unittest.TestCase):
 
     def test_commit_rejects_a_separately_valid_duplicate_attribute_proposal(self):
         migration = self.preview(items=[self.key_item()])
-        ordinary = self.preview(items=[{'kind': 'attribute', 'recordId': 'AT-HEIGHT',
+        ordinary = self.preview(items=[{'kind': 'attribute', 'recordId': 'attribute-HEIGHT',
             'patch': [{'op': 'set', 'path': ['values', 0, 'value', 'number'], 'value': 185}],
-            'reason': '另改数值', 'evidence': [{'fragmentId': 'SF-HEIGHT', 'quote': '一米九'}]}], requestId='ordinary')
+            'reason': '另改数值', 'evidence': [{'fragmentId': 'fact-HEIGHT', 'quote': '一米九'}]}], requestId='ordinary')
         original = read_json(self.plan_path(migration))
         other = read_json(self.plan_path(ordinary))['parameters']['proposals'][0]
         for rows in ([original['parameters']['proposals'][0], other],
@@ -478,11 +480,11 @@ class FieldMigrationTests(unittest.TestCase):
             self.commit(preview)
 
     def test_target_budget_accumulates_separate_migrations_and_rechecks_commit(self):
-        skin = {'kind': 'field_migration', 'recordId': 'FD-SKIN',
+        skin = {'kind': 'field_migration', 'recordId': 'field-SKIN',
                 'patch': [{'op': 'set', 'path': ['key'], 'value': 'appearance.complexion'}],
-                'attributeMigrations': [{'attributeId': 'AT-SKIN',
-                    'values': [{'valueId': 'FV-SKIN', 'value': '白皙'}],
-                    'evidence': [{'fragmentId': 'SF-LOOK', 'quote': '他高大而白皙。'}]}],
+                'attributeMigrations': [{'attributeId': 'attribute-SKIN',
+                    'values': [{'valueId': 'value-SKIN', 'value': '白皙'}],
+                    'evidence': [{'fragmentId': 'fact-LOOK', 'quote': '他高大而白皙。'}]}],
                 'reason': '明确字段语义键', 'evidence': []}
         items = [self.key_item(), skin]
         policy = deepcopy(workflow_policy())
@@ -576,7 +578,7 @@ class FieldMigrationTests(unittest.TestCase):
     def test_recomputed_plan_hash_cannot_forge_review_metadata_or_omit_coverage(self):
         preview = self.preview()
         original = read_json(self.plan_path(preview))
-        mutations = [lambda proposal: proposal.update(sourceChapterId='CH-MISSING'),
+        mutations = [lambda proposal: proposal.update(sourceChapterId='chapter-MISSING'),
                      lambda proposal: proposal.update(expectedOldRecordHash='0' * 64),
                      lambda proposal: proposal.update(newRecordHash='0' * 64),
                      lambda proposal: proposal.update(evidence=[]),
@@ -586,8 +588,8 @@ class FieldMigrationTests(unittest.TestCase):
                      lambda proposal: proposal['attributeMigrations'].append(deepcopy(proposal['attributeMigrations'][0])),
                      lambda proposal: proposal['attributeMigrations'][0].update(expectedOldRecordHash='0' * 64),
                      lambda proposal: proposal['attributeMigrations'][0].update(newRecordHash='0' * 64),
-                     lambda proposal: proposal['attributeMigrations'][0].update(sourceChapterId='CH-MISSING'),
-                     lambda proposal: proposal['attributeMigrations'][0].update(ownerId='C-BETA'),
+                     lambda proposal: proposal['attributeMigrations'][0].update(sourceChapterId='chapter-MISSING'),
+                     lambda proposal: proposal['attributeMigrations'][0].update(ownerId='character-BETA'),
                      lambda proposal: proposal['attributeMigrations'][0].update(evidence=[])]
         for mutate in mutations:
             plan = deepcopy(original)
@@ -601,18 +603,18 @@ class FieldMigrationTests(unittest.TestCase):
     def test_rehashed_attribute_cannot_move_identity_state_time_or_record_order(self):
         preview = self.preview()
         original = read_json(self.plan_path(preview))
-        mutations = [lambda attribute: attribute.update(ownerId='C-BETA'),
-                     lambda attribute: attribute.update(fieldId='FD-SKIN'),
-                     lambda attribute: attribute['values'][0].update(valueId='FV-NEW'),
+        mutations = [lambda attribute: attribute.update(ownerId='character-BETA'),
+                     lambda attribute: attribute.update(fieldId='field-SKIN'),
+                     lambda attribute: attribute['values'][0].update(valueId='value-NEW'),
                      lambda attribute: attribute['values'][0].update(state='known'),
-                     lambda attribute: attribute['values'][0].update(validDuring={'fromId': 'TA-LATER'}),
+                     lambda attribute: attribute['values'][0].update(validDuring={'fromId': 'time-LATER'}),
                      lambda attribute: attribute['values'].clear()]
         for mutate in mutations:
             plan = deepcopy(original)
-            attribute = self.attribute('AT-HEIGHT', plan['proposedStructure'])
+            attribute = self.attribute('attribute-HEIGHT', plan['proposedStructure'])
             mutate(attribute)
             proposal = plan['parameters']['proposals'][0]['proposal']
-            next(row for row in proposal['attributeMigrations'] if row['attributeId'] == 'AT-HEIGHT')['newRecordHash'] = fingerprint(attribute)
+            next(row for row in proposal['attributeMigrations'] if row['attributeId'] == 'attribute-HEIGHT')['newRecordHash'] = fingerprint(attribute)
             tampered = self.rewrite_plan(preview, plan)
             before = self.inventory()
             with self.subTest(mutate=mutate), self.assertRaises(StructureError):
@@ -629,7 +631,7 @@ class FieldMigrationTests(unittest.TestCase):
         original = read_json(self.plan_path(preview))
         for mutate in (lambda source: source['entities'][0].update(name='夹带改名'),
                        lambda source: source['fragments'][0].update(text='夹带正文事实'),
-                       lambda source: self.attribute('AT-SKIN', source)['values'][0].update(value='其他肤色')):
+                       lambda source: self.attribute('attribute-SKIN', source)['values'][0].update(value='其他肤色')):
             plan = deepcopy(original)
             mutate(plan['proposedStructure'])
             tampered = self.rewrite_plan(preview, plan)
@@ -675,23 +677,23 @@ class FieldMigrationTests(unittest.TestCase):
             'name': 'preview_source_proposal_batch', 'arguments': args}})['result']
         self.assertFalse(response['isError'], response)
         self.assertEqual(response['structuredContent'], json.loads(cli.stdout))
-        args['items'][0]['attributeMigrations'][0]['ownerId'] = 'C-BETA'
+        args['items'][0]['attributeMigrations'][0]['ownerId'] = 'character-BETA'
         response = handle({'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {
             'name': 'preview_source_proposal_batch', 'arguments': args}})['result']
         self.assertTrue(response['isError'], response)
 
     def test_only_related_chapter_approvals_and_semantic_receipts_become_stale(self):
-        self.source['fieldDefinitions'].append({'fieldId': 'FD-PLAN', 'key': 'plot.plan', 'label': '计划',
+        self.source['fieldDefinitions'].append({'fieldId': 'field-PLAN', 'key': 'plot.plan', 'label': '计划',
                                                'valueType': 'topic', 'appliesTo': ['chapter']})
-        pairs = [('CH-ALPHA', 'FV-HEIGHT'), ('CH-BETA', 'FV-BETA-HEIGHT'), ('CH-OTHER', 'FV-SKIN')]
+        pairs = [('chapter-ALPHA', 'value-HEIGHT'), ('chapter-BETA', 'value-BETA-HEIGHT'), ('chapter-OTHER', 'value-SKIN')]
         for ordinal, (cid, dependency) in enumerate(pairs, 1):
             self.source['chapters'].append(single_source_chapter(self.source, cid, ordinal=ordinal,
                                           volume_id=self.source['volumes'][0]['volumeId']))
             self.source['chapterArcLinks'].append({'chapterId': cid, 'arcId': self.source['arcs'][0]['arcId'], 'role': 'primary'})
-            self.source['attributes'].append({'attributeId': 'AT-' + cid, 'ownerId': cid,
-                                              'fieldId': 'FD-PLAN', 'values': []})
-            self.source['fragments'].append({'fragmentId': 'SF-' + cid, 'ownerId': cid, 'contentRole': 'plan',
-                'text': '核对当前资料后出发。', 'order': 1, 'contentBindings': ['AT-' + cid], 'dependsOn': [dependency],
+            self.source['attributes'].append({'attributeId': 'attribute-' + cid, 'ownerId': cid,
+                                              'fieldId': 'field-PLAN', 'values': []})
+            self.source['fragments'].append({'fragmentId': 'plan-' + cid, 'ownerId': cid, 'contentRole': 'plan',
+                'text': '核对当前资料后出发。', 'order': 1, 'contentBindings': ['attribute-' + cid], 'dependsOn': [dependency],
                 'chapterContract': {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                                     'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
         self.install_fixture()
@@ -713,25 +715,25 @@ class FieldMigrationTests(unittest.TestCase):
         reviews = [{key: pending[rid][key] for key in ('recordId', 'inputHash', 'contentHash')} | {
             'decision': 'compatible', 'reason': '中性测试当前输入复核',
             'evidence': [{'start': 0, 'end': len(texts[rid]), 'text': texts[rid]}]}
-            for rid in ('SF-LIFE', 'SF-CH-ALPHA', 'SF-CH-BETA', 'SF-CH-OTHER')]
+            for rid in ('fact-LIFE', 'plan-chapter-ALPHA', 'plan-chapter-BETA', 'plan-chapter-OTHER')]
         submit_review(self.root, requestId='pre-migration-reviews', reviews=reviews)
         before_inputs = ReviewInputs(self.source)
         preview = self.preview()
-        self.assertEqual(set(preview['impact']['approvalInvalidations']), {'CH-ALPHA', 'CH-BETA'})
+        self.assertEqual(set(preview['impact']['approvalInvalidations']), {'chapter-ALPHA', 'chapter-BETA'})
         self.commit(preview)
         current = load_structure(self.root)
         after_inputs = ReviewInputs(current)
-        self.assertNotEqual(before_inputs.fingerprint('SF-LIFE'), after_inputs.fingerprint('SF-LIFE'))
-        self.assertEqual(before_inputs.fingerprint('SF-CH-OTHER'), after_inputs.fingerprint('SF-CH-OTHER'))
+        self.assertNotEqual(before_inputs.fingerprint('fact-LIFE'), after_inputs.fingerprint('fact-LIFE'))
+        self.assertEqual(before_inputs.fingerprint('plan-chapter-OTHER'), after_inputs.fingerprint('plan-chapter-OTHER'))
         states = {row['recordId']: row['status'] for row in query_reviews(self.root)['items']}
-        self.assertEqual(states['SF-CH-ALPHA'], 'pending')
-        self.assertEqual(states['SF-CH-BETA'], 'pending')
-        self.assertEqual(states['SF-CH-OTHER'], 'compatible')
+        self.assertEqual(states['plan-chapter-ALPHA'], 'pending')
+        self.assertEqual(states['plan-chapter-BETA'], 'pending')
+        self.assertEqual(states['plan-chapter-OTHER'], 'compatible')
         current_workflow = read_json(self.root / '.govel/workflow.json')
-        for cid in ('CH-ALPHA', 'CH-BETA'):
+        for cid in ('chapter-ALPHA', 'chapter-BETA'):
             self.assertFalse(current_workflow['approvals'][cid]['approved'])
-        self.assertEqual(current_workflow['approvals']['CH-OTHER'], workflow['approvals']['CH-OTHER'])
-        self.assertEqual(current_workflow['artifacts']['CH-OTHER'], workflow['artifacts']['CH-OTHER'])
+        self.assertEqual(current_workflow['approvals']['chapter-OTHER'], workflow['approvals']['chapter-OTHER'])
+        self.assertEqual(current_workflow['artifacts']['chapter-OTHER'], workflow['artifacts']['chapter-OTHER'])
 
 
 if __name__ == '__main__':

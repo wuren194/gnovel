@@ -53,9 +53,9 @@ class MaintenanceEntrypointTests(unittest.TestCase):
         args = {'terms': ['他'], 'ownerSelectors': ['人物甲']}
         report = call_operation('source.search', self.root, args)
         self.assertTrue(report['items'])
-        self.assertEqual({row['ownerId'] for row in report['items']}, {'C-ALPHA'})
+        self.assertEqual({row['ownerId'] for row in report['items']}, {'character-ALPHA'})
         with self.assertRaises(StructureError):
-            call_operation('source.search', self.root, {**args, 'selection': {'ownerIds': ['C-BETA']}})
+            call_operation('source.search', self.root, {**args, 'selection': {'ownerIds': ['character-BETA']}})
         self.source['volumes'][0]['title'] = '人物甲'
         write_json(self.root / '.govel/structure.json', self.source)
         with self.assertRaises(StructureError) as caught:

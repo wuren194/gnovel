@@ -21,7 +21,7 @@ from scripts.core.project import query_policy
 from scripts.core.source_model import source_schema
 from scripts.core.structure_store import StructureError, validate_structure
 from scripts.core.tool_catalog import list_capabilities
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 def size(value):
@@ -33,7 +33,7 @@ class AuthoringSchemaGuidanceTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve() / 'book'
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         self.source = self.fixture['structure']
         self.chapter_id = self.fixture['chapterIds'][0]
 

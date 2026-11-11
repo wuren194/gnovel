@@ -35,7 +35,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.source = source_fixture()
-        self.source['fragments'].append({**self.source['fragments'][3], 'fragmentId': 'SF-PLAN',
+        self.source['fragments'].append({**self.source['fragments'][3], 'fragmentId': 'plan-PLAN',
                                         'contentRole': 'plan', 'text': '计划：独自守门，第二日回家。'})
         write_json(self.root / '.govel/structure.json', self.source)
 
@@ -45,19 +45,19 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
                                       items=items or self.items())
 
     def items(self):
-        return [{'kind': 'fact', 'recordId': 'SF-LIFE', 'reason': 'word choice',
+        return [{'kind': 'fact', 'recordId': 'fact-LIFE', 'reason': 'word choice',
                  'patch': [text_patch('独自', '单独'), text_patch('城门', '大门')],
-                 'evidence': [{'fragmentId': 'SF-LIFE', 'quote': '他独自守过城门。'}]},
-                {'kind': 'planning', 'recordId': 'SF-PLAN', 'reason': 'same revision',
+                 'evidence': [{'fragmentId': 'fact-LIFE', 'quote': '他独自守过城门。'}]},
+                {'kind': 'planning', 'recordId': 'plan-PLAN', 'reason': 'same revision',
                  'patch': [text_patch('独自', '单独'), text_patch('第二日', '第三日')], 'evidence': []}]
 
     def inventory(self):
         return {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
 
     def test_query_logic_stdio_with_project_fields_and_rule_records(self):
-        self.source['fieldDefinitions'].append({'fieldId': 'FD-PROJECT', 'key': 'project.plan', 'label': '总规划',
+        self.source['fieldDefinitions'].append({'fieldId': 'field-PROJECT', 'key': 'project.plan', 'label': '总规划',
                                                'valueType': 'topic', 'appliesTo': ['project']})
-        self.source['entities'].append({'entityId': 'RU-GATE', 'entityType': 'rule', 'name': '门禁规则'})
+        self.source['entities'].append({'entityId': 'rule-GATE', 'entityType': 'rule', 'name': '门禁规则'})
         write_json(self.root / '.govel/structure.json', self.source)
         before = self.inventory()
         request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {
@@ -67,7 +67,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         response = json.loads(result.stdout)['result']
         self.assertFalse(response['isError'], response)
-        self.assertEqual(response['structuredContent']['items'][0]['id'], 'RU-GATE')
+        self.assertEqual(response['structuredContent']['items'][0]['id'], 'rule-GATE')
         self.assertEqual(self.inventory(), before)
 
     def test_budget_error_has_registry_bounds_in_cli_and_mcp(self):
@@ -152,9 +152,9 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.assertFalse((self.root / f'.govel/operations/{plan["operationId"]}.json').exists())
 
     def test_evidence_error_identifies_quote_role_and_reason(self):
-        for evidence, reason in (({'fragmentId': 'SF-PLAN', 'quote': '独自'}, 'non_fact_fragment'),
-                                 ({'fragmentId': 'SF-LIFE', 'quote': '不存在'}, 'quote_not_found'),
-                                 ({'fragmentId': 'SF-MISSING', 'quote': '独自'}, 'fragment_not_found')):
+        for evidence, reason in (({'fragmentId': 'plan-PLAN', 'quote': '独自'}, 'non_fact_fragment'),
+                                 ({'fragmentId': 'fact-LIFE', 'quote': '不存在'}, 'quote_not_found'),
+                                 ({'fragmentId': 'fact-MISSING', 'quote': '独自'}, 'fragment_not_found')):
             items = self.items()[:1]
             items[0]['evidence'].append(evidence)
             with self.assertRaises(StructureError) as error:
@@ -181,7 +181,7 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         self.assertEqual(self.inventory(), before)
 
     def test_source_scan_word_lists_role_status_read_only_and_cursor_binding(self):
-        self.source['fragments'].append({**self.source['fragments'][3], 'fragmentId': 'SF-OLD', 'status': 'archived'})
+        self.source['fragments'].append({**self.source['fragments'][3], 'fragmentId': 'fact-OLD', 'status': 'archived'})
         write_json(self.root / '.govel/structure.json', self.source)
         words = self.root / '工作台/禁用词.json'
         write_json(words, ['独自'])
@@ -191,10 +191,10 @@ class SourceMaintenanceFeedbackTests(unittest.TestCase):
         result = call_operation('source.scan-report', self.root, args)
         self.assertEqual(self.inventory(), before)
         hits = {row['fragmentId']: row for row in result['items']}
-        self.assertTrue(hits['SF-LIFE']['factEvidenceEligible'])
-        self.assertEqual(hits['SF-PLAN']['evidenceIneligibilityReason'], 'non_fact_fragment')
-        self.assertEqual(hits['SF-OLD']['status'], 'archived')
-        self.assertFalse(hits['SF-OLD']['factEvidenceEligible'])
+        self.assertTrue(hits['fact-LIFE']['factEvidenceEligible'])
+        self.assertEqual(hits['plan-PLAN']['evidenceIneligibilityReason'], 'non_fact_fragment')
+        self.assertEqual(hits['fact-OLD']['status'], 'archived')
+        self.assertFalse(hits['fact-OLD']['factEvidenceEligible'])
         args['limit'] = 1
         page = call_operation('source.scan-report', self.root, args)
         self.assertTrue(page['hasMore'])
@@ -235,21 +235,21 @@ class AgentsDecisionConsistencyTests(unittest.TestCase):
             root = Path(temp)
             source = source_fixture()
             base = {'statement': '作者决定', 'rationale': 'test', 'scopeIds': [], 'dependsOn': []}
-            active = {**base, 'decisionId': 'DR-ACTIVE', 'status': 'active', 'scopeSnapshot': {},
+            active = {**base, 'decisionId': 'decision-ACTIVE', 'status': 'active', 'scopeSnapshot': {},
                       'scopeSnapshotBasis': SCOPE_SNAPSHOT_BASIS,
                       'approval': {'actorId': 'author', 'evidence': 'approved'}}
             source['authorDecisions'] = [active,
-                {**base, 'decisionId': 'DR-OLD', 'status': 'superseded'},
-                {**active, 'decisionId': 'DR-NEW', 'supersedes': 'DR-OLD'},
-                {**base, 'decisionId': 'DR-DRAFT', 'status': 'draft'},
-                {**active, 'decisionId': 'DR-STALE', 'scopeIds': ['C-ALPHA'],
-                 'scopeSnapshot': _scope_hashes(source, ['C-ALPHA'])}]
+                {**base, 'decisionId': 'decision-OLD', 'status': 'superseded'},
+                {**active, 'decisionId': 'decision-NEW', 'supersedes': 'decision-OLD'},
+                {**base, 'decisionId': 'decision-DRAFT', 'status': 'draft'},
+                {**active, 'decisionId': 'decision-STALE', 'scopeIds': ['character-ALPHA'],
+                 'scopeSnapshot': _scope_hashes(source, ['character-ALPHA'])}]
             source['entities'][0]['name'] = '新姓名'
             validate_structure(source)
-            (root / 'AGENTS.md').write_text('DR-OLD\nDR-ACTIVE DR-DRAFT DR-MISSING\nDR-STALE\nDR-OLD-SUFFIX')
+            (root / 'AGENTS.md').write_text('decision-OLD\ndecision-ACTIVE decision-DRAFT decision-MISSING\ndecision-STALE\ndecision-OLD-SUFFIX')
             result = check_agents_decisions(root, source)
-            self.assertEqual({r['decisionId'] for r in result['issues']}, {'DR-OLD', 'DR-DRAFT', 'DR-MISSING', 'DR-STALE', 'DR-OLD-SUFFIX'})
-            self.assertEqual(result['issues'][0]['supersededBy'], ['DR-NEW'])
+            self.assertEqual({r['decisionId'] for r in result['issues']}, {'decision-OLD', 'decision-DRAFT', 'decision-MISSING', 'decision-STALE', 'decision-OLD-SUFFIX'})
+            self.assertEqual(result['issues'][0]['supersededBy'], ['decision-NEW'])
             _, issues, objects = _planning_domain(root, source)
             self.assertEqual(len(issues), len(result['issues']))
             self.assertFalse(objects['agentsConsistency']['coverage']['semanticConsistencyChecked'])

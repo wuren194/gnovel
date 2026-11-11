@@ -1,6 +1,6 @@
 """`novelctl project export` assembles finished chapters in reading order.
 
-动机：`正文/` 下的文件名是 chapterId（`正文/CH-XXXXXXXXXXXX.md`），与章节顺序和标题
+动机：`正文/` 下的文件名是 chapterId（`正文/chapter-XXXXXXXXXXXX.md`），与章节顺序和标题
 都解耦——要读全本或发出去，此前只能手工按 structure 的 displayOrdinal 排序再逐个拼接。
 导出是只读操作，不得改 structure、正文或状态。
 """
@@ -33,9 +33,9 @@ def run_cli(args: list[str], *, process: bool = False) -> tuple[int, dict]:
 
 
 CHAPTERS = [
-    ("CH-EXPORT00000A", "雨夜第一次", "stable", "他把伞收了。\n\n水从袖口灌进去。"),
-    ("CH-EXPORT00000B", "第二天早上", "stable", "桌面是凉的。\n\n他先摸到的是空的那半边。"),
-    ("CH-EXPORT00000C", "还没写完", "draft", "草稿内容。"),
+    ("chapter-EXPORT00000A", "雨夜第一次", "stable", "他把伞收了。\n\n水从袖口灌进去。"),
+    ("chapter-EXPORT00000B", "第二天早上", "stable", "桌面是凉的。\n\n他先摸到的是空的那半边。"),
+    ("chapter-EXPORT00000C", "还没写完", "draft", "草稿内容。"),
 ]
 
 
@@ -47,15 +47,15 @@ def make_project(root: Path) -> None:
     path = root / ".govel" / "structure.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data["volumes"].append(
-        {"volumeId": "VOL-EXPORT01", "title": "第一卷", "summary": "", "status": "planned"}
+        {"volumeId": "volume-EXPORT01", "title": "第一卷", "summary": "", "status": "planned"}
     )
     data["arcs"].append(
         {
-            "arcId": "ARC-EXPORT01",
+            "arcId": "arc-EXPORT01",
             "title": "主线",
             "summary": "",
             "status": "planned",
-            "volumeIds": ["VOL-EXPORT01"],
+            "volumeIds": ["volume-EXPORT01"],
         }
     )
     data["revision"] = 1
@@ -68,7 +68,7 @@ def make_project(root: Path) -> None:
                 "displayOrdinal": index,
                 "displayCode": f"CH{index:03d}",
                 "title": title,
-                "placement": {"scope": "volume", "volumeId": "VOL-EXPORT01"},
+                "placement": {"scope": "volume", "volumeId": "volume-EXPORT01"},
                 "filePath": f"正文/{chapter_id}.md",
                 "status": status,
                 "storyTimeStartId": None,
@@ -79,7 +79,7 @@ def make_project(root: Path) -> None:
             f"正文/{chapter_id}.md", state='managed', generation=data['revision'],
             expected_content_digest='sha256:'+sha256_text(body))
         data["chapterArcLinks"].append(
-            {"chapterId": chapter_id, "arcId": "ARC-EXPORT01", "role": "primary"}
+            {"chapterId": chapter_id, "arcId": "arc-EXPORT01", "role": "primary"}
         )
         (root / "正文" / f"{chapter_id}.md").write_text(body, encoding="utf-8")
     from scripts.core.structure_store import validate_structure

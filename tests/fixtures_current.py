@@ -17,7 +17,7 @@ def initialize_project(root: Path, *, book_name: str = '测试书') -> dict:
     return read_json(root/'.govel/structure.json')
 
 
-def create_schema5_project(root: Path, *, book_name: str = '测试书', chapter_count: int = 2,
+def create_current_project(root: Path, *, book_name: str = '测试书', chapter_count: int = 2,
                            arc_title: str = '主线') -> dict:
     structure = initialize_project(root, book_name=book_name)
     structure['pairAssessment'] = {'status': 'not_applicable', 'reason': '合成夹具只核对钥匙来源，没有配对设计。'}
@@ -26,16 +26,16 @@ def create_schema5_project(root: Path, *, book_name: str = '测试书', chapter_
     arc_id = structure['arcs'][0]['arcId']
     structure['arcs'][0]['title'] = arc_title
     structure['entities'] = [
-        {'entityId': 'C-TEST-ALPHA', 'entityType': 'character', 'name': '沈砚', 'aliases': ['阿砚'],
+        {'entityId': 'character-TEST-ALPHA', 'entityType': 'character', 'name': '沈砚', 'aliases': ['阿砚'],
          'status': 'active', 'summary': '主角', 'voiceProfile': {'bannedPhrasesForRole': ['该死']}},
-        {'entityId': 'P-TEST-KEY', 'entityType': 'prop', 'name': '储物柜钥匙', 'aliases': ['钥匙'],
+        {'entityId': 'prop-TEST-KEY', 'entityType': 'prop', 'name': '储物柜钥匙', 'aliases': ['钥匙'],
          'status': 'active', 'summary': '关键物件'},
-        {'entityId': 'L-TEST-ROOM', 'entityType': 'location', 'name': '仓库', 'aliases': [],
+        {'entityId': 'location-TEST-ROOM', 'entityType': 'location', 'name': '仓库', 'aliases': [],
          'status': 'active', 'summary': '开场地点'},
-        {'entityId': 'HK-TEST-SECRET', 'entityType': 'hook', 'name': '钥匙秘密', 'aliases': [],
+        {'entityId': 'hook-TEST-SECRET', 'entityType': 'hook', 'name': '钥匙秘密', 'aliases': [],
          'status': 'active', 'summary': '待揭晓'},
     ]
-    structure['fieldDefinitions'] = [{'fieldId': 'FD-TEST-PLAN', 'key': 'plot.plan', 'label': '章节计划',
+    structure['fieldDefinitions'] = [{'fieldId': 'field-TEST-PLAN', 'key': 'plot.plan', 'label': '章节计划',
                                     'valueType': 'topic', 'appliesTo': ['chapter']}]
     ids = []
     for number in range(1, chapter_count + 1):
@@ -51,8 +51,8 @@ def create_schema5_project(root: Path, *, book_name: str = '测试书', chapter_
         structure['chapters'].append(chapter)
         structure['chapterArcLinks'].append({'chapterId': cid, 'arcId': arc_id, 'role': 'primary'})
         aid = new_id('attribute')
-        structure['attributes'].append({'attributeId': aid, 'ownerId': cid, 'fieldId': 'FD-TEST-PLAN', 'values': []})
-        structure['fragments'].append({'fragmentId': new_id('fragment'), 'ownerId': cid, 'order': 1,
+        structure['attributes'].append({'attributeId': aid, 'ownerId': cid, 'fieldId': 'field-TEST-PLAN', 'values': []})
+        structure['fragments'].append({'fragmentId': new_id('fragment', content_role='plan'), 'ownerId': cid, 'order': 1,
             'text': '主角核对钥匙来源，决定留在仓库。', 'contentRole': 'plan', 'contentBindings': [aid],
             'dependsOn': [], 'chapterContract': {'targetRange': [1, 10000], 'mode': 'plot', 'intensityLevel': 1,
                 'behaviorCoverage': {'relationship': 'not_applicable', 'living': 'not_applicable'}}})
@@ -60,4 +60,4 @@ def create_schema5_project(root: Path, *, book_name: str = '测试书', chapter_
     write_json(root/'.govel/structure.json', structure)
     state_cache.rebuild(root)
     return {'structure': structure, 'chapterIds': ids, 'volumeId': volume_id, 'arcId': arc_id,
-            'characterId': 'C-TEST-ALPHA', 'propId': 'P-TEST-KEY', 'locationId': 'L-TEST-ROOM', 'hookId': 'HK-TEST-SECRET'}
+            'characterId': 'character-TEST-ALPHA', 'propId': 'prop-TEST-KEY', 'locationId': 'location-TEST-ROOM', 'hookId': 'hook-TEST-SECRET'}

@@ -82,7 +82,7 @@ def _target_from_ref(source: dict, session_ref: str) -> tuple[dict, dict]:
 
 
 MUTABLE_FIELDS = {'name', 'aliases', 'status', 'summary', 'absoluteTime', 'timeOrdinal',
-                  'timeStartId', 'timeEndId', 'ruleSpec', 'voiceProfile'}
+                  'timeStartId', 'timeEndId', 'ruleSpec', 'voiceProfile', 'designations'}
 
 
 def _value(entity: dict, path: str):

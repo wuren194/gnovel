@@ -21,7 +21,7 @@ class ProseEvidenceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.source = source_fixture()
-        cid = 'CH-ALPHA'
+        cid = 'chapter-ALPHA'
         self.source['chapters'] = [{'chapterId': cid, 'title': '守门', 'displayOrdinal': 1,
             'placement': {'scope': 'volume', 'volumeId': self.source['volumes'][0]['volumeId']},
             'status': 'stable', 'filePath': '正文/守门.md'}]
@@ -33,24 +33,24 @@ class ProseEvidenceTests(unittest.TestCase):
         self.prose.write_bytes('他一米九的身形挡住了城门。\r\n天色已暗。'.encode())
 
     def args(self, kind='depends_on', key='one'):
-        return {'chapterId': 'CH-ALPHA', 'requestId': key, 'fileHash': digest(self.prose.read_bytes()),
+        return {'chapterId': 'chapter-ALPHA', 'requestId': key, 'fileHash': digest(self.prose.read_bytes()),
                 'sourceHash': snapshot_hash(load_structure(self.root)), 'citations': [{
                 'start': 0, 'end': 13, 'text': self.prose.read_bytes().decode()[:13],
-                'targetIds': ['AT-HEIGHT'], 'kind': kind, 'reason': '明确使用成年身高。'}]}
+                'targetIds': ['attribute-HEIGHT'], 'kind': kind, 'reason': '明确使用成年身高。'}]}
 
     def plan(self):
-        return attribute_value_proposal(self.root, 'AT-HEIGHT', 185)
+        return attribute_value_proposal(self.root, 'attribute-HEIGHT', 185)
 
     def test_dependency_invalidation_has_exact_location_without_prose_write(self):
         original = self.prose.read_bytes()
         register_evidence(self.root, **self.args())
         plan = self.plan()
-        self.assertEqual(plan['impact']['approvalInvalidations'], ['CH-ALPHA'])
+        self.assertEqual(plan['impact']['approvalInvalidations'], ['chapter-ALPHA'])
         self.assertEqual(plan['impact']['proseEvidence'][0]['locator']['start'], 0)
         commit(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True, actor='test')
         self.assertEqual(self.prose.read_bytes(), original)
         self.assertEqual(query_evidence(self.root)['items'][0]['status'], 'needs_review')
-        self.assertFalse(read_json(self.root / '.govel/workflow.json')['approvals']['CH-ALPHA']['approved'])
+        self.assertFalse(read_json(self.root / '.govel/workflow.json')['approvals']['chapter-ALPHA']['approved'])
 
     def test_mention_is_candidate_and_does_not_invalidate_approval(self):
         register_evidence(self.root, **self.args(kind='mentions'))

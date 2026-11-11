@@ -11,7 +11,7 @@ from scripts.core.review_plan import chapter_stage_a_plan, require_stage_a_compl
 from scripts.core.source_plan import chapter_plan
 from scripts.core.structure_store import StructureError
 from scripts.core.workflow import approve_artifacts, default_workflow, record_artifact
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 from tests.fixtures_workflow import assessed_review_payload
 
 
@@ -19,7 +19,7 @@ class ReviewCompletionBoundaryTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
-        fixture = create_schema5_project(self.root, chapter_count=1)
+        fixture = create_current_project(self.root, chapter_count=1)
         self.source = fixture['structure']; self.cid = fixture['chapterIds'][0]
         self.source['chapters'][0]['status'] = 'planning_required'
         write_json(self.root / '.govel/structure.json', self.source)

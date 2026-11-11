@@ -23,7 +23,7 @@ class SourceReportTests(unittest.TestCase):
         self.root = Path(self.temp.name); source_fixture(self.root)
 
     def preview(self, height=185, key='change'):
-        return attribute_value_proposal(self.root, 'AT-HEIGHT', height)
+        return attribute_value_proposal(self.root, 'attribute-HEIGHT', height)
 
     def commit(self, plan):
         return commit(self.root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True, actor='test')
@@ -31,7 +31,7 @@ class SourceReportTests(unittest.TestCase):
     def test_large_report_is_bounded_but_all_impacts_can_be_read(self):
         source = load_structure(self.root)
         template = source['fragments'][0]
-        source['fragments'].extend({**deepcopy(template), 'fragmentId': 'SF-LARGE-' + str(i), 'order': i + 10} for i in range(400))
+        source['fragments'].extend({**deepcopy(template), 'fragmentId': 'fact-LARGE-' + str(i), 'order': i + 10} for i in range(400))
         write_json(self.root / '.govel/structure.json', source)
         plan = self.preview()
         self.assertTrue(plan['responseCompacted'])
@@ -57,7 +57,7 @@ class SourceReportTests(unittest.TestCase):
 
     def test_undo_preserves_review_history_and_recomputes_current_work(self):
         plan = self.preview(); self.commit(plan)
-        item = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')
+        item = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'fact-HEIGHT')
         review = {k: item[k] for k in ('recordId', 'inputHash', 'contentHash')} | {
             'decision': 'conflict', 'reason': '原文一米九与新值不符。',
             'evidence': [{'start': 0, 'end': 7, 'text': '他身高一米九。'}]}
@@ -66,10 +66,10 @@ class SourceReportTests(unittest.TestCase):
         result = undo(self.root, plan['operationId'], actor='test')
         self.assertEqual((self.root / RECEIPTS_PATH).read_bytes(), history)
         self.assertFalse(query_receipt(self.root, receiptId=receipt['receiptId'])['items'][0]['inputsStillCurrent'])
-        self.assertIn('SF-HEIGHT', result['impact']['reviewFragmentIds'])
+        self.assertIn('fact-HEIGHT', result['impact']['reviewFragmentIds'])
         report = query_change_report(self.root, operationId=plan['operationId'], undoRevision=result['revision'])
         self.assertTrue(report['historical'])
-        self.assertTrue(any(r.get('recordId') == 'SF-HEIGHT' for r in report['items']))
+        self.assertTrue(any(r.get('recordId') == 'fact-HEIGHT' for r in report['items']))
 
     def test_three_changes_and_undo_keep_latest_target_and_history(self):
         plans = []
@@ -78,7 +78,7 @@ class SourceReportTests(unittest.TestCase):
         for plan, expected in zip(reversed(plans), (180, 185, 190)):
             undo(self.root, plan['operationId'], actor='test')
             self.assertEqual(load_structure(self.root)['attributes'][0]['values'][0]['value']['number'], expected)
-            row = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'SF-HEIGHT')
+            row = next(r for r in query_reviews(self.root)['items'] if r['recordId'] == 'fact-HEIGHT')
             self.assertEqual(row['status'], 'pending')
         self.assertEqual(load_structure(self.root)['revision'], 6)
         self.assertEqual(len(list((self.root / '.govel/undo-receipts').glob('*.json'))), 3)

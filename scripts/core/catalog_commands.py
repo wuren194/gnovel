@@ -60,7 +60,7 @@ def apply_create_entity(proposed: dict, *, entity_type: str, name: str, aliases:
     """Register a new entity in ``proposed``; shared by the single preview and structure batches."""
     if entity_type not in PREFIX_BY_TYPE or entity_type == "time_anchor":
         raise StructureError("ENTITY_TYPE_INVALID", "use a supported entity type; time anchors use preview_create_time_anchor")
-    entity_id = new_id(PREFIX_BY_TYPE[entity_type])
+    entity_id = new_id(entity_type)
     register_entity(proposed, {"entityId": entity_id, "entityType": entity_type, "name": _text(name, "name"),
                               "aliases": _strings(aliases if aliases is not None else [], "aliases"), "summary": _text(summary, "summary", empty=True)})
     return entity_id

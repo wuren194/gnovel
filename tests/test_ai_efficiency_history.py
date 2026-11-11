@@ -212,7 +212,7 @@ class HistoryIndexTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         root = Path(temp.name).resolve()
         source = source_fixture(root)
-        row = query_reviews(root, recordIds=['SF-HEIGHT'])['items'][0]
+        row = query_reviews(root, recordIds=['fact-HEIGHT'])['items'][0]
         text = source['fragments'][0]['text']
         receipt = submit_review(root, requestId='review-once', reviews=[{
             **{key: row[key] for key in ('recordId', 'inputHash', 'contentHash')},
@@ -221,7 +221,7 @@ class HistoryIndexTests(unittest.TestCase):
         for indexed in (False, True):
             if indexed:
                 rebuild_history_index(root)
-            result = query_history(root, kind='evidence', requestId='review-once', recordId='SF-HEIGHT')
+            result = query_history(root, kind='evidence', requestId='review-once', recordId='fact-HEIGHT')
             self.assertEqual(len(result['items']), 1)
             self.assertEqual(result['items'][0]['receiptId'], receipt['receiptId'])
             self.assertNotIn(text, json.dumps(result, ensure_ascii=False))
@@ -232,12 +232,12 @@ class HistoryIndexTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         root = Path(temp.name).resolve()
         _, chapter = planning_source(root)
-        plan = attribute_value_proposal(root, 'AT-HEIGHT', 185)
+        plan = attribute_value_proposal(root, 'attribute-HEIGHT', 185)
         commit_plan(root, operation_id=plan['operationId'], plan_hash=plan['planHash'], approved=True)
         for indexed in (False, True):
             if indexed:
                 rebuild_history_index(root)
-            rows = query_history(root, kind='operation', recordId='AT-HEIGHT')['items']
+            rows = query_history(root, kind='operation', recordId='attribute-HEIGHT')['items']
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]['id'], plan['operationId'])
             self.assertTrue(rows[0]['historicalSnapshot'])
@@ -260,24 +260,24 @@ class HistoryIndexTests(unittest.TestCase):
         from tests.fixtures_source import source_fixture, single_source_chapter
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         root = Path(temp.name).resolve(); source = source_fixture()
-        chapter = single_source_chapter(source, 'CH-ALPHA', status='stable',
+        chapter = single_source_chapter(source, 'chapter-ALPHA', status='stable',
                                         volume_id=source['volumes'][0]['volumeId'])
         source['chapters'].append(chapter)
-        source['chapterArcLinks'].append({'chapterId': 'CH-ALPHA', 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
+        source['chapterArcLinks'].append({'chapterId': 'chapter-ALPHA', 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
         validate_structure(source)
         write_json(root / '.govel/structure.json', source)
         write_json(root / '.govel/workflow.json', default_workflow())
         manuscript = root / chapter['filePath']; manuscript.parent.mkdir()
         text = '他一米九的身形挡住了城门。'; manuscript.write_text(text)
-        receipt = register_evidence(root, chapterId='CH-ALPHA', fileHash=digest(manuscript.read_bytes()),
+        receipt = register_evidence(root, chapterId='chapter-ALPHA', fileHash=digest(manuscript.read_bytes()),
             sourceHash=snapshot_hash(source), requestId='prose-once', citations=[{
-                'start': 0, 'end': len(text), 'text': text, 'targetIds': ['AT-HEIGHT'],
+                'start': 0, 'end': len(text), 'text': text, 'targetIds': ['attribute-HEIGHT'],
                 'kind': 'depends_on', 'reason': '明确引证'}])
         manuscript.write_text('后来改稿，旧引证不能充当当前证据。')
         for indexed in (False, True):
             if indexed:
                 rebuild_history_index(root)
-            result = query_history(root, kind='evidence', requestId='prose-once', chapterId='CH-ALPHA')
+            result = query_history(root, kind='evidence', requestId='prose-once', chapterId='chapter-ALPHA')
             self.assertEqual(result['items'][0]['receiptId'], receipt['batchId'])
             self.assertTrue(result['coverage']['currentStatusNotEvaluated'])
             self.assertNotIn(text, json.dumps(result, ensure_ascii=False))

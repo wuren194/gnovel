@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import json
 import tempfile
 import unittest
@@ -7,13 +9,13 @@ from pathlib import Path
 
 from scripts.continuation_context import build_continuation_context
 from scripts.story_summarizer import StorySummarizerError, _commit_summary, _prepare_context
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 def fake_summary(root: Path, fixture: dict) -> dict:
     structure = fixture["structure"]
     return {
-        "schemaVersion": 5,
+        "schemaVersion": current_schema_version(),
         "projectId": structure["projectId"],
         "structureRevision": structure["revision"],
         "coveredChapterIds": fixture["chapterIds"],
@@ -30,7 +32,7 @@ class StorySummarizerTests(unittest.TestCase):
     def test_prepare_uses_stable_ids_and_structure_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             ctx = _prepare_context(root)
             self.assertEqual(ctx["committedChapters"], 2)
             self.assertEqual(ctx["chapters"][0]["chapterId"], fixture["chapterIds"][0])
@@ -40,7 +42,7 @@ class StorySummarizerTests(unittest.TestCase):
     def test_commit_and_context_injection(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             src = root / "summary.json"
             src.write_text(json.dumps(fake_summary(root, fixture), ensure_ascii=False), encoding="utf-8")
             report = _commit_summary(root, str(src))
@@ -52,7 +54,7 @@ class StorySummarizerTests(unittest.TestCase):
     def test_commit_rejects_wrong_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             summary = fake_summary(root, fixture)
             summary["structureRevision"] = 99
             src = root / "bad.json"
@@ -63,7 +65,7 @@ class StorySummarizerTests(unittest.TestCase):
     def test_missing_or_corrupt_summary_falls_back(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            fixture = create_schema5_project(root)
+            fixture = create_current_project(root)
             ctx = build_continuation_context(root, fixture["chapterIds"][0])
             self.assertNotIn("storySummary", ctx)
             (root / ".govel/aux/story-summary.json").write_text("bad", encoding="utf-8")

@@ -37,8 +37,15 @@
       "role": "canon_semantic_contract",
       "create": "generic",
       "existing": "field_definition_proposal",
-      "metadataFields": ["label", "description"],
-      "semanticFields": ["key", "valueType", "appliesTo"],
+      "metadataFields": [
+        "label",
+        "description"
+      ],
+      "semanticFields": [
+        "key",
+        "valueType",
+        "appliesTo"
+      ],
       "delete": "migration_required"
     },
     "planFragments": {
@@ -56,6 +63,15 @@
     "presentations": {
       "role": "narrative_presentation",
       "existing": "generic_transaction"
+    },
+    "checks": {
+      "role": "verification_history",
+      "create": "check_preview",
+      "existing": "immutable"
+    },
+    "recallPools": {
+      "role": "authorial_reminder",
+      "existing": "generic_transaction"
     }
   },
   "placementScopes": [
@@ -67,13 +83,22 @@
     "planning_candidate"
   ],
   "pairClassification": {
-    "idPrefix": "PAIR",
-    "assessmentStates": ["unassessed", "assessed", "not_applicable"],
-    "classificationStates": ["unassessed", "unknown", "known", "not_applicable"]
+    "idPrefix": "pair",
+    "assessmentStates": [
+      "unassessed",
+      "assessed",
+      "not_applicable"
+    ],
+    "classificationStates": [
+      "unassessed",
+      "unknown",
+      "known",
+      "not_applicable"
+    ]
   },
-  "idSuffixPattern": "[A-Z0-9][A-Z0-9-]{1,63}",
+  "idSuffixPattern": "[A-Za-z0-9][A-Za-z0-9-]{1,63}",
   "planningCandidates": {
-    "idPrefix": "PC",
+    "idPrefix": "candidate",
     "statuses": [
       "draft",
       "approved",
@@ -84,7 +109,7 @@
     "maxMergeSources": 8
   },
   "authorDecisions": {
-    "idPrefix": "DR",
+    "idPrefix": "decision",
     "statuses": [
       "draft",
       "active",
@@ -94,26 +119,33 @@
   "collections": {
     "fieldDefinitions": {
       "idField": "fieldId",
-      "prefix": "FD"
+      "prefix": "field"
     },
     "attributes": {
       "idField": "attributeId",
-      "prefix": "AT"
+      "prefix": "attribute"
     },
     "fragments": {
-      "idField": "fragmentId",
-      "prefix": "SF"
+      "idField": "fragmentId"
     },
     "units": {
       "idField": "unitId",
-      "prefix": "UN"
+      "prefix": "unit"
     },
     "presentations": {
       "idField": "presentationId",
-      "prefix": "PV"
+      "prefix": "presentation"
+    },
+    "checks": {
+      "idField": "checkId",
+      "prefix": "check"
+    },
+    "recallPools": {
+      "idField": "poolId",
+      "prefix": "pool"
     }
   },
-  "valueIdPrefix": "FV",
+  "valueIdPrefix": "value",
   "valueTypes": [
     "text",
     "number",
@@ -126,7 +158,8 @@
     "known",
     "unknown",
     "unfilled",
-    "not_applicable"
+    "not_applicable",
+    "absent"
   ],
   "contentRoles": [
     "fact",
@@ -173,5 +206,60 @@
   "knowledgeModes": [
     "author",
     "perspective"
-  ]
+  ],
+  "entityPrefixes": {
+    "character": "character",
+    "prop": "prop",
+    "location": "location",
+    "event": "event",
+    "faction": "faction",
+    "rule": "rule",
+    "secret": "secret",
+    "hook": "hook",
+    "soft_limit": "limit",
+    "time_anchor": "time"
+  },
+  "objectPrefixes": {
+    "volume": "volume",
+    "arc": "arc",
+    "chapter": "chapter",
+    "relation": "relation"
+  },
+  "fragmentPrefixes": {
+    "fact": "fact",
+    "belief": "belief",
+    "in_world_text": "text",
+    "plan": "plan"
+  },
+  "receiptPrefixes": {
+    "sample": "sample",
+    "evidence": "evidence"
+  },
+  "profileTopics": [
+    "trait",
+    "preference",
+    "tendency",
+    "goal",
+    "priority",
+    "state",
+    "voice"
+  ],
+  "recallTopics": [
+    "trait",
+    "preference",
+    "tendency"
+  ],
+  "cognitionAttitudes": [
+    "knows",
+    "believes",
+    "suspects",
+    "unaware"
+  ],
+  "checkStatuses": [
+    "unverified",
+    "supported",
+    "refuted",
+    "inconclusive"
+  ],
+  "generatedSuffixLength": 12
 }

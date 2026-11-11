@@ -34,10 +34,10 @@ def make_card_project(root: Path) -> dict:
     source = source_fixture()
     source.update(projectId=initial['projectId'], bookName='对象卡投影验收')
     source['entities'][0].update(aliases=['值班员'], summary='负责整理值班记录。')
-    source['attributes'][0]['values'][0]['validDuring']['toId'] = 'TA-LATER'
+    source['attributes'][0]['values'][0]['validDuring']['toId'] = 'time-LATER'
     source['attributes'][0]['values'].append({
-        'valueId': 'FV-HEIGHT-LATER', 'value': {'number': 191, 'unit': 'cm'},
-        'validDuring': {'fromId': 'TA-LATER'}})
+        'valueId': 'value-HEIGHT-LATER', 'value': {'number': 191, 'unit': 'cm'},
+        'validDuring': {'fromId': 'time-LATER'}})
 
     rows = [
         ('UNKNOWN', 'profile.origin', '籍贯', 'text', {'state': 'unknown'}),
@@ -48,34 +48,34 @@ def make_card_project(root: Path) -> dict:
         ('ZERO', 'profile.count', '遗漏次数', 'number', {'value': 0}),
         ('TEXT', 'profile.literal', '原样文本', 'text', {'value': JSON_TEXT}),
         ('MARKUP', 'profile.markup', '原样标记', 'text', {'value': MARKUP_TEXT}),
-        ('REF', 'profile.partner', '搭档', 'reference', {'value': 'C-BETA'}),
+        ('REF', 'profile.partner', '搭档', 'reference', {'value': 'character-BETA'}),
         ('PROTO', '__proto__', '自定义字段', 'text', {'value': '原型同名也只是字段'}),
     ]
     for suffix, key, label, kind, value in rows:
         source['fieldDefinitions'].append({
-            'fieldId': 'FD-CARD-' + suffix, 'key': key, 'label': label,
+            'fieldId': 'field-CARD-' + suffix, 'key': key, 'label': label,
             'valueType': kind, 'appliesTo': ['character']})
         source['attributes'].append({
-            'attributeId': 'AT-CARD-' + suffix, 'ownerId': 'C-ALPHA',
-            'fieldId': 'FD-CARD-' + suffix,
-            'values': [] if value is None else [{'valueId': 'FV-CARD-' + suffix, **value}]})
+            'attributeId': 'attribute-CARD-' + suffix, 'ownerId': 'character-ALPHA',
+            'fieldId': 'field-CARD-' + suffix,
+            'values': [] if value is None else [{'valueId': 'value-CARD-' + suffix, **value}]})
     source['fieldDefinitions'].append({
-        'fieldId': 'FD-CARD-MISSING', 'key': 'profile.missing', 'label': '未登记项',
+        'fieldId': 'field-CARD-MISSING', 'key': 'profile.missing', 'label': '未登记项',
         'valueType': 'text', 'appliesTo': ['character']})
     source['fieldDefinitions'].append({
-        'fieldId': 'FD-CARD-CONSTRUCTOR', 'key': 'constructor', 'label': '未登记自定义项',
+        'fieldId': 'field-CARD-CONSTRUCTOR', 'key': 'constructor', 'label': '未登记自定义项',
         'valueType': 'text', 'appliesTo': ['character']})
     source['fragments'].extend([
-        {'fragmentId': 'SF-CARD-BELIEF', 'ownerId': 'C-BETA', 'order': 5,
-         'text': '甲认为两人都熟悉这条路。', 'contentRole': 'belief', 'perspectiveId': 'C-ALPHA',
-         'contentBindings': ['AT-SKIN', 'AT-BETA-HEIGHT'], 'validDuring': {'fromId': 'TA-START'}},
-        {'fragmentId': 'SF-CARD-DOC', 'ownerId': 'C-ALPHA', 'order': 6,
+        {'fragmentId': 'belief-CARD-BELIEF', 'ownerId': 'character-BETA', 'order': 5,
+         'text': '甲认为两人都熟悉这条路。', 'contentRole': 'belief', 'perspectiveId': 'character-ALPHA',
+         'contentBindings': ['attribute-SKIN', 'attribute-BETA-HEIGHT'], 'validDuring': {'fromId': 'time-START'}},
+        {'fragmentId': 'text-CARD-DOC', 'ownerId': 'character-ALPHA', 'order': 6,
          'text': '值班簿写着：周三由甲值班。', 'contentRole': 'in_world_text',
-         'perspectiveId': 'C-ALPHA', 'contentBindings': ['AT-LIFE']},
-        {'fragmentId': 'SF-CARD-PLAN', 'ownerId': 'C-ALPHA', 'order': 7,
-         'text': '下一次值班时核对钥匙数量。', 'contentRole': 'plan', 'contentBindings': ['AT-LIFE']},
-        {'fragmentId': 'SF-CARD-ARCHIVED', 'ownerId': 'C-ALPHA', 'order': 8,
-         'text': 'ARCHIVED-旧记录', 'contentRole': 'fact', 'contentBindings': ['AT-LIFE'],
+         'perspectiveId': 'character-ALPHA', 'contentBindings': ['attribute-LIFE']},
+        {'fragmentId': 'plan-CARD-PLAN', 'ownerId': 'character-ALPHA', 'order': 7,
+         'text': '下一次值班时核对钥匙数量。', 'contentRole': 'plan', 'contentBindings': ['attribute-LIFE']},
+        {'fragmentId': 'fact-CARD-ARCHIVED', 'ownerId': 'character-ALPHA', 'order': 8,
+         'text': 'ARCHIVED-旧记录', 'contentRole': 'fact', 'contentBindings': ['attribute-LIFE'],
          'status': 'archived'},
     ])
     validate_structure(source)
@@ -105,7 +105,7 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
         before = inventory(self.root)
         result = get_entity(self.root, '值班员')
         projection = result['sourceProjection']
-        queried = query_settings_source(self.root, self.source, selector='C-ALPHA')['matches'][0]
+        queried = query_settings_source(self.root, self.source, selector='character-ALPHA')['matches'][0]
         self.assertEqual(result['entity'], self.source['entities'][0])
         self.assertEqual(result['references'], self.source['references'])
         self.assertEqual(projection['fields'], queried['fields'])
@@ -119,7 +119,7 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
             self.root / '.govel/structure.json')['entities']))
 
     def test_typed_states_empty_fields_and_validity_are_not_flattened(self):
-        projection = get_entity(self.root, 'C-ALPHA')['sourceProjection']
+        projection = get_entity(self.root, 'character-ALPHA')['sourceProjection']
         values = projection['fieldValues']
         for key, state in [('profile.origin', 'unknown'), ('profile.note', 'unfilled'),
                            ('profile.rank', 'not_applicable')]:
@@ -132,33 +132,33 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
         self.assertIn('profile.empty', definitions)
         self.assertIn('profile.missing', definitions)
         for key, expected in [('profile.onDuty', False), ('profile.count', 0),
-                              ('profile.literal', JSON_TEXT), ('profile.partner', 'C-BETA')]:
+                              ('profile.literal', JSON_TEXT), ('profile.partner', 'character-BETA')]:
             with self.subTest(key=key):
                 self.assertEqual(values[key][0]['content']['value'], expected)
         heights = values['appearance.height']
         self.assertEqual([row['content']['value']['number'] for row in heights], [190, 191])
-        self.assertEqual(heights[0]['content']['validDuring'], {'fromId': 'TA-START', 'toId': 'TA-LATER'})
-        self.assertEqual(heights[1]['content']['validDuring'], {'fromId': 'TA-LATER'})
+        self.assertEqual(heights[0]['content']['validDuring'], {'fromId': 'time-START', 'toId': 'time-LATER'})
+        self.assertEqual(heights[1]['content']['validDuring'], {'fromId': 'time-LATER'})
         self.assertTrue(all(row['timeMatch'] == 'all' for row in heights))
 
     def test_shared_fragments_are_bound_to_each_card_once_and_archived_content_is_excluded(self):
-        for selector, expected_keys in [('C-ALPHA', ['appearance.skin']),
-                                        ('C-BETA', ['appearance.height'])]:
+        for selector, expected_keys in [('character-ALPHA', ['appearance.skin']),
+                                        ('character-BETA', ['appearance.height'])]:
             with self.subTest(selector=selector):
                 rows = get_entity(self.root, selector)['sourceProjection']['fragments']
                 ids = [row['id'] for row in rows]
                 self.assertEqual(len(ids), len(set(ids)))
-                self.assertNotIn('SF-CARD-ARCHIVED', ids)
-                shared = next(row for row in rows if row['id'] == 'SF-CARD-BELIEF')
+                self.assertNotIn('fact-CARD-ARCHIVED', ids)
+                shared = next(row for row in rows if row['id'] == 'belief-CARD-BELIEF')
                 self.assertEqual(shared['fieldKeys'], expected_keys)
-                self.assertEqual(shared['content']['ownerId'], 'C-BETA')
+                self.assertEqual(shared['content']['ownerId'], 'character-BETA')
                 self.assertEqual(shared['content']['contentRole'], 'belief')
 
     def test_archived_entity_keeps_metadata_and_reports_exclusion_instead_of_missing_facts(self):
         self.source['entities'][0]['status'] = 'archived'
         self.save()
         before = inventory(self.root)
-        result = get_entity(self.root, 'C-ALPHA')
+        result = get_entity(self.root, 'character-ALPHA')
         self.assertEqual(result['entity'], self.source['entities'][0])
         projection = result['sourceProjection']
         self.assertEqual(projection['excludedReason'], 'archived')
@@ -168,15 +168,15 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
         self.assertEqual(inventory(self.root), before)
 
     def test_source_changes_are_reflected_on_the_next_read_without_projection_storage(self):
-        old = get_entity(self.root, 'C-ALPHA')['sourceProjection']
+        old = get_entity(self.root, 'character-ALPHA')['sourceProjection']
         self.source['attributes'][1]['values'][0]['value'] = '肤色记录已修订'
         self.source['fragments'][3]['text'] = '他曾整理过仓库的记录。'
         self.save()
         before = inventory(self.root)
-        new = get_entity(self.root, 'C-ALPHA')['sourceProjection']
+        new = get_entity(self.root, 'character-ALPHA')['sourceProjection']
         self.assertNotEqual(new['fields']['appearance.skin'], old['fields']['appearance.skin'])
         self.assertIn('肤色记录已修订', new['fields']['appearance.skin'])
-        self.assertEqual(next(row for row in new['fragments'] if row['id'] == 'SF-LIFE')['content']['text'],
+        self.assertEqual(next(row for row in new['fragments'] if row['id'] == 'fact-LIFE')['content']['text'],
                          '他曾整理过仓库的记录。')
         self.assertEqual(inventory(self.root), before)
 
@@ -185,22 +185,22 @@ class EntityCardProjectionTests(CardFixture, unittest.TestCase):
         self.source['attributes'][1]['values'][0]['value'] = 'SECRET-canonical-value'
         self.source['fragments'][0]['text'] = 'SECRET-author-fact'
         self.source['fragments'].append({
-            'fragmentId': 'SF-CARD-OTHER-POV', 'ownerId': 'C-BETA', 'order': 9,
-            'contentBindings': ['AT-BETA-HEIGHT'], 'contentRole': 'belief',
-            'perspectiveId': 'C-BETA', 'text': 'SECRET-other-belief'})
+            'fragmentId': 'belief-CARD-OTHER-POV', 'ownerId': 'character-BETA', 'order': 9,
+            'contentBindings': ['attribute-BETA-HEIGHT'], 'contentRole': 'belief',
+            'perspectiveId': 'character-BETA', 'text': 'SECRET-other-belief'})
         self.save()
-        get_entity(self.root, 'C-ALPHA')
+        get_entity(self.root, 'character-ALPHA')
         result = query_source(self.root, selection={
-            'knowledgeMode': 'perspective', 'perspectiveIds': ['C-ALPHA']}, view='detail')
+            'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}, view='detail')
         self.assertNotIn('SECRET', json.dumps(result, ensure_ascii=False))
-        self.assertEqual({row['id'] for row in result['items']}, {'SF-CARD-BELIEF', 'SF-CARD-DOC'})
+        self.assertEqual({row['id'] for row in result['items']}, {'belief-CARD-BELIEF', 'text-CARD-DOC'})
         self.assertTrue(all(row['kind'] == 'fragment' for row in result['items']))
 
     def test_pending_transaction_blocks_entity_projection_without_writes(self):
         write_json(self.root / '.govel/transactions/TX-PENDING.json', {'phase': 'prepared'})
         before = inventory(self.root)
         with self.assertRaises(StructureError) as caught:
-            get_entity(self.root, 'C-ALPHA')
+            get_entity(self.root, 'character-ALPHA')
         self.assertEqual(caught.exception.code, 'TRANSACTION_INCOMPLETE')
         self.assertEqual(inventory(self.root), before)
 
@@ -231,17 +231,17 @@ class EntityCardHTTPTests(CardServerFixture, unittest.TestCase):
 
     def test_authenticated_http_detail_serializes_current_source_and_rejects_anonymous_read(self):
         before = inventory(self.root)
-        status, _, payload = self.request('POST', '/api/entity', {'selector': 'C-ALPHA'})
+        status, _, payload = self.request('POST', '/api/entity', {'selector': 'character-ALPHA'})
         self.assertIn(status, {401, 403})
         self.assertIn(payload['code'], {'SESSION_REQUIRED', 'MUTATION_TOKEN_REQUIRED'})
         status, headers, _ = self.request('GET', '/api/config', headers={'Origin': self.base})
         self.assertEqual(status, 200)
         cookie = headers['Set-Cookie'].split(';')[0]
-        status, _, payload = self.request('POST', '/api/entity', {'selector': 'C-ALPHA'},
+        status, _, payload = self.request('POST', '/api/entity', {'selector': 'character-ALPHA'},
                                           {'Cookie': cookie, 'Origin': self.base})
         self.assertEqual(status, 200)
         self.assertTrue(payload['ok'])
-        self.assertEqual(payload['sourceProjection'], get_entity(self.root, 'C-ALPHA')['sourceProjection'])
+        self.assertEqual(payload['sourceProjection'], get_entity(self.root, 'character-ALPHA')['sourceProjection'])
         self.assertIs(payload['sourceProjection']['fieldValues']['profile.onDuty'][0]['content']['value'], False)
         self.assertNotIn('fields', payload['entity'])
         self.assertEqual(inventory(self.root), before)

@@ -24,7 +24,7 @@ from scripts.core.tool_catalog import list_capabilities
 from scripts.novelctl import build_parser
 from tests.fixtures_current import initialize_project
 from tests.fixtures_workflow import review_ready_project, evidenced_slots
-from tests.test_phase2_ownership_cutover import _walk_to_review, review_ready_schema5_project
+from tests.test_phase2_ownership_cutover import _walk_to_review, review_ready_current_project
 
 
 def files(root):
@@ -211,7 +211,7 @@ class WorkflowProjectionTests(unittest.TestCase):
     def test_create_and_finalize_keep_source_as_the_only_plan(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
-            chapter = review_ready_schema5_project(root)['chapters'][0]
+            chapter = review_ready_current_project(root)['chapters'][0]
             source = load_structure(root); before = files(root)
             outputs, owners = derived_outputs(root, source, current=source,
                                                extras={chapter['filePath']: b'prospective prose'})
@@ -228,7 +228,7 @@ class WorkflowProjectionTests(unittest.TestCase):
     def test_summary_advisory_is_explicit_across_closeout(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
-            chapter = review_ready_schema5_project(root)['chapters'][0]
+            chapter = review_ready_current_project(root)['chapters'][0]
             cid = chapter['chapterId']
             generation = load_structure(root)['chapters'][0]['proseBinding']['generation']
             finalized = finalize_chapter(root, cid, skip_title=True, binding_generation=generation)

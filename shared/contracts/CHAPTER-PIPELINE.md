@@ -1,7 +1,7 @@
 ---
 id: CHAPTER-PIPELINE
 version: 2.5.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 章节与约定候选批次的执行、返修、版本交接、范围授权和正式入库规则。
 ---
 

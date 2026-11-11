@@ -21,16 +21,16 @@ class CurrentLifecycleFixture(unittest.TestCase):
         return commit_plan(root, operation_id=preview['operationId'], plan_hash=preview['planHash'],
                            approved=True, actor='test')['chapter']
 
-    def read_ready_schema5(self, name='current'):
+    def read_ready_current(self, name='current'):
         root = self.base/name
         initialize_project(root)
         chapter = self.materialize(root)
         source = read_json(root/'.govel/structure.json')
-        source['fieldDefinitions'].append({'fieldId': 'FD-TEST-PLAN', 'key': 'plot.plan', 'label': '章节计划',
+        source['fieldDefinitions'].append({'fieldId': 'field-TEST-PLAN', 'key': 'plot.plan', 'label': '章节计划',
                                           'valueType': 'topic', 'appliesTo': ['chapter', 'project', 'volume']})
-        source['attributes'].append({'attributeId': 'AT-TEST-PLAN', 'ownerId': chapter['chapterId'],
-                                     'fieldId': 'FD-TEST-PLAN', 'values': []})
-        source['fragments'].append({'fragmentId': 'SF-TEST-PLAN', 'ownerId': chapter['chapterId'], 'order': 1,
-                                    'contentRole': 'plan', 'contentBindings': ['AT-TEST-PLAN'], 'text': '甲守城门。'})
+        source['attributes'].append({'attributeId': 'attribute-TEST-PLAN', 'ownerId': chapter['chapterId'],
+                                     'fieldId': 'field-TEST-PLAN', 'values': []})
+        source['fragments'].append({'fragmentId': 'plan-TEST-PLAN', 'ownerId': chapter['chapterId'], 'order': 1,
+                                    'contentRole': 'plan', 'contentBindings': ['attribute-TEST-PLAN'], 'text': '甲守城门。'})
         write_json(root/'.govel/structure.json', source)
         return root, chapter['chapterId']

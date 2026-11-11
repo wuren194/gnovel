@@ -15,7 +15,7 @@ from tests.fixtures_source import source_fixture, single_source_chapter
 
 class CurrentFormatOnlyTests(unittest.TestCase):
     def test_old_formats_cannot_be_read_or_written_through_public_project_operations(self):
-        for version in (1, 2, 3, 4, True, '5'):
+        for version in (1, 2, 3, 4, 5, True, '6'):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
                 source = initialize_project(root)
@@ -45,22 +45,22 @@ class CurrentFormatOnlyTests(unittest.TestCase):
 
     def test_current_time_mounts_participate_in_source_impact(self):
         source = source_fixture()
-        chapter = single_source_chapter(source, 'CH-TIME-DEPENDENT', volume_id=source['volumes'][0]['volumeId'])
-        chapter['storyTimeStartId'] = 'TA-START'
+        chapter = single_source_chapter(source, 'chapter-TIME-DEPENDENT', volume_id=source['volumes'][0]['volumeId'])
+        chapter['storyTimeStartId'] = 'time-START'
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})
-        source['entities'][0]['timeStartId'] = 'TA-START'
-        self.assertIn(('TA-START', chapter['chapterId'], 'time_mount'), dependency_edges(source))
-        self.assertIn(('TA-START', 'C-ALPHA', 'time_mount'), dependency_edges(source))
+        source['entities'][0]['timeStartId'] = 'time-START'
+        self.assertIn(('time-START', chapter['chapterId'], 'time_mount'), dependency_edges(source))
+        self.assertIn(('time-START', 'character-ALPHA', 'time_mount'), dependency_edges(source))
         after = deepcopy(source)
-        next(row for row in after['entities'] if row['entityId'] == 'TA-START')['timeOrdinal'] = 3
+        next(row for row in after['entities'] if row['entityId'] == 'time-START')['timeOrdinal'] = 3
         impact = source_impact(source, after)
         self.assertIn(chapter['chapterId'], impact['staleCandidates'])
 
     def test_old_chapter_outline_locator_is_rejected_without_conversion(self):
         from scripts.core.structure_store import validate_structure
         source = source_fixture()
-        chapter = single_source_chapter(source, 'CH-OUTLINE-REJECT', volume_id=source['volumes'][0]['volumeId'])
+        chapter = single_source_chapter(source, 'chapter-OUTLINE-REJECT', volume_id=source['volumes'][0]['volumeId'])
         chapter['outlinePath'] = '规划/旧章纲.md'
         source['chapters'].append(chapter)
         source['chapterArcLinks'].append({'chapterId': chapter['chapterId'], 'arcId': source['arcs'][0]['arcId'], 'role': 'primary'})

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from scripts.core.project import current_schema_version
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,8 +22,8 @@ class ExtendedStructureCommandTests(unittest.TestCase):
     def _project(self, root: Path) -> dict:
         helper = StructureCommandTests()
         data = helper._project(root)
-        register_entity(data, {"entityId": "P-LAMP", "entityType": "prop", "name": "旧灯", "aliases": ["台灯"]})
-        data["references"].append({"referenceId": "REL-REF1", "sourceId": data["chapters"][0]["chapterId"], "targetId": "P-LAMP", "kind": "mentions"})
+        register_entity(data, {"entityId": "prop-LAMP", "entityType": "prop", "name": "旧灯", "aliases": ["台灯"]})
+        data["references"].append({"referenceId": "relation-REF1", "sourceId": data["chapters"][0]["chapterId"], "targetId": "prop-LAMP", "kind": "mentions"})
         save_structure(root, data)
         return data
 
@@ -29,7 +31,7 @@ class ExtendedStructureCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = self._project(root)
-            write_json(root / ".govel/project.json", {"schemaVersion": 5, "workflowVersion": "5.0", "projectId": "project-1", "bookName": "测试"})
+            write_json(root / ".govel/project.json", {"schemaVersion": current_schema_version(), "workflowVersion": '6.0', "projectId": "project-1", "bookName": "测试"})
             first, second = data["chapters"]
             preview = preview_move_chapter(root, chapter_id=first["chapterId"], before_chapter_id=None)
             result = commit_plan(root, operation_id=preview["operationId"], plan_hash=preview["planHash"], approved=True)
@@ -122,22 +124,22 @@ class OverviewEnrichmentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = StructureCommandTests()._project(root)
-            register_entity(data, {"entityId": "HK-SEED0001", "entityType": "hook", "name": "断簪", "status": "active"})
-            register_entity(data, {"entityId": "HK-DONE0001", "entityType": "hook", "name": "旧信", "status": "archived"})
-            data["references"].append({"referenceId": "REF-F1", "sourceId": data["chapters"][0]["chapterId"], "targetId": "HK-SEED0001", "kind": "plants"})
+            register_entity(data, {"entityId": "hook-SEED0001", "entityType": "hook", "name": "断簪", "status": "active"})
+            register_entity(data, {"entityId": "hook-DONE0001", "entityType": "hook", "name": "旧信", "status": "archived"})
+            data["references"].append({"referenceId": "REF-F1", "sourceId": data["chapters"][0]["chapterId"], "targetId": "hook-SEED0001", "kind": "plants"})
             save_structure(root, data)
             report = list_foreshadowing(root)
             self.assertEqual(report["unresolvedCount"], 1)
             first_row = report["foreshadowing"][0]
-            self.assertEqual(first_row["entityId"], "HK-SEED0001")
+            self.assertEqual(first_row["entityId"], "hook-SEED0001")
             self.assertEqual(first_row["mentionChapters"][0]["chapterId"], data["chapters"][0]["chapterId"])
 
 
 class StoryTimelineTests(unittest.TestCase):
     def _project_with_anchors(self, root: Path) -> dict:
         data = StructureCommandTests()._project(root)
-        register_entity(data, {"entityId": "TA-SPRING01", "entityType": "time_anchor", "name": "三年前的春天", "absoluteTime": "0844-03-01"})
-        register_entity(data, {"entityId": "TA-NYE00001", "entityType": "time_anchor", "name": "除夕夜", "absoluteTime": "0847-02-17 23:00"})
+        register_entity(data, {"entityId": "time-SPRING01", "entityType": "time_anchor", "name": "三年前的春天", "absoluteTime": "0844-03-01"})
+        register_entity(data, {"entityId": "time-NYE00001", "entityType": "time_anchor", "name": "除夕夜", "absoluteTime": "0847-02-17 23:00"})
         save_structure(root, data)
         return data
 
@@ -146,12 +148,12 @@ class StoryTimelineTests(unittest.TestCase):
             root = Path(temp)
             data = self._project_with_anchors(root)
             first, second = data["chapters"]
-            p = preview_set_chapter_timespan(root, chapter_id=first["chapterId"], start_anchor_id="TA-SPRING01")
+            p = preview_set_chapter_timespan(root, chapter_id=first["chapterId"], start_anchor_id="time-SPRING01")
             commit_plan(root, operation_id=p["operationId"], plan_hash=p["planHash"], approved=True)
-            p = preview_set_chapter_timespan(root, chapter_id=second["chapterId"], start_anchor_id="TA-NYE00001")
+            p = preview_set_chapter_timespan(root, chapter_id=second["chapterId"], start_anchor_id="time-NYE00001")
             commit_plan(root, operation_id=p["operationId"], plan_hash=p["planHash"], approved=True)
             view = story_timeline(root)
-            self.assertEqual([a["entityId"] for a in view["anchors"]], ["TA-SPRING01", "TA-NYE00001"])
+            self.assertEqual([a["entityId"] for a in view["anchors"]], ["time-SPRING01", "time-NYE00001"])
             self.assertEqual(view["problems"], [])
             self.assertEqual(view["unmappedChapterCount"], 0)
             rows = {row["chapterId"]: row for row in view["chapters"]}
@@ -163,10 +165,10 @@ class StoryTimelineTests(unittest.TestCase):
             root = Path(temp)
             data = self._project_with_anchors(root)
             first, second = data["chapters"]
-            first["storyTimeStartId"] = "TA-NYE00001"
-            first["storyTimeEndId"] = "TA-NYE00001"
-            second["storyTimeStartId"] = "TA-SPRING01"
-            second["storyTimeEndId"] = "TA-GHOST001"
+            first["storyTimeStartId"] = "time-NYE00001"
+            first["storyTimeEndId"] = "time-NYE00001"
+            second["storyTimeStartId"] = "time-SPRING01"
+            second["storyTimeEndId"] = "time-GHOST001"
             with self.assertRaises(StructureError) as caught:
                 save_structure(root, data)
             self.assertIn('SOURCE_TIME_MOUNT_INVALID',
@@ -182,18 +184,18 @@ class StoryTimelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = StructureCommandTests()._project(root)
-            register_entity(data, {"entityId": "TA-LATER001", "entityType": "time_anchor", "name": "后来", "absoluteTime": "0850-01-01"})
-            register_entity(data, {"entityId": "TA-EARLY001", "entityType": "time_anchor", "name": "很早以前", "absoluteTime": "0840-06-01"})
+            register_entity(data, {"entityId": "time-LATER001", "entityType": "time_anchor", "name": "后来", "absoluteTime": "0850-01-01"})
+            register_entity(data, {"entityId": "time-EARLY001", "entityType": "time_anchor", "name": "很早以前", "absoluteTime": "0840-06-01"})
             save_structure(root, data)
             view = story_timeline(root)
-            self.assertEqual([a["entityId"] for a in view["anchors"]], ["TA-EARLY001", "TA-LATER001"])
+            self.assertEqual([a["entityId"] for a in view["anchors"]], ["time-EARLY001", "time-LATER001"])
             self.assertEqual(view["anchors"][0]["absoluteTime"], "0840-06-01")
 
     def test_anchor_without_absolute_time_is_flagged(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = StructureCommandTests()._project(root)
-            register_entity(data, {"entityId": "TA-VAGUE001", "entityType": "time_anchor", "name": "某天"})
+            register_entity(data, {"entityId": "time-VAGUE001", "entityType": "time_anchor", "name": "某天"})
             save_structure(root, data)
             view = story_timeline(root)
             self.assertIn("ANCHOR_MISSING_ABSOLUTE_TIME", {p["code"] for p in view["problems"]})
@@ -214,10 +216,10 @@ class StoryTimelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             data = self._project_with_anchors(root)
-            register_entity(data, {'entityId': 'C-HERO0001', 'entityType': 'character', 'name': '沈决',
-                'timeStartId': 'TA-SPRING01', 'timeEndId': 'TA-NYE00001'})
-            register_entity(data, {'entityId': 'HK-PIN0001', 'entityType': 'hook', 'name': '断簪',
-                'timeStartId': 'TA-SPRING01', 'timeEndId': 'TA-SPRING01', 'status': 'active'})
+            register_entity(data, {'entityId': 'character-HERO0001', 'entityType': 'character', 'name': '沈决',
+                'timeStartId': 'time-SPRING01', 'timeEndId': 'time-NYE00001'})
+            register_entity(data, {'entityId': 'hook-PIN0001', 'entityType': 'hook', 'name': '断簪',
+                'timeStartId': 'time-SPRING01', 'timeEndId': 'time-SPRING01', 'status': 'active'})
             save_structure(root, data)
             tracks = story_timeline(root)['tracks']
             self.assertFalse(tracks['character'][0]['isPoint'])
@@ -228,7 +230,7 @@ class StoryTimelineTests(unittest.TestCase):
             root = Path(temp)
             data = self._project_with_anchors(root)
             with self.assertRaises(StructureError) as ctx:
-                preview_set_chapter_timespan(root, chapter_id=data["chapters"][0]["chapterId"], start_anchor_id="TA-NOPE0001")
+                preview_set_chapter_timespan(root, chapter_id=data["chapters"][0]["chapterId"], start_anchor_id="time-NOPE0001")
             self.assertEqual(ctx.exception.code, "TIME_ANCHOR_NOT_FOUND")
 
 

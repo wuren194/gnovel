@@ -46,8 +46,8 @@ def _source_fixture(root: Path, target_bytes: int) -> dict:
     count = max(1, (target_bytes - current + approximate - 1) // approximate)
     for index in range(count):
         source['fragments'].append({
-            'fragmentId': f'SF-SCALE-{index:06d}', 'ownerId': 'C-ALPHA',
-            'text': chunk, 'order': 100 + index, 'contentBindings': ['AT-LIFE'],
+            'fragmentId': f'fact-SCALE-{index:06d}', 'ownerId': 'character-ALPHA',
+            'text': chunk, 'order': 100 + index, 'contentBindings': ['attribute-LIFE'],
             'dependsOn': [], 'contentRole': 'fact',
         })
     root.joinpath('.govel').mkdir(parents=True); root.joinpath('工作台').mkdir()
@@ -61,7 +61,7 @@ def benchmark_source(megabytes: float) -> dict:
         _, generate = _now(lambda: _source_fixture(root, target))
         actual = (root / '.govel/structure.json').stat().st_size
         loaded, cold = _now(lambda: load_structure(root))
-        selection = {'ownerIds': ['C-ALPHA']}
+        selection = {'ownerIds': ['character-ALPHA']}
         overview, overview_time = _now(lambda: query_source(root, selection=selection, view='overview', limit=20))
         page, list_time = _now(lambda: query_source(root, selection=selection, view='list', limit=20))
         exported, export_time = _now(lambda: export_source(
@@ -97,7 +97,7 @@ def _prose_fixture(root: Path, characters: int) -> tuple[dict, list[str], int]:
     (root / '.govel').mkdir(parents=True); (root / '正文').mkdir()
     base = ('他沿着长廊向前，记住每一扇门的位置。' * 250)[:per_chapter]
     for ordinal in range(1, chapter_count + 1):
-        cid = f'CH-SCALE-{ordinal:06d}'; ids.append(cid)
+        cid = f'chapter-SCALE-{ordinal:06d}'; ids.append(cid)
         remaining = max(0, characters - actual); text = base[:min(per_chapter, remaining)]
         if ordinal % 100 == 0 and len(text) >= 4:
             text = '救了' + text[2:]
@@ -118,7 +118,7 @@ def benchmark_prose(characters: int) -> dict:
         root = Path(directory)
         (source, ids, actual), generate = _now(lambda: _prose_fixture(root, characters))
         result, scan = _now(lambda: scan_prose_candidates(root, terms=['救了'], chapterIds=ids,
-                                                           targetIds=['AT-LIFE'], limit=100))
+                                                           targetIds=['attribute-LIFE'], limit=100))
         path = root / source['chapters'][-1]['filePath']; path.write_text(path.read_text(encoding='utf-8') + '救了', encoding='utf-8')
         changed, changed_scan = _now(lambda: scan_prose_candidates(root, terms=['救了'],
                                                                     chapterIds=[ids[-1]], limit=100))

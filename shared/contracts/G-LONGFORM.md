@@ -1,7 +1,7 @@
 ---
 id: G-LONGFORM
 version: 5.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 当前单一真源项目的长篇连续性、计划执行、事实回流和跨章影响规则。
 ---
 

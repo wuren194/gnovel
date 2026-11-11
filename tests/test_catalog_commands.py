@@ -9,7 +9,7 @@ from scripts.core.entity_registry import PREFIX_BY_TYPE
 from scripts.core.jsonio import read_json, write_json
 from scripts.core.structure_commands import commit_plan, undo_operation
 from scripts.core.structure_store import StructureError, load_structure
-from tests.fixtures_current import create_schema5_project
+from tests.fixtures_current import create_current_project
 
 
 class CatalogCommandTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class CatalogCommandTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root)
+        self.fixture = create_current_project(self.root)
         self.volume = self.fixture["structure"]["volumes"][0]["volumeId"]
         self.arc = self.fixture["structure"]["arcs"][0]["arcId"]
 
@@ -49,12 +49,12 @@ class CatalogCommandTests(unittest.TestCase):
         from scripts.core.canon_proposals import resolve_canon_target, preview_canon_change
         before = load_structure(self.root)
         hook = self.fixture['hookId']
-        before['fieldDefinitions'].append({'fieldId': 'FD-ARCHIVE-FACT', 'key': 'hook.result',
+        before['fieldDefinitions'].append({'fieldId': 'field-ARCHIVE-FACT', 'key': 'hook.result',
             'label': '结果', 'valueType': 'topic', 'appliesTo': ['hook']})
-        before['attributes'].append({'attributeId': 'AT-ARCHIVE-FACT', 'ownerId': hook,
-            'fieldId': 'FD-ARCHIVE-FACT', 'values': []})
-        before['fragments'].append({'fragmentId': 'SF-ARCHIVE-FACT', 'ownerId': hook, 'order': 1,
-            'contentRole': 'fact', 'contentBindings': ['AT-ARCHIVE-FACT'], 'text': '钥匙秘密已经解决。'})
+        before['attributes'].append({'attributeId': 'attribute-ARCHIVE-FACT', 'ownerId': hook,
+            'fieldId': 'field-ARCHIVE-FACT', 'values': []})
+        before['fragments'].append({'fragmentId': 'fact-ARCHIVE-FACT', 'ownerId': hook, 'order': 1,
+            'contentRole': 'fact', 'contentBindings': ['attribute-ARCHIVE-FACT'], 'text': '钥匙秘密已经解决。'})
         before['fragments'][0]['dependsOn'] = [hook]
         write_json(self.root/'.govel/structure.json', before)
         note = self.root/'工作台/作者资料.md'; note.write_text('作者保留的原稿，不是运行时设定。')
@@ -72,17 +72,17 @@ class CatalogCommandTests(unittest.TestCase):
 
     def test_time_anchor_archive_preserves_registered_mounts_and_reports_them_on_read(self):
         structure = load_structure(self.root)
-        structure['entities'].append({'entityId': 'TA-TEST-0001', 'entityType': 'time_anchor',
+        structure['entities'].append({'entityId': 'time-TEST-0001', 'entityType': 'time_anchor',
                                      'name': '测试锚点', 'absoluteTime': '2026-01-01'})
-        structure['chapters'][0]['storyTimeStartId'] = 'TA-TEST-0001'
-        structure['entities'][0]['timeStartId'] = 'TA-TEST-0001'
+        structure['chapters'][0]['storyTimeStartId'] = 'time-TEST-0001'
+        structure['entities'][0]['timeStartId'] = 'time-TEST-0001'
         write_json(self.root/'.govel/structure.json', structure)
-        plan = catalog.preview_archive_entity(self.root, selector='TA-TEST-0001')
+        plan = catalog.preview_archive_entity(self.root, selector='time-TEST-0001')
         self.commit(plan)
         source = load_structure(self.root)
-        self.assertEqual(source['chapters'][0]['storyTimeStartId'], 'TA-TEST-0001')
-        self.assertEqual(source['entities'][0]['timeStartId'], 'TA-TEST-0001')
-        self.assertEqual(next(e for e in source['entities'] if e['entityId'] == 'TA-TEST-0001')['status'], 'archived')
+        self.assertEqual(source['chapters'][0]['storyTimeStartId'], 'time-TEST-0001')
+        self.assertEqual(source['entities'][0]['timeStartId'], 'time-TEST-0001')
+        self.assertEqual(next(e for e in source['entities'] if e['entityId'] == 'time-TEST-0001')['status'], 'archived')
         from scripts.core.commands import story_timeline
         self.assertIn('ARCHIVED_ANCHOR_REFERENCED', {r['code'] for r in story_timeline(self.root)['problems']})
 
@@ -101,7 +101,7 @@ class CatalogCommandTests(unittest.TestCase):
     def test_visibility_only_changes_supported_planning_metadata(self):
         from scripts.core.catalog_api import call_catalog_operation
         before = (self.root/'.govel/structure.json').read_bytes()
-        for collection, record_id in [('entities', self.fixture['characterId']), ('relations', 'REL-UNKNOWN')]:
+        for collection, record_id in [('entities', self.fixture['characterId']), ('relations', 'relation-UNKNOWN')]:
             self.assertCode('VISIBILITY_COLLECTION_INVALID', catalog.preview_set_visibility,
                             collection=collection, record_id=record_id, visibility='public')
             with self.assertRaises(StructureError) as caught:
@@ -155,16 +155,16 @@ class CatalogCommandTests(unittest.TestCase):
 
     def test_relink_requires_active_in_scope_arcs(self):
         self.assertCode("ARC_ROLE_CONFLICT", catalog.preview_relink_chapter, chapter_id=self.fixture["chapterIds"][0], volume_id=self.volume, primary_arc_id=self.arc, secondary_arc_ids=[self.arc])
-        self.assertCode("ARC_NOT_FOUND", catalog.preview_relink_chapter, chapter_id=self.fixture["chapterIds"][0], volume_id=self.volume, primary_arc_id="ARC-NOT-FOUND")
+        self.assertCode("ARC_NOT_FOUND", catalog.preview_relink_chapter, chapter_id=self.fixture["chapterIds"][0], volume_id=self.volume, primary_arc_id="arc-NOT-FOUND")
         plan = catalog.preview_create_volume(self.root, title="第二卷")
         self.commit(plan)
         self.assertCode("ARC_VOLUME_MISMATCH", catalog.preview_relink_chapter, chapter_id=self.fixture["chapterIds"][0], volume_id=plan["parameters"]["volumeId"], primary_arc_id=self.arc)
 
     def test_catalog_rejects_cycles_unknown_targets_and_identity_changes(self):
         self.assertCode("ARC_PARENT_CYCLE", catalog.preview_update_arc, arc_id=self.arc, changes={"parentArcId": self.arc})
-        self.assertCode("CHAPTER_NOT_FOUND", catalog.preview_update_arc, arc_id=self.arc, changes={"resolutionTargetChapterId": "CH-NOT-FOUND"})
-        self.assertCode("VOLUME_NOT_FOUND", catalog.preview_create_arc, title="支线", volume_ids=["VOL-NOT-FOUND"])
-        self.assertCode("FIELD_FORBIDDEN", catalog.preview_update_volume, volume_id=self.volume, changes={"volumeId": "VOL-NEW-ID"})
+        self.assertCode("CHAPTER_NOT_FOUND", catalog.preview_update_arc, arc_id=self.arc, changes={"resolutionTargetChapterId": "chapter-NOT-FOUND"})
+        self.assertCode("VOLUME_NOT_FOUND", catalog.preview_create_arc, title="支线", volume_ids=["volume-NOT-FOUND"])
+        self.assertCode("FIELD_FORBIDDEN", catalog.preview_update_volume, volume_id=self.volume, changes={"volumeId": "volume-NEW-ID"})
         self.assertCode("STATUS_INVALID", catalog.preview_update_arc, arc_id=self.arc, changes={"status": "not-a-status"})
         plan = catalog.preview_create_arc(self.root, title="子线", volume_ids=[self.volume], parent_arc_id=self.arc)
         self.commit(plan)
@@ -196,7 +196,7 @@ class CurrentPlacementCatalogTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.fixture = create_schema5_project(self.root, chapter_count=1)
+        self.fixture = create_current_project(self.root, chapter_count=1)
         source = load_structure(self.root)
         self.volume = source['volumes'][0]['volumeId']
         self.arc = source['arcs'][0]['arcId']

@@ -1,7 +1,7 @@
 ---
 id: G-RELATIONSHIP-MOTIVES
 version: 1.0.0
-compatibilityVersion: 5
+compatibilityVersion: 6
 description: 人物关系动机的责任与判断边界。
 ---
 

@@ -19,18 +19,18 @@ class SourceRulesTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.source, self.chapter = planning_source(self.root)
         self.cid = self.chapter['chapterId']
-        self.source['fieldDefinitions'].append({'fieldId': 'FD-LIMIT', 'key': 'power.limit', 'label': '救人上限',
+        self.source['fieldDefinitions'].append({'fieldId': 'field-LIMIT', 'key': 'power.limit', 'label': '救人上限',
             'valueType': 'number', 'appliesTo': ['character']})
-        self.source['attributes'].append({'attributeId': 'AT-LIMIT', 'ownerId': 'C-ALPHA', 'fieldId': 'FD-LIMIT',
-            'values': [{'valueId': 'FV-LIMIT', 'value': 1}]})
+        self.source['attributes'].append({'attributeId': 'attribute-LIMIT', 'ownerId': 'character-ALPHA', 'fieldId': 'field-LIMIT',
+            'values': [{'valueId': 'value-LIMIT', 'value': 1}]})
         self.source['entities'].extend([
-            {'entityId': 'E-FIRST', 'entityType': 'event', 'name': '第一次成功救人'},
-            {'entityId': 'E-SECOND', 'entityType': 'event', 'name': '第二次成功救人'},
-            {'entityId': 'RU-RESCUE', 'entityType': 'rule', 'name': '救人次数规则', 'ruleSpec': {
+            {'entityId': 'event-FIRST', 'entityType': 'event', 'name': '第一次成功救人'},
+            {'entityId': 'event-SECOND', 'entityType': 'event', 'name': '第二次成功救人'},
+            {'entityId': 'rule-RESCUE', 'entityType': 'rule', 'name': '救人次数规则', 'ruleSpec': {
                 'version': '1', 'method': 'mechanical', 'enforcement': 'required',
                 'scopeIds': [self.source['projectId']], 'actions': ['review', 'publish'],
-                'inputIds': ['C-ALPHA'], 'evaluation': {'kind': 'count_at_most',
-                    'eventIds': ['E-FIRST', 'E-SECOND'], 'limitValueId': 'FV-LIMIT', 'complete': True}}}])
+                'inputIds': ['character-ALPHA'], 'evaluation': {'kind': 'count_at_most',
+                    'eventIds': ['event-FIRST', 'event-SECOND'], 'limitValueId': 'value-LIMIT', 'complete': True}}}])
         self.rule = self.source['entities'][-1]['ruleSpec']
         validate_structure(self.source)
 
@@ -44,10 +44,10 @@ class SourceRulesTests(unittest.TestCase):
         self.assertEqual(result['items'][0]['evidence']['registeredCount'], 2)
 
     def test_incomplete_inventory_and_unknown_limit_never_pass(self):
-        self.rule['evaluation'].update(eventIds=['E-FIRST'], complete=False)
+        self.rule['evaluation'].update(eventIds=['event-FIRST'], complete=False)
         self.assertEqual(self.result()['items'][0]['status'], 'pending')
         self.rule['evaluation']['complete'] = True
-        self.source['attributes'][-1]['values'][0] = {'valueId': 'FV-LIMIT', 'state': 'unknown'}
+        self.source['attributes'][-1]['values'][0] = {'valueId': 'value-LIMIT', 'state': 'unknown'}
         validate_structure(self.source)
         self.assertEqual(self.result()['items'][0]['status'], 'pending')
 
@@ -58,14 +58,14 @@ class SourceRulesTests(unittest.TestCase):
 
     def test_other_action_and_unrelated_object_do_not_block(self):
         self.assertTrue(self.result('draft')['ready'])
-        self.rule['scopeIds'] = ['C-BETA']
+        self.rule['scopeIds'] = ['character-BETA']
         self.assertEqual(self.result()['items'], [])
-        self.rule['scopeIds'] = ['C-ALPHA']
+        self.rule['scopeIds'] = ['character-ALPHA']
         self.assertFalse(self.result()['ready'])
 
     def test_later_volume_rule_does_not_invalidate_current_plan(self):
-        self.source['volumes'].append({'volumeId': 'VOL-LATER', 'title': '后卷', 'displayOrdinal': 2})
-        self.rule['scopeIds'] = ['VOL-LATER']
+        self.source['volumes'].append({'volumeId': 'volume-LATER', 'title': '后卷', 'displayOrdinal': 2})
+        self.rule['scopeIds'] = ['volume-LATER']
         before = chapter_plan(self.source, self.cid)['sourcePlanHash']
         self.rule['version'] = '2'
         self.assertEqual(chapter_plan(self.source, self.cid)['sourcePlanHash'], before)
@@ -89,7 +89,7 @@ class SourceRulesTests(unittest.TestCase):
         self.assertEqual(self.result()['items'][0]['status'], 'pending')
 
     def test_invalid_and_duplicate_event_ids_rejected(self):
-        for events in (['E-FIRST', 'E-FIRST'], ['C-ALPHA'], [['bad']]):
+        for events in (['event-FIRST', 'event-FIRST'], ['character-ALPHA'], [['bad']]):
             with self.subTest(events=events):
                 self.rule['evaluation']['eventIds'] = events
                 with self.assertRaises(StructureError): validate_structure(self.source)
@@ -98,7 +98,7 @@ class SourceRulesTests(unittest.TestCase):
         write_json(self.root / '.govel/structure.json', self.source)
         page = query_rules(self.root, chapterId=self.cid, action='publish', limit=1)
         self.assertFalse(page['ready'])
-        self.assertEqual(page['items'][0]['ruleId'], 'RU-RESCUE')
+        self.assertEqual(page['items'][0]['ruleId'], 'rule-RESCUE')
 
     def test_required_rule_blocks_publication_preflight(self):
         from scripts.core.finalization_preflight import preflight_finalization
@@ -149,10 +149,10 @@ class SourceRulesTests(unittest.TestCase):
         self.rule['exceptionsAllowed'] = True
         write_json(self.root / '.govel/structure.json', self.source)
         row = evaluate_rules(self.source, self.cid, 'publish', root=self.root)['items'][0]
-        submit_rule_issue(self.root, requestId='mechanical-exception', ruleId='RU-RESCUE',
+        submit_rule_issue(self.root, requestId='mechanical-exception', ruleId='rule-RESCUE',
             chapterId=self.cid, action='publish', inputHash=row['inputHash'], status='exception',
             reason='作者批准本章为规则明文允许的唯一例外。', affectedIds=[self.cid],
-            evidence=[{'kind': 'source_quote', 'recordId': 'SF-PLAN', 'start': 0, 'end': 5,
+            evidence=[{'kind': 'source_quote', 'recordId': 'plan-PLAN', 'start': 0, 'end': 5,
                        'text': '甲守城门。'}])
         passed = evaluate_rules(self.source, self.cid, 'publish', root=self.root)['items'][0]
         self.assertEqual(passed['status'], 'passed')
