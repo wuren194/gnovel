@@ -99,6 +99,28 @@ class ExportTests(unittest.TestCase):
             self.assertEqual([item["reason"] for item in result["skipped"]], ["status=draft"])
             self.assertTrue(Path(result["output"]).is_file())
 
+    def test_quarantined_chapter_is_visible_as_skipped_but_never_exported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "book"
+            make_project(root)
+            structure_path = root / '.govel/structure.json'
+            structure = json.loads(structure_path.read_text(encoding='utf-8'))
+            chapter = structure['chapters'][0]
+            chapter.update(status='quarantined', quarantineReason='content_boundary', quarantineCategory='content_boundary')
+            structure_path.write_text(json.dumps(structure, ensure_ascii=False), encoding='utf-8')
+            code, result = run_cli(['project', 'export', '--project-root', str(root)], process=True)
+            self.assertEqual(code, 0, result)
+            self.assertEqual(result['chapterCount'], 1)
+            self.assertIn({'chapterId': chapter['chapterId'], 'displayCode': chapter['displayCode'],
+                           'reason': 'quarantined'}, result['skipped'])
+            text = Path(result['output']).read_text(encoding='utf-8')
+            self.assertNotIn('雨夜第一次', text)
+            from scripts.core.manuscript_export import export_manuscript
+            from scripts.core.structure_store import StructureError
+            with self.assertRaises(StructureError) as rejected:
+                export_manuscript(root, statuses=('quarantined',))
+            self.assertEqual(rejected.exception.code, 'INVALID_EXPORT_STATUS')
+
     def test_chapters_are_ordered_by_display_ordinal(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "book"

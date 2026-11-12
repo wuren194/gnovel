@@ -56,6 +56,22 @@ class ContextTransportTests(unittest.TestCase):
         return {str(path.relative_to(self.root)): path.read_bytes()
                 for path in self.root.rglob('*') if path.is_file()}
 
+    def test_legacy_cli_json_flag_preserves_output_and_files(self):
+        before = self.inventory()
+        command = [sys.executable, str(ROOT / 'scripts/continuation_context.py'),
+                   '--project-root', str(self.root), '--chapter-id', 'chapter-AAA',
+                   '--task-type', 'planner', '--view', 'station']
+        reports = []
+        for options in ([], ['--json']):
+            result = subprocess.run(command + options, cwd=ROOT, capture_output=True,
+                                    text=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            reports.append(json.loads(result.stdout))
+        self.assertEqual(reports[0], reports[1])
+        self.assertEqual(reports[0]['targetChapter'], 'chapter-AAA')
+        self.assertTrue(reports[0]['readiness']['ready'])
+        self.assertEqual(before, self.inventory(), '显式 JSON 输出不得写入项目文件')
+
     def test_cli_and_mcp_context_read_agree_with_direct_builder(self):
         before = self.inventory()
         cli = run_cli('task', 'context', '--project-root', str(self.root),

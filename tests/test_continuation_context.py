@@ -47,6 +47,35 @@ class ContinuationContextTests(unittest.TestCase):
             line = _plot_line(state)
             self.assertEqual([item["displayCode"] for item in line], ["CH001", "CH002"])
 
+    def test_quarantined_chapter_is_absent_from_plot_and_recent_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixture = create_current_project(root, chapter_count=3)
+            structure = load_structure(root)
+            hidden_id = fixture['chapterIds'][1]
+            structure['chapters'][1].update(status='quarantined', quarantineReason='隔离敏感插入',
+                                             quarantineCategory='content_boundary')
+            save_structure(root, structure)
+            from scripts import state_cache
+            state_cache.rebuild(root)
+            context = build_continuation_context(root, fixture['chapterIds'][2])
+            self.assertNotIn(hidden_id, [row['chapterId'] for row in context['plotLine']])
+            self.assertNotIn(hidden_id, [row['chapterId'] for row in context['recentChapters']])
+            self.assertEqual(context['committedChapters'], 2)
+
+    def test_quarantined_target_cannot_build_continuation_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixture = create_current_project(root)
+            structure = load_structure(root)
+            chapter_id = fixture['chapterIds'][0]
+            structure['chapters'][0].update(status='quarantined', quarantineReason='隔离复核',
+                                             quarantineCategory='content_boundary')
+            save_structure(root, structure)
+            with self.assertRaises(ContinuationContextError) as caught:
+                build_continuation_context(root, chapter_id)
+            self.assertIn('CHAPTER_QUARANTINED', str(caught.exception))
+
     def test_unknown_pov_does_not_fallback_to_all_states(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -109,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="本章章纲目标，唯一驱动知识检索与记忆过滤")
     parser.add_argument("--view", default="full", choices=["full", "station"],
                         help="full 返回完整审计上下文；station 只返回预算化工位包")
+    parser.add_argument("--json", action="store_true", help="输出 JSON（默认）")
     parser.add_argument("--summary", action="store_true", help="输出纯文本摘要")
     args = parser.parse_args(argv)
 

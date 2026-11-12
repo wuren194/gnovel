@@ -107,13 +107,20 @@ def transition_chapter_status(structure: dict[str, Any], chapter_id: str, target
 
 def current_serial_chapter(structure):
     """The first unfinished chapter owns the current placement, not volume status."""
-    chapters = sorted((row for row in structure.get('chapters', []) if row.get('status') != 'archived'),
+    from .structure_store import is_quarantined
+    chapters = sorted((row for row in structure.get('chapters', [])
+                       if row.get('status') != 'archived' and not is_quarantined(row)),
                       key=lambda row: row['displayOrdinal'])
     return next((row for row in chapters if row.get('status') != 'stable'), chapters[-1] if chapters else None)
 
 
 def require_serial_scope(structure, workflow, chapter, *, root=None, planning=False,
                          current_volume_only=True, prewarm_next_chapter=False):
+    from .structure_store import is_quarantined
+    if is_quarantined(chapter):
+        raise WorkflowError('CHAPTER_QUARANTINED', 'quarantined chapters cannot enter an authoring workflow',
+                            {'chapterId': chapter['chapterId'], 'reason': chapter.get('quarantineReason'),
+                             'category': chapter.get('quarantineCategory')})
     from .source_placement import chapter_volume_id
     current = current_serial_chapter(structure)
     if current_volume_only and current is not None:
@@ -124,7 +131,8 @@ def require_serial_scope(structure, workflow, chapter, *, root=None, planning=Fa
     if planning:
         # Completed conditional candidates count only after their real batch
         # evidence has been validated. Future planning rows do not advance this frontier.
-        ordered = sorted((row for row in structure.get('chapters', []) if row.get('status') != 'archived'),
+        ordered = sorted((row for row in structure.get('chapters', [])
+                          if row.get('status') != 'archived' and not is_quarantined(row)),
                          key=lambda row: row['displayOrdinal'])
         for index, previous in enumerate(ordered):
             if previous['displayOrdinal'] >= chapter['displayOrdinal']:
@@ -163,6 +171,11 @@ def validate_next_action_for_project(
     chapter = next((item for item in structure.get("chapters", []) if item.get("chapterId") == chapter_id), None)
     if chapter is None:
         raise WorkflowError("CHAPTER_NOT_FOUND", f"unknown chapter: {chapter_id}")
+    from .structure_store import is_quarantined
+    if is_quarantined(chapter):
+        raise WorkflowError('CHAPTER_QUARANTINED', 'quarantined chapters cannot receive workflow actions',
+                            {'chapterId': chapter_id, 'reason': chapter.get('quarantineReason'),
+                             'category': chapter.get('quarantineCategory')})
     approved = set(workflow.get("approvedChapterIds", []))
     if chapter_range_required and chapter_id not in approved and action["action"] != "continuity":
         raise WorkflowError("CHAPTER_OUTSIDE_APPROVED_RANGE", f"chapter is not approved: {chapter_id}", {"approvedChapterIds": sorted(approved)})

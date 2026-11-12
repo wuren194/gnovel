@@ -140,10 +140,13 @@ def select_content(structure: dict, selection: dict | None = None) -> dict:
     validate_structure(structure)
     index = SourceIndex.build(structure)
     choice = normalize_selection(selection, index)
+    from .structure_store import is_quarantined
+    quarantined_ids = {row['chapterId'] for row in structure['chapters'] if is_quarantined(row)}
     owners = {oid for oid, obj in index.objects.items()
               if ('ownerIds' not in choice or oid in choice['ownerIds'])
               and ('ownerTypes' not in choice or index.owner_types[oid] in choice['ownerTypes'])
-              and (choice['includeArchived'] or obj.get('status') != 'archived')}
+              and (choice['includeArchived'] or obj.get('status') != 'archived')
+              and oid not in quarantined_ids}
 
     def field_selected(aid, key):
         field = index.fields[index.attributes[aid]['fieldId']]

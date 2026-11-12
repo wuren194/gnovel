@@ -135,3 +135,23 @@ class MissingContinuityTests(unittest.TestCase):
             with self.assertRaises(ContinuityError):
                 require_predecessors_ready(source, workflow, {'chapterId': 'chapter-NEXT', 'displayOrdinal': 4})
             self.assertEqual((root/'.govel/workflow.json').read_bytes(), before)
+
+    def test_quarantined_predecessor_is_skipped_and_target_cannot_receive_continuity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixture = create_current_project(root, chapter_count=2)
+            source = load_structure(root)
+            first, second = fixture['chapterIds']
+            chapter = next(row for row in source['chapters'] if row['chapterId'] == first)
+            chapter.update(status='quarantined', quarantineReason='sensitive material',
+                           quarantineCategory='content_boundary')
+            from scripts.core.structure_store import save_structure
+            save_structure(root, source)
+            source = load_structure(root)
+            workflow = read_json(root / '.govel/workflow.json')
+            self.assertNotIn(first, [row['chapterId'] for row in pending_continuity(source, workflow)])
+            require_predecessors_ready(source, workflow, next(row for row in source['chapters'] if row['chapterId'] == second))
+            with self.assertRaises(ContinuityError) as caught:
+                continuity_preview(root, first)
+            self.assertEqual(caught.exception.code, 'CHAPTER_QUARANTINED')
+            self.assertEqual(caught.exception.details['category'], 'content_boundary')

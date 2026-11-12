@@ -1,7 +1,9 @@
 """Frozen, author-reviewable manuscript intake; no caller-built project records."""
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -21,7 +23,10 @@ ORDINAL = r'[零〇一二三四五六七八九十百千万两\d]+'
 HEADING = re.compile(r'^\s*(?:#{1,6}\s*)?((?:第\s*' + ORDINAL + r'\s*[章回节]|(?:chapter|ch)\s*\d+|' +
                      r'[（(]\s*' + ORDINAL + r'\s*[）)]|【\s*' + ORDINAL + r'\s*】|' +
                      ORDINAL + r'、)[^\r\n]*)$', re.I)
+SPECIAL_HEADING = re.compile(r'^\s*(?:#{1,6}\s*)?((?:引子|楔子|序章|尾声|后记|番外)(?:$|[\s:：、.．-]+[^\r\n]*))\s*$')
 PLAN_ID = re.compile(r'^IMP-[0-9a-f]{32}$')
+FREE_MARKER = re.compile(r'[（(]\s*本章免费\s*[）)]\s*$')
+SUSPECTED_HEADING = re.compile(r'^\s*(?:第\s*)?(' + ORDINAL + r')\s*[章掌回节][^\r\n]{0,100}$')
 
 
 def digest(data: bytes) -> str:
@@ -88,9 +93,64 @@ def decode_source(raw: bytes, encoding: str) -> str:
     return text
 
 
-def _splits(text: str, relative: str, split: str, overrides: list[dict]) -> tuple[list[dict], list[str]]:
+def _number(value: str) -> int | None:
+    if value.isdigit():
+        return int(value)
+    digits = {'零': 0, '〇': 0, '一': 1, '二': 2, '三': 3, '四': 4,
+              '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '两': 2}
+    units = {'十': 10, '百': 100, '千': 1000, '万': 10000}
+    total = section = number = 0
+    for char in value:
+        if char in digits:
+            number = digits[char]
+        elif char in units:
+            unit = units[char]
+            if unit == 10000:
+                total += (section + number or 1) * unit
+                section = number = 0
+            else:
+                section += (number or 1) * unit
+                number = 0
+        else:
+            return None
+    total += section + number
+    return total
+
+
+def _heading(line: str, prefixes: list[str], ignored: re.Pattern | None) -> tuple[str, int | None] | None:
+    stripped = line.rstrip('\r\n')
+    if ignored and ignored.search(stripped):
+        return None
+    match = HEADING.fullmatch(stripped)
+    if match:
+        title = match[1].strip()
+        ordinal = re.search(r'(?:第\s*)?(' + ORDINAL + r')\s*[章回节]', title)
+        return title, _number(ordinal[1]) if ordinal else None
+    match = SPECIAL_HEADING.fullmatch(stripped)
+    if match:
+        return match[1].strip(), None
+    for prefix in prefixes:
+        match = re.match(r'^\s*(?:#{1,6}\s*)?(' + re.escape(prefix) + r'(?:$|(?:\s+|\s*[:：、.．-]\s*)[^\r\n]*))\s*$', stripped)
+        if match:
+            return match[1].strip(), None
+    return None
+
+
+def _splits(text: str, relative: str, split: str, overrides: list[dict], *,
+            ignore_heading_pattern: str | None = None, heading_patterns: list[str] | None = None,
+            dedupe_heading_window: int = 5) -> tuple[list[dict], list[str], list[dict]]:
     lines = text.splitlines(keepends=True)
     warnings = []
+    anomalies = []
+    prefixes = ['引子', '楔子', '序章', '尾声', '后记', '番外', *(heading_patterns or [])]
+    ignored = None
+    if ignore_heading_pattern is not None:
+        try:
+            ignored = re.compile(ignore_heading_pattern)
+        except (TypeError, re.error) as exc:
+            raise StructureError('IMPORT_HEADING_PATTERN_INVALID', 'ignoreHeadingPattern must be a valid regular expression') from exc
+    if type(dedupe_heading_window) is not int or not 0 <= dedupe_heading_window <= 100:
+        raise StructureError('IMPORT_HEADING_PATTERN_INVALID', 'dedupeHeadingWindow must be between 0 and 100')
     selected = [row for row in overrides if row['sourcePath'] == relative]
     if selected:
         starts = [row['startLine'] for row in selected]
@@ -100,13 +160,61 @@ def _splits(text: str, relative: str, split: str, overrides: list[dict]) -> tupl
     elif split == 'file':
         selected = [{'startLine': 1, 'title': Path(relative).stem}]
     else:
-        selected = [{'startLine': i + 1, 'title': match[1].strip()[:query_policy()['searchContextCharacters']]}
-                    for i, line in enumerate(lines) if (match := HEADING.fullmatch(line.rstrip('\r\n')))]
+        candidates = []
+        for line_number, line in enumerate(lines, 1):
+            found = _heading(line, prefixes, ignored)
+            if found:
+                title, ordinal = found
+                candidates.append({'startLine': line_number, 'title': title[:query_policy()['searchContextCharacters']],
+                                   'ordinal': ordinal})
+                continue
+            suspect = SUSPECTED_HEADING.fullmatch(line.rstrip('\r\n'))
+            if suspect:
+                raw_title = line.strip().lstrip('#').strip()
+                suggestion = raw_title
+                if '掌' in suggestion:
+                    suggestion = suggestion.replace('掌', '章', 1)
+                if not suggestion.startswith('第'):
+                    suggestion = '第' + suggestion
+                anomalies.append({'sourcePath': relative, 'line': line_number, 'code': 'suspected_heading',
+                                  'title': raw_title, 'suggestion': suggestion,
+                                  'message': '疑似章标题未匹配；请确认后用 boundaries 修正。'})
+                ordinal = re.search(r'(' + ORDINAL + r')\s*[章掌回节]', raw_title)
+                candidates.append({'startLine': line_number, 'title': raw_title[:query_policy()['searchContextCharacters']],
+                                   'ordinal': _number(ordinal[1]) if ordinal else None})
+        selected, merged_headings = [], []
+        for candidate in candidates:
+            normalized = FREE_MARKER.sub('', candidate['title']).strip()
+            duplicate_index = next((index for index in range(len(selected) - 1, -1, -1)
+                                    if candidate['startLine'] - selected[index]['startLine'] <= dedupe_heading_window
+                                    and FREE_MARKER.sub('', selected[index]['title']).strip() == normalized), None)
+            if duplicate_index is not None:
+                merged_headings.append({'line': candidate['startLine'], 'title': candidate['title'],
+                                        'chapterOrdinal': duplicate_index + 1})
+                continue
+            selected.append({key: candidate[key] for key in ('startLine', 'title')})
+        if merged_headings:
+            anomalies.append({'sourcePath': relative, 'line': merged_headings[0]['line'],
+                              'code': 'duplicate_heading_merged', 'count': len(merged_headings),
+                              'chapterOrdinals': sorted({row['chapterOrdinal'] for row in merged_headings}),
+                              'lineExamples': [row['line'] for row in merged_headings[:10]],
+                              'message': f'已合并 {len(merged_headings)} 行窗口内重复标题。'})
         if not selected:
             selected = [{'startLine': 1, 'title': Path(relative).stem}]
             warnings.append('未识别章标题，暂按整个文件一章；可按行号调整分章。')
-        if len({row['title'] for row in selected}) != len(selected):
-            warnings.append('检测到重复章标题，请核对目录与正文边界。')
+        for finding in anomalies:
+            if finding['code'] == 'suspected_heading':
+                finding['chapterOrdinal'] = next((index for index, row in enumerate(selected, 1)
+                                                  if row['startLine'] == finding['line']), None)
+        title_ordinals = {}
+        for index, item in enumerate(selected, 1):
+            title_ordinals.setdefault(item['title'], []).append(index)
+        duplicate_ordinals = [ordinal for ordinals in title_ordinals.values() if len(ordinals) > 1
+                              for ordinal in ordinals]
+        if duplicate_ordinals:
+            anomalies.append({'sourcePath': relative, 'code': 'repeated_chapter_title',
+                              'chapterOrdinals': duplicate_ordinals,
+                              'message': '存在未合并的重复章标题，请核对是否为不同章节。'})
         if any(re.match(r'^[（(【零〇一二三四五六七八九十百千万两\d]', row['title']) for row in selected):
             warnings.append('括号／序数标题也可能是目录或正文列表，请核对分章候选。')
     selected = [dict(row) for row in selected]
@@ -114,6 +222,11 @@ def _splits(text: str, relative: str, split: str, overrides: list[dict]) -> tupl
         prefix = ''.join(lines[:selected[0]['startLine'] - 1])
         if prefix.strip():
             selected.insert(0, {'startLine': 1, 'title': '卷首内容：' + Path(relative).stem})
+            anomalies.append({'sourcePath': relative, 'line': 1, 'code': 'front_matter',
+                              'chapterOrdinal': 1,
+                              'startLine': 1, 'endLine': selected[1]['startLine'] - 1,
+                              'excerpt': prefix.strip()[:120],
+                              'message': '以下卷首原文未拆为独立章，已包含在卷首章节候选中。'})
             warnings.append('首章之前的内容单独保留，请核对是否为前言或目录。')
         else:
             selected[0]['startLine'] = 1
@@ -131,11 +244,32 @@ def _splits(text: str, relative: str, split: str, overrides: list[dict]) -> tupl
                        'endLine': end_line, 'utf8ByteStart': start, 'utf8ByteEnd': end,
                        'characterStart': character_offsets[start_line - 1], 'characterEnd': character_offsets[end_line],
                        'contentHash': digest(encoded[start:end]), 'bytes': end - start})
-    return result, warnings
+        chapter_text = ''.join(lines[start_line - 1:end_line])
+        body = '\n'.join(chapter_text.splitlines()[1:]).strip()
+        if len(body) <= 80:
+            anomalies.append({'sourcePath': relative, 'line': start_line, 'code': 'short_chapter',
+                              'chapterOrdinal': index + 1, 'title': item['title'],
+                              'characterCount': len(chapter_text), 'message': '章节正文为空或很短，请检查源稿。'})
+    ordinals = []
+    for index, item in enumerate(selected):
+        found = re.search(r'(?:第\s*)?(' + ORDINAL + r')\s*[章回节]', item['title'])
+        ordinal = _number(found[1]) if found else None
+        if ordinal is None:
+            continue
+        ordinals.append((index + 1, item['startLine'], ordinal, item['title']))
+    for previous, current in zip(ordinals, ordinals[1:]):
+        if current[2] != previous[2] + 1:
+            anomalies.append({'sourcePath': relative, 'line': current[1], 'code': 'chapter_number_sequence',
+                              'chapterOrdinal': current[0], 'title': current[3],
+                              'expected': previous[2] + 1, 'actual': current[2],
+                              'message': '章节编号不连续或发生倒退，请核对。'})
+    return result, warnings, anomalies
 
 
 def preview_import(root: Path, *, source: str, bookName: str | None = None, encoding: str = 'utf-8',
-                   split: str = 'auto', boundaries: list[dict] | None = None) -> dict:
+                   split: str = 'auto', boundaries: list[dict] | None = None,
+                   ignoreHeadingPattern: str | None = None, headingPatterns: list[str] | None = None,
+                   dedupeHeadingWindow: int = 5) -> dict:
     root = root.expanduser().resolve()
     requested = Path(source).expanduser().absolute()
     if requested.is_symlink():
@@ -147,6 +281,9 @@ def preview_import(root: Path, *, source: str, bookName: str | None = None, enco
         raise StructureError('IMPORT_TARGET_EXISTS', 'choose a new project path separate from the original manuscript')
     if split not in ('auto', 'file'):
         raise StructureError('IMPORT_BOUNDARIES_INVALID', 'split must be auto or file')
+    if (headingPatterns is not None and (not isinstance(headingPatterns, list)
+            or any(not isinstance(prefix, str) or not prefix.strip() for prefix in headingPatterns))):
+        raise StructureError('IMPORT_HEADING_PATTERN_INVALID', 'headingPatterns must be an array of nonempty strings')
     overrides = boundaries or []
     for row in overrides:
         if (not isinstance(row, dict) or set(row) != {'sourcePath', 'startLine', 'title'}
@@ -156,7 +293,7 @@ def preview_import(root: Path, *, source: str, bookName: str | None = None, enco
     name = bookName if bookName is not None else source_path.stem
     if not isinstance(name, str) or not name.strip():
         raise StructureError('MISSING_BOOK_NAME', 'bookName must be nonempty')
-    files, chapters, warnings, contents = [], [], [], {}
+    files, chapters, warnings, anomalies, contents = [], [], [], [], {}
     for index, path in enumerate(source_files(source_path)):
         state, raw = observation(path)
         if raw is None:
@@ -168,9 +305,17 @@ def preview_import(root: Path, *, source: str, bookName: str | None = None, enco
                       'sourceHash': digest(raw), 'sourceObject': state, 'bytes': len(raw),
                       'textHash': digest(text.encode()), 'lineCount': len(text.splitlines())})
         contents[stored] = raw
-        sections, notes = _splits(text, relative, split, overrides)
+        chapter_offset = len(chapters)
+        sections, notes, findings = _splits(text, relative, split, overrides,
+            ignore_heading_pattern=ignoreHeadingPattern, heading_patterns=headingPatterns,
+            dedupe_heading_window=dedupeHeadingWindow)
         chapters.extend(sections)
         warnings.extend({'sourcePath': relative, 'message': note} for note in notes)
+        anomalies.extend([{**finding, **({'chapterOrdinal': finding['chapterOrdinal'] + chapter_offset}
+                                         if finding.get('chapterOrdinal') is not None else {}),
+                           **({'chapterOrdinals': [ordinal + chapter_offset for ordinal in finding['chapterOrdinals']]}
+                              if finding.get('chapterOrdinals') else {})}
+                           for finding in findings])
     unknown = {row['sourcePath'] for row in overrides} - {row['sourcePath'] for row in files}
     if unknown:
         raise StructureError('IMPORT_BOUNDARIES_INVALID', 'boundary sourcePath is not in the manuscript', {'unknown': sorted(unknown)})
@@ -179,7 +324,7 @@ def preview_import(root: Path, *, source: str, bookName: str | None = None, enco
     plan = {'kind': 'manuscript_import', 'schemaVersion': 1, 'planId': plan_id, 'createdAt': utc_now(),
             'projectRoot': str(root), 'projectId': str(uuid.uuid4()), 'bookName': name.strip(),
             'source': str(source_path), 'encoding': encoding, 'files': files, 'chapters': chapters,
-            'warnings': warnings, 'provider': binding(), 'toolboxVersion': toolbox_manifest()['version'],
+            'warnings': warnings, 'anomalies': anomalies, 'provider': binding(), 'toolboxVersion': toolbox_manifest()['version'],
             'manifestHash': digest((TOOLBOX_ROOT / 'toolbox.manifest.json').read_bytes())}
     plan['planHash'] = plan_hash(plan)
     directory = plan_directory(root, plan_id)
@@ -198,46 +343,140 @@ def preview_import(root: Path, *, source: str, bookName: str | None = None, enco
     return inspect_import(root, planId=plan_id, planHash=plan['planHash'])
 
 
+def _inspection_chapters(plan: dict, anomalies_only: bool, search: str | None) -> list[tuple[int, dict]]:
+    anomalies = plan.get('anomalies', [])
+    flagged = {ordinal for row in anomalies for ordinal in
+               ([row['chapterOrdinal']] if row.get('chapterOrdinal') is not None else row.get('chapterOrdinals', []))}
+    line = int(search) if isinstance(search, str) and search.isdecimal() else None
+    return [(ordinal, chapter) for ordinal, chapter in enumerate(plan['chapters'], 1)
+            if (not anomalies_only or ordinal in flagged)
+            and (search is None or search.casefold() in (chapter['title'] + ' ' + chapter['sourcePath']).casefold()
+                 or line is not None and chapter['startLine'] <= line <= chapter['endLine'])]
+
+
+def _page_anomalies(anomalies: list[dict], ordinals: list[int], *, include_global: bool) -> list[dict]:
+    result = []
+    selected = set(ordinals)
+    for finding in anomalies:
+        if finding.get('chapterOrdinal') in selected:
+            result.append(finding)
+            continue
+        affected = [ordinal for ordinal in finding.get('chapterOrdinals', []) if ordinal in selected]
+        if affected:
+            result.append({**finding, 'chapterOrdinals': affected})
+        elif include_global and 'chapterOrdinal' not in finding and 'chapterOrdinals' not in finding:
+            result.append(finding)
+    return result
+
+
+def _export_rows(plan: dict, rows: list[tuple[int, dict]], target: Path) -> dict:
+    suffix = target.suffix.lower()
+    if suffix not in {'.csv', '.jsonl'}:
+        raise StructureError('IMPORT_EXPORT_INVALID', 'exportPath must end in .csv or .jsonl')
+    anomalies = plan.get('anomalies', [])
+    records = [{**chapter, 'ordinal': ordinal,
+                'anomalies': [finding for finding in anomalies
+                              if finding.get('chapterOrdinal') == ordinal
+                              or finding.get('chapterOrdinals') and ordinal in finding['chapterOrdinals']]}
+               for ordinal, chapter in rows]
+    if suffix == '.jsonl':
+        payload = ''.join(json.dumps(row, ensure_ascii=False) + '\n' for row in records).encode('utf-8')
+    else:
+        stream = io.StringIO(newline='')
+        writer = csv.DictWriter(stream, fieldnames=('ordinal', 'sourcePath', 'title', 'startLine',
+            'endLine', 'utf8ByteStart', 'utf8ByteEnd', 'characterStart', 'characterEnd',
+            'contentHash', 'bytes', 'anomalies'))
+        writer.writeheader()
+        for row in records:
+            writer.writerow({**row, 'anomalies': json.dumps(row['anomalies'], ensure_ascii=False)})
+        payload = stream.getvalue().encode('utf-8-sig')
+    try:
+        descriptor = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError as exc:
+        raise StructureError('IMPORT_EXPORT_EXISTS', 'export target already exists; choose a new path',
+                             {'exportPath': str(target)}) from exc
+    try:
+        with os.fdopen(descriptor, 'wb') as output:
+            output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+    except BaseException:
+        target.unlink(missing_ok=True)
+        raise
+    return {'path': str(target), 'format': suffix[1:], 'rowCount': len(records)}
+
+
+def export_import_plan(root: Path, *, planId: str, planHash: str, exportPath: str,
+                       anomaliesOnly: bool = False, search: str | None = None) -> dict:
+    root = root.expanduser().resolve()
+    _, plan = read_plan(root, planId, planHash)
+    if type(anomaliesOnly) is not bool or search is not None and (not isinstance(search, str) or not search.strip()):
+        raise StructureError('ARGUMENTS_INVALID', 'anomaliesOnly must be boolean and search must be nonempty when supplied')
+    rows = _inspection_chapters(plan, anomaliesOnly, search)
+    target = Path(exportPath).expanduser().absolute()
+    exported = _export_rows(plan, rows, target)
+    return {'ok': True, 'code': 'IMPORT_PLAN_EXPORTED', 'planId': planId, 'planHash': planHash,
+            'anomaliesOnly': anomaliesOnly, 'search': search, 'exportedPlan': exported}
+
+
 def inspect_import(root: Path, *, planId: str, planHash: str, offset: int = 0,
-                   limit: int | None = None) -> dict:
+                   limit: int | None = None, anomaliesOnly: bool = False, search: str | None = None) -> dict:
     root = root.expanduser().resolve()
     _, plan = read_plan(root, planId, planHash)
     policy = query_policy()
     limit = policy['defaultLimit'] if limit is None else limit
     if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= policy['maxLimit']:
         raise StructureError('ARGUMENTS_INVALID', 'invalid import page offset or limit')
-    if offset > len(plan['chapters']):
+    if type(anomaliesOnly) is not bool:
+        raise StructureError('ARGUMENTS_INVALID', 'anomaliesOnly must be boolean')
+    if search is not None and (not isinstance(search, str) or not search.strip()):
+        raise StructureError('ARGUMENTS_INVALID', 'search must be nonempty when supplied')
+    anomalies = plan.get('anomalies', [])
+    chapters = _inspection_chapters(plan, anomaliesOnly, search)
+    if offset > len(chapters):
         raise StructureError('ARGUMENTS_INVALID', 'offset exceeds the chapter count')
     action = {'operation': 'import.commit', 'arguments': {'projectRoot': str(root), 'planId': planId, 'planHash': planHash, 'approve': True},
               'requiresApproval': True}
     result = {'ok': True, 'code': 'IMPORT_PREVIEW', 'projectRoot': str(root), 'planId': planId, 'planHash': planHash,
               'bookName': plan['bookName'], 'fileCount': len(plan['files']), 'chapterCount': len(plan['chapters']),
+              'listedChapterCount': len(chapters), 'anomaliesOnly': anomaliesOnly, 'search': search,
+              'anomalySummary': dict(sorted((code, sum(row.get('count', 1) for row in anomalies
+                                                       if row['code'] == code))
+                                            for code in {row['code'] for row in anomalies})),
               'encoding': plan['encoding'], 'sourceBytes': sum(row['bytes'] for row in plan['files']),
               'preservesAllText': True, 'chapterStatus': 'planning_required', 'semanticReviewComplete': False,
               'guidance': '核对完整分章列表；调整时重新 preview，boundaries 只需源文件相对路径、起始行与标题。导入保留正文，设定与规划待整理。',
-              'warnings': [], 'chapters': [], 'nextOffset': None, 'nextAction': action}
+              'warnings': plan['warnings'], 'anomalies': [], 'chapters': [], 'nextOffset': None, 'nextAction': action}
     # Reserve the actual next-page action while measuring so the final envelope
     # stays within the same byte budget as its chapter list.
     result['readAction'] = {'operation': 'import.inspect', 'arguments': {
-        'projectRoot': str(root), 'planId': planId, 'planHash': planHash, 'offset': len(plan['chapters']), 'limit': limit}}
-    result['nextOffset'] = len(plan['chapters'])
-    for index in range(offset, min(offset + limit, len(plan['chapters']))):
-        chapter = plan['chapters'][index]
-        row = {**chapter, 'ordinal': index + 1,
-               'warnings': [note['message'] for note in plan['warnings'] if note['sourcePath'] == chapter['sourcePath']],
+        'projectRoot': str(root), 'planId': planId, 'planHash': planHash, 'offset': len(chapters), 'limit': limit,
+        **({'anomaliesOnly': True} if anomaliesOnly else {}), **({'search': search} if search else {})}}
+    result['nextOffset'] = len(chapters)
+    page_chapters = []
+    for index in range(offset, min(offset + limit, len(chapters))):
+        ordinal, chapter = chapters[index]
+        row = {**chapter, 'ordinal': ordinal,
                'readAction': {'operation': 'import.read', 'arguments': {'projectRoot': str(root),
                    'planId': planId, 'planHash': planHash, 'sourcePath': chapter['sourcePath'], 'offset': chapter['characterStart']}}}
         result['chapters'].append(row)
+        page_chapters.append((ordinal, row))
+        result['anomalies'] = _page_anomalies(anomalies, [item[0] for item in page_chapters],
+                                              include_global=offset == 0)
         if len(json.dumps(result, ensure_ascii=False).encode()) > policy['maxBytes']['list']:
             result['chapters'].pop()
+            page_chapters.pop()
+            result['anomalies'] = _page_anomalies(anomalies, [item[0] for item in page_chapters],
+                                                  include_global=offset == 0)
             if not result['chapters']:
                 raise StructureError('IMPORT_PAGE_TOO_LARGE', 'one chapter title exceeds the response budget; shorten it in a new preview')
             break
     following = offset + len(result['chapters'])
-    if following < len(plan['chapters']):
+    if following < len(chapters):
         result['nextOffset'] = following
         result['readAction'] = {'operation': 'import.inspect', 'arguments': {
-            'projectRoot': str(root), 'planId': planId, 'planHash': planHash, 'offset': following, 'limit': limit}}
+            'projectRoot': str(root), 'planId': planId, 'planHash': planHash, 'offset': following, 'limit': limit,
+            **({'anomaliesOnly': True} if anomaliesOnly else {}), **({'search': search} if search else {})}}
     else:
         result['nextOffset'] = None
         result.pop('readAction')

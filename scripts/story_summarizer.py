@@ -29,11 +29,11 @@ from pathlib import Path
 try:
     from scripts import state_cache
     from scripts.core.exit_codes import EXIT_FAIL_CLOSED, EXIT_OK, FailClosedArgumentParser
-    from scripts.core.structure_store import ordered_chapters
+    from scripts.core.structure_store import usable_chapters
 except ImportError:  # 以 `python3 scripts/xxx.py` 直接运行时
     import state_cache
     from core.exit_codes import EXIT_FAIL_CLOSED, EXIT_OK, FailClosedArgumentParser
-    from core.structure_store import ordered_chapters
+    from core.structure_store import usable_chapters
 
 TOOLBOX_ROOT = Path(__file__).resolve().parent.parent
 try:
@@ -110,7 +110,7 @@ def _build_prepare_context(project_root: Path, *, view: str = 'full') -> dict:
     head = commit.get("head") or state.get("head") or {}
     head_id = head.get("eventId") if isinstance(head, dict) else head
 
-    chapters = ordered_chapters(state)
+    chapters = usable_chapters(state)
     old = _load_aux_summary(project_root)
     try:
         from scripts.core.summary_inputs import summary_inputs, summary_delta
@@ -182,6 +182,11 @@ def _build_prepare_context(project_root: Path, *, view: str = 'full') -> dict:
             "plotLine 每章关键推进、characterSummaries 每角色到当前的状态与关系变化。"
             "只返回字段齐全的摘要 JSON。"
         )
+    excluded_chapters = inputs['excludedChapterIds']
+    if excluded_chapters:
+        instruction += (' 隔离章节不属于可摘要历史，必须从 priorSummary 和已有摘要条目中剔除，'
+                        '也不得通过其他章节推测或复述其内容。隔离章节 ID：' +
+                        '、'.join(excluded_chapters) + '。')
 
     result = {
         'ok': True, 'upToDate': not new_chapters and not delta['fullRefresh'],
@@ -191,6 +196,7 @@ def _build_prepare_context(project_root: Path, *, view: str = 'full') -> dict:
         "asOfDisplayOrdinal": chapters[-1]["displayOrdinal"],
         "structureRevision": state.get("structureRevision"),
         "coveredChapterIds": [item["chapterId"] for item in chapters],
+        "excludedChapterIds": excluded_chapters,
         "sourceCommitId": head_id,
         "committedChapters": len(chapters),
         "incremental": incremental,
@@ -205,12 +211,15 @@ def _build_prepare_context(project_root: Path, *, view: str = 'full') -> dict:
         ],
         "instruction": instruction,
     }
-    if old is not None:
+    excluded_chapters_changed = bool(delta.get('excludedChapterIdsChanged'))
+    if old is not None and not excluded_chapters_changed:
         result["priorSummary"] = {
             "storySummary": old.get("storySummary"),
             "plotLine": old.get("plotLine", []),
             "characterSummaries": old.get("characterSummaries", []),
         }
+    elif old is not None:
+        result['priorSummaryWithheld'] = True
     result['instruction'] += ' 回传 inputSnapshot 原样绑定已读输入；fullRefresh 时用 priorSummary 对照重审完整因果。'
     if view == 'model':
         try:
@@ -221,7 +230,7 @@ def _build_prepare_context(project_root: Path, *, view: str = 'full') -> dict:
         result['instruction'] = result['instruction'].replace('inputSnapshot 原样', 'inputSnapshotRef 原样')
     result['inputSkeleton'] = {key: result[key] for key in
         ('schemaVersion', 'projectId', 'asOfChapterId', 'structureRevision', 'coveredChapterIds',
-         'sourceCommitId', 'asOfDisplayOrdinal')}
+         'excludedChapterIds', 'sourceCommitId', 'asOfDisplayOrdinal')}
     snapshot_key = 'inputSnapshotRef' if view == 'model' else 'inputSnapshot'
     result['inputSkeleton'][snapshot_key] = result[snapshot_key]
     result['inputSkeleton'].update(storySummary='', plotLine=[], characterSummaries=[])
@@ -284,6 +293,8 @@ def _commit_summary_locked(project_root: Path, input_path: str) -> dict:
             raise StorySummarizerError('摘要输入已变化，请重新 prepare')
         if payload.get('coveredChapterIds') != payload['inputSnapshot']['chapterOrder']:
             raise StorySummarizerError('摘要覆盖范围必须与已准备的章节一致')
+        if payload.get('excludedChapterIds', []) != payload['inputSnapshot'].get('excludedChapterIds', []):
+            raise StorySummarizerError('摘要隔离章节清单必须与已准备的输入一致')
 
     try:
         from scripts.core.summary_updates import persist_summary

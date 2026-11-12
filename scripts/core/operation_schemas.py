@@ -127,7 +127,7 @@ def evidence_decisions():
 
 
 def structure_batch_step(entity_types) -> dict:
-    """One ordered step of `structure.batch-preview`; chapter fields accept stable IDs or CH001."""
+    """One ordered step of `structure.batch-preview`; local refs bind records created earlier in the batch."""
     return {'type': 'object', 'oneOf': [
         object_schema({'op': {'const': 'move-chapter'}, 'chapterId': TEXT, 'beforeChapterId': TEXT},
                       ('op', 'chapterId')),
@@ -136,6 +136,14 @@ def structure_batch_step(entity_types) -> dict:
         object_schema({'op': {'const': 'create-entity'}, 'entityType': {'type': 'string', 'enum': list(entity_types)},
                        'name': TEXT, 'aliases': {'type': 'array', 'items': TEXT}, 'summary': STRING},
                       ('op', 'entityType', 'name')),
+        object_schema({'op': {'const': 'create-volume'}, 'ref': TEXT, 'title': TEXT}, ('op', 'ref', 'title')),
+        object_schema({'op': {'const': 'create-arc'}, 'ref': TEXT, 'title': TEXT, 'volumeRefs': STRINGS,
+                       'kind': TEXT, 'parentArcRef': TEXT, 'promise': STRING}, ('op', 'ref', 'title', 'volumeRefs')),
+        object_schema({'op': {'const': 'relink-range'}, 'volumeRef': TEXT, 'primaryArcRef': TEXT,
+                       'fromOrdinal': {'type': 'integer', 'minimum': 1},
+                       'toOrdinal': {'type': 'integer', 'minimum': 1},
+                       'secondaryArcRefs': STRINGS},
+                      ('op', 'volumeRef', 'primaryArcRef', 'fromOrdinal', 'toOrdinal')),
     ]}
 
 

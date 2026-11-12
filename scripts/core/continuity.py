@@ -143,14 +143,17 @@ def _batch_hash(record: dict) -> str:
 
 
 def _ordered(structure: dict) -> list[dict]:
-    return sorted((row for row in structure.get("chapters", []) if isinstance(row, dict)),
-                  key=lambda row: (row.get("displayOrdinal", 0), str(row.get("chapterId", ""))))
+    from .structure_store import ordered_chapters
+    return ordered_chapters(structure)
 
 
 def pending_continuity(structure: dict, workflow: dict, *, before_ordinal: int | None = None, root=None) -> list[dict]:
     records = _records(workflow)
+    from .structure_store import is_quarantined
     pending = []
     for chapter in _ordered(structure):
+        if is_quarantined(chapter):
+            continue
         if chapter.get("status") != "stable" or (
                 before_ordinal is not None and chapter.get("displayOrdinal", 0) >= before_ordinal):
             continue
@@ -174,12 +177,17 @@ def pending_continuity(structure: dict, workflow: dict, *, before_ordinal: int |
 
 
 def require_predecessors_ready(structure: dict, workflow: dict, chapter: dict, *, root=None, candidate_recipe=None, formal=False) -> None:
+    from .structure_store import is_quarantined, usable_chapters
+    if is_quarantined(chapter):
+        raise ContinuityError('CHAPTER_QUARANTINED', 'quarantined chapters cannot continue or receive continuity review',
+                              {'chapterId': chapter['chapterId'], 'reason': chapter.get('quarantineReason'),
+                               'category': chapter.get('quarantineCategory')})
     if root is not None and not formal:
         from .candidate_batch import require_candidate_predecessors
         if require_candidate_predecessors(root, structure, workflow, chapter, recipe=candidate_recipe):
             return
     ordinal = chapter.get("displayOrdinal") or 0
-    previous = [row for row in _ordered(structure) if (row.get("displayOrdinal") or 0) < ordinal]
+    previous = [row for row in usable_chapters(structure) if (row.get("displayOrdinal") or 0) < ordinal]
     unstable = [row["chapterId"] for row in previous if row.get("status") != "stable"]
     if unstable:
         raise ContinuityError("PREDECESSOR_UNSTABLE", "earlier chapters are not committed", {"chapterIds": unstable})
@@ -213,6 +221,9 @@ def new_continuity_record(root: Path, chapter: dict, sync: dict, state_artifact_
 
 
 def continuity_status(root: Path, structure: dict, workflow: dict, chapter: dict) -> dict:
+    from .structure_store import is_quarantined
+    if is_quarantined(chapter):
+        return {'status': 'quarantined', 'readyForContinuation': False, 'continuityComplete': False}
     record = _records(workflow).get(chapter["chapterId"])
     from .import_history import history_entry, history_status
     if record is None and history_entry(workflow, chapter['chapterId']) is not None:
@@ -234,7 +245,14 @@ def continuity_preview(root: Path, chapter_id: str) -> dict:
     root = root.expanduser().resolve()
     structure, workflow = load_structure(root), _load_workflow(root)
     chapter = next((row for row in structure["chapters"] if row["chapterId"] == chapter_id), None)
-    if chapter is None or chapter.get("status") != "stable":
+    if chapter is None:
+        raise ContinuityError("CONTINUITY_CHAPTER_NOT_COMMITTED", "continuity requires a committed chapter")
+    from .structure_store import is_quarantined
+    if is_quarantined(chapter):
+        raise ContinuityError('CHAPTER_QUARANTINED', 'quarantined chapters cannot receive continuity review',
+                              {'chapterId': chapter_id, 'reason': chapter.get('quarantineReason'),
+                               'category': chapter.get('quarantineCategory')})
+    if chapter.get("status") != "stable":
         raise ContinuityError("CONTINUITY_CHAPTER_NOT_COMMITTED", "continuity requires a committed chapter")
     record = deepcopy(_records(workflow).get(chapter_id))
     if record is None:

@@ -94,7 +94,6 @@ class CatalogCommandTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(StructureError):
                 preview_rename_entity(self.root, selector=self.fixture['characterId'],
                                       new_name=name, keep_old_name_as_alias=True)
-        self.assertCode("STRUCTURE_INVALID", catalog.preview_create_entity, entity_type="character", name="沈砚")
         self.assertCode("ENTITY_TYPE_INVALID", catalog.preview_create_entity, entity_type="unknown", name="新人物")
         self.assertFalse(list((self.root / ".govel/plans").iterdir()))
 
@@ -229,6 +228,37 @@ class CurrentPlacementCatalogTests(unittest.TestCase):
         self.commit(catalog.preview_relink_chapter(self.root, chapter_id=self.chapter,
                     placement={'scope': 'project'}, primary_arc_id=arc))
         self.assertEqual(self.chapter_record()['placement'], {'scope': 'project'})
+
+    def test_release_quarantine_requires_review_and_keeps_identity_and_prose(self):
+        source = load_structure(self.root)
+        chapter = next(row for row in source['chapters'] if row['chapterId'] == self.chapter)
+        chapter.update(status='quarantined', quarantineReason='内容边界待复核',
+                       quarantineCategory='content_boundary')
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', source)
+        prose = (self.root / chapter['filePath']).read_bytes()
+        preview = catalog.preview_release_quarantined_chapter(
+            self.root, chapter_id=self.chapter, reason='作者复核后确认该章边界正常。')
+        self.assertEqual(preview['impact']['adoptionRevoked'], True)
+        self.commit(preview)
+        restored = self.chapter_record()
+        self.assertEqual(restored['status'], 'planning_required')
+        self.assertNotIn('quarantineReason', restored)
+        self.assertNotIn('quarantineCategory', restored)
+        self.assertEqual((self.root / chapter['filePath']).read_bytes(), prose)
+
+    def test_release_quarantine_rejects_missing_or_non_quarantined_targets(self):
+        with self.assertRaises(StructureError) as caught:
+            catalog.preview_release_quarantined_chapter(self.root, chapter_id=self.chapter, reason='复核')
+        self.assertEqual(caught.exception.code, 'CHAPTER_NOT_QUARANTINED')
+        source = load_structure(self.root)
+        chapter = next(row for row in source['chapters'] if row['chapterId'] == self.chapter)
+        chapter.update(status='quarantined', quarantineReason='待复核', quarantineCategory='other')
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', source)
+        with self.assertRaises(StructureError) as caught:
+            catalog.preview_release_quarantined_chapter(self.root, chapter_id=self.chapter, reason='')
+        self.assertEqual(caught.exception.code, 'QUARANTINE_RELEASE_REASON_REQUIRED')
 
     def test_volume_only_arc_rejected_for_project_chapter(self):
         with self.assertRaises(StructureError) as caught:

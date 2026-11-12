@@ -19,7 +19,7 @@ from .write_sets import (apply_write_set, capture_guards, digest, guard_observat
 SUMMARY_PATH = '.govel/aux/story-summary.json'
 HISTORY_PATH = '.govel/aux/story-summary-history'
 MACHINE_FIELDS = ('schemaVersion', 'projectId', 'asOfChapterId', 'structureRevision',
-                  'coveredChapterIds', 'sourceCommitId', 'asOfDisplayOrdinal')
+                  'coveredChapterIds', 'excludedChapterIds', 'sourceCommitId', 'asOfDisplayOrdinal')
 
 
 def prepare_update(root, report, dependencies, baseline):
@@ -37,8 +37,10 @@ def prepare_update(root, report, dependencies, baseline):
     report['inputSkeleton']['prepareRef'] = reference
     report['deltaSkeleton'] = {'prepareRef': reference, 'storySummary': '', 'plotLine': [], 'characterSummaries': []}
     report['priorSummaryVersion'] = baseline['sha256']
-    report['instruction'] = ('阅读 chapters 指定的正文并由你重述 storySummary 的完整因果。可用 deltaSkeleton 按稳定 ID '
-        '新增、替换或明确删除 plotLine/characterSummaries；未改条目由工具保留。'
+    report['instruction'] = ('阅读 chapters 指定的正文并由你重述 storySummary 的完整因果。excludedChapterIds 中的章节已隔离，'
+        '必须从 priorSummary 删除其正文衍生的 plotLine、人物状态和事件因果；不可把其内容带入新摘要。'
+        'deltaSkeleton 缺省省略隔离 chapterId 对应的 plotLine 更新，表示删除这些旧条目。可用 deltaSkeleton 按稳定 ID '
+        '新增、替换或明确删除其他 plotLine/characterSummaries；未改条目由工具保留。'
         'prepareRef 同时绑定准备输入及旧摘要版本。完整 inputSkeleton 提交继续支持；机器绑定不能代替语义审查。')
     return report
 

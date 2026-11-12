@@ -693,6 +693,9 @@ def _planning_domain(root: Path, structure: dict) -> tuple[dict, list[dict], dic
         'stable': sorted(by_chapter_status.get('stable', [])),
         'stale': sorted(by_chapter_status.get('stale', [])),
         'planningRequired': sorted(by_chapter_status.get('planning_required', [])),
+        'quarantined': sorted(by_chapter_status.get('quarantined', [])),
+        'quarantinedReasons': {row['chapterId']: row.get('quarantineReason')
+                               for row in chapters if row.get('status') == 'quarantined'},
         'archived': sorted(by_chapter_status.get('archived', [])),
     }
     for chapter_id in sorted(by_chapter_status.get('stale', [])):
@@ -1020,6 +1023,11 @@ def _stable_chapters_domain(root: Path, structure: dict, workflow: dict) -> tupl
 
     issues, chapters = [], []
     for chapter in ordered_chapters(structure):
+        if chapter.get('status') == 'quarantined':
+            chapters.append({'chapterId': chapter['chapterId'], 'status': 'quarantined',
+                             'quarantineReason': chapter.get('quarantineReason'),
+                             'excludedFromContinuation': True})
+            continue
         if chapter.get('status') != 'stable':
             continue
         chapter_id = chapter['chapterId']

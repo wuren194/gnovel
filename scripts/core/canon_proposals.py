@@ -10,6 +10,7 @@ from .source_review import fingerprint
 from pathlib import Path
 
 from .consistency import require_no_pending
+from .entity_registry import entity_candidates, entity_matches, require_resolution_budget
 from .source_model import SourceIndex, require_current_source, snapshot_hash
 from .structure_commands import _base_plan, _write_plan
 from .structure_store import ENTITY_TYPES, StructureError, canonical_json, load_structure, validate_structure
@@ -34,22 +35,15 @@ def resolve_canon_target(root: Path, *, selector: str, entityType: str | None = 
         raise StructureError('RESOLVER_TYPE_UNKNOWN', 'entity type is unknown')
     if chapterId is not None and chapterId not in {row['chapterId'] for row in source['chapters']}:
         raise StructureError('RESOLVER_SCOPE_UNKNOWN', 'chapter scope does not exist')
-    scoped_ids = ({row['targetId'] for row in source.get('references', []) if row['sourceId'] == chapterId}
-                  if chapterId is not None else None)
-    key = selector.strip().casefold()
-    rows = [row for row in source['entities'] if (entityType is None or row['entityType'] == entityType)
-            and (scoped_ids is None or row['entityId'] in scoped_ids)
-            and (includeArchived or row.get('status') != 'archived')
-            and key in {str(value).strip().casefold() for value in
-                        [row['entityId'], row.get('name'), *row.get('aliases', [])]}]
-    matches = [{'entityId': row['entityId'], 'entityType': row['entityType'], 'name': row['name'],
-                'status': row.get('status')} for row in rows]
+    rows = entity_matches(source, selector, entity_type=entityType,
+                          chapter_id=chapterId, include_archived=includeArchived)
     result = {'ok': True, 'code': 'CANON_TARGET_RESOLUTION', 'revision': source['revision'],
               'sourceHash': snapshot_hash(source), 'status': 'resolved' if len(rows) == 1 else
-              'ambiguous' if rows else 'not_found', 'matches': matches}
+              'ambiguous' if rows else 'not_found', 'matches': entity_candidates(source, rows)}
     if len(rows) == 1 and rows[0].get('status') != 'archived':
         result['recordHash'] = fingerprint(rows[0])
         result['sessionRef'] = _ref(source, rows[0]['entityId'], entity_type=entityType, chapter_id=chapterId)
+    require_resolution_budget(result)
     return result
 
 

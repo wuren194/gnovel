@@ -83,6 +83,54 @@ class StructureBatchTests(unittest.TestCase):
         names = {row["name"] for row in load_structure(self.root)["entities"]}
         self.assertIn("藏书楼", names)
 
+    def test_create_volume_arc_and_relink_ordinal_range_in_one_plan(self) -> None:
+        before = read_json(self.root / ".govel/structure.json")
+        preview = preview_structure_batch(self.root, steps=[
+            {"op": "create-volume", "ref": "$volume-second", "title": "第二卷"},
+            {"op": "create-arc", "ref": "$arc-second", "title": "第二卷主线",
+             "volumeRefs": ["$volume-second"]},
+            {"op": "relink-range", "volumeRef": "$volume-second", "primaryArcRef": "$arc-second",
+             "fromOrdinal": 2, "toOrdinal": 4},
+        ])
+        self.assertEqual(read_json(self.root / ".govel/structure.json"), before)
+        self.assertEqual(preview["batch"]["createdVolumes"][0]["title"], "第二卷")
+        self.assertEqual(preview["batch"]["createdArcs"][0]["title"], "第二卷主线")
+        self.assertEqual(preview["batch"]["relinkedChapterCount"], 3)
+        steps = preview["parameters"]["steps"]
+        volume_id = steps[0]["volumeId"]
+        arc_id = steps[1]["arcId"]
+        self.assertEqual(steps[2]["chapterIds"], self.ids[1:4])
+        commit_plan(self.root, operation_id=preview["operationId"], plan_hash=preview["planHash"], approved=True)
+        structure = load_structure(self.root)
+        for chapter in structure["chapters"]:
+            if chapter["chapterId"] in self.ids[1:4]:
+                self.assertEqual(chapter["placement"], {"scope": "volume", "volumeId": volume_id})
+        for chapter_id in self.ids[1:4]:
+            link = next(row for row in structure["chapterArcLinks"] if row["chapterId"] == chapter_id and row["role"] == "primary")
+            self.assertEqual(link["arcId"], arc_id)
+
+    def test_range_requires_order_and_refs_must_precede_use(self) -> None:
+        for steps, code in (
+            ([{"op": "relink-range", "volumeRef": "$volume-MISSING", "primaryArcRef": self.root.name,
+              "fromOrdinal": 3, "toOrdinal": 1}], "STRUCTURE_BATCH_REFERENCE_NOT_FOUND"),
+            ([{"op": "relink-range", "volumeRef": "$volume", "primaryArcRef": "$arc",
+              "fromOrdinal": 3, "toOrdinal": 1}], "STRUCTURE_BATCH_REFERENCE_NOT_FOUND"),
+        ):
+            with self.subTest(code=code):
+                with self.assertRaises(StructureError) as caught:
+                    preview_structure_batch(self.root, steps=steps)
+                self.assertEqual(caught.exception.code, "STRUCTURE_BATCH_STEP_FAILED")
+                self.assertEqual(caught.exception.details["stepCode"], code)
+        with self.assertRaises(StructureError) as caught:
+            preview_structure_batch(self.root, steps=[
+                {"op": "create-volume", "ref": "$volume", "title": "第二卷"},
+                {"op": "create-arc", "ref": "$arc", "title": "第二卷主线", "volumeRefs": ["$volume"]},
+                {"op": "relink-range", "volumeRef": "$volume", "primaryArcRef": "$arc",
+                 "fromOrdinal": 3, "toOrdinal": 1},
+            ])
+        self.assertEqual(caught.exception.code, "STRUCTURE_BATCH_STEP_FAILED")
+        self.assertEqual(caught.exception.details["stepCode"], "STRUCTURE_BATCH_RANGE_INVALID")
+
     def test_failed_step_reports_its_index_and_writes_no_plan(self) -> None:
         plans = self.root / ".govel/plans"
         before = sorted(plans.glob("*.json")) if plans.is_dir() else []

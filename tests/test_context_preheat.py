@@ -61,6 +61,22 @@ class ContextPreheatTests(unittest.TestCase):
             preheat_next_chapter(self.root, afterChapterId='chapter-NEXT')
         self.assertEqual(caught.exception.code, 'NEXT_CHAPTER_NOT_FOUND')
 
+    def test_preheat_skips_quarantined_chapter(self):
+        next_chapter = {
+            'chapterId': 'chapter-LAST', 'title': '末章', 'displayOrdinal': 3,
+            'placement': self.current['placement'], 'filePath': '正文/末章.md',
+            'status': 'planning_required',
+        }
+        self.source['chapters'][1].update(status='quarantined', quarantineReason='待边界复核',
+                                           quarantineCategory='content_boundary')
+        self.source['chapters'].append(next_chapter)
+        self.source['chapterArcLinks'].append({'chapterId': 'chapter-LAST',
+                                               'arcId': self.source['arcs'][0]['arcId'], 'role': 'primary'})
+        self.save()
+        metadata, _, _, target = preheat_metadata(self.source, self.current['chapterId'])
+        self.assertEqual(metadata['nextChapterId'], 'chapter-LAST')
+        self.assertEqual(target['chapterId'], 'chapter-LAST')
+
 
 class ContextPreheatContractTests(unittest.TestCase):
     """Preheat 与 Builder 的正式契约：共享 fingerprint，且预取不缓存任何未来上下文。"""

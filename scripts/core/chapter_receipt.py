@@ -27,6 +27,28 @@ def _chapter_receipt(root: Path, structure: dict[str, Any], workflow: dict[str, 
                      *, title_candidate_id: str | None = None, skip_title: bool = False,
                      view: str = 'full') -> dict[str, Any]:
     chapter_id = chapter["chapterId"]
+    if chapter.get('status') == 'quarantined':
+        from .source_model import snapshot_hash
+        empty_freshness = {'stale': False, 'reason': 'chapter_quarantined', 'affectedChapterIds': [],
+                           'inputSnapshotHash': snapshot_hash(structure)}
+        return {
+            'finalizeAction': None,
+            'chapter': {**{key: chapter.get(key) for key in ("chapterId", "displayCode", "title", "status", "filePath")},
+                        'quarantineReason': chapter.get('quarantineReason'),
+                        "volumeId": chapter_volume_id(chapter, structure["schemaVersion"]),
+                        "placement": chapter_placement(chapter, structure["schemaVersion"])},
+            'approvedRange': False, 'approvalScope': workflow.get('approvalScope'), 'nextAction': None,
+            'artifacts': [], 'titleDecision': None,
+            'finalizationOptions': {'titleCandidateId': title_candidate_id, 'skipTitle': skip_title},
+            'finalization': {'applicable': False, 'note': '隔离章节不会进入定稿或续写历史。', 'blockers': []},
+            'summaryFreshness': empty_freshness,
+            'continuity': {'status': 'quarantined', 'readyForContinuation': False,
+                           'continuityComplete': False, 'items': [], 'blockers': []},
+            'factInventory': None, 'readyForContinuation': False, 'transactions': [], 'ownership': None,
+            'bindingGeneration': None, 'blockers': [],
+            'guidance': {'blockerCount': 0, 'quarantineReason': chapter.get('quarantineReason')},
+            'readyToFinalize': False, 'suggestedActions': [],
+        }
     preflight = preflight_finalization(root, chapter_id, title_candidate_id=title_candidate_id, skip_title=skip_title)
     freshness = summary_freshness(root, structure, target_chapter_id=chapter_id)
     stored_next_action = workflow.get("nextAction")

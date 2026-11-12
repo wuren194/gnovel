@@ -54,8 +54,11 @@ def scan_prose_report(root: Path, *, terms: list[str], chapterIds: list[str] | N
                                                        for term in terms)):
         raise StructureError('SOURCE_SCAN_INVALID', 'terms must be a nonempty string list')
     terms = sorted(set(terms))
+    excluded_quarantined = []
     if chapterIds is None:
-        chapters = sorted(rid for rid, kind in index.owner_types.items() if kind == 'chapter')
+        from .structure_store import is_quarantined, usable_chapters
+        excluded_quarantined = sorted(row['chapterId'] for row in source['chapters'] if is_quarantined(row))
+        chapters = sorted(row['chapterId'] for row in usable_chapters(source))
         explicit_scope = False
     else:
         if (not isinstance(chapterIds, list) or any(not isinstance(cid, str)
@@ -97,6 +100,9 @@ def scan_prose_report(root: Path, *, terms: list[str], chapterIds: list[str] | N
                         'budgetBytes': budget, 'usedBytes': used, 'truncated': truncated},
             'chapters': groups,
             'coverage': {'requestedChapterCount': len(chapters), 'scannedChapterCount': len(scanned),
+                         'excludedQuarantinedCount': len(excluded_quarantined),
+                         'excludedQuarantinedChapterIds': excluded_quarantined[:policy['maxLimit']],
+                         'excludedQuarantinedIdsTruncated': len(excluded_quarantined) > policy['maxLimit'],
                          'missingChapterCount': len(missing), 'missingChapterIds': missing[:policy['maxLimit']],
                          'completeForRequestedScope': not missing,
                          'reportTruncated': truncated,

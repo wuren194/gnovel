@@ -251,7 +251,6 @@ def execute_task_actions(root: Path, task: str, *, chapter_id: str | None = None
                                    'necessary': True, 'dedupeKey': 'explicit-diagnostics'})
     executed, skipped = [], []
     seen = set()
-    prepared_context = False
     prepared_index = None
     evidence_registered = False
     for row in plan['toolActions']:
@@ -272,9 +271,9 @@ def execute_task_actions(root: Path, task: str, *, chapter_id: str | None = None
             skipped.append({'capabilityId': row['capabilityId'], 'necessary': row['necessary'],
                             'reason': 'candidate-write needs explicit candidate authorization'})
             continue
-        if binding['ref'] == 'context.read' and prepared_context:
+        if binding['ref'] == 'context.read' and prepared_index is not None:
             skipped.append({'capabilityId': row['capabilityId'], 'coveredBy': 'chapter.prepare',
-                            'reason': 'the prepared result already contains this task context'})
+                            'reason': 'preparation owns this task context and any blockers; use its result'})
             continue
         if pov_character and (binding['ref'].startswith('query.') or binding['ref'] == 'summary.prepare'):
             skipped.append({'capabilityId': row['capabilityId'], 'necessary': row['necessary'],
@@ -316,9 +315,6 @@ def execute_task_actions(root: Path, task: str, *, chapter_id: str | None = None
                              'details': getattr(exc, 'details', {})})
             continue
         if spec.id == 'task.prepare':
-            prepared_context = (result.get('modelContext') is not None or
-                                'modelContext' in result.get('delivery', {}).get('unchangedFields', [])
-                                and result.get('readiness', {}).get('contextReady') is True)
             prepared_index = len(executed)
         if spec.id == 'diagnostics.aggregate' and result.get('registered') is True:
             evidence_registered = True

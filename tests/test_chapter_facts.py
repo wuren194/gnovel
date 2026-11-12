@@ -54,6 +54,17 @@ class ChapterFactsTests(unittest.TestCase):
         return {'ownerId': 'character-FACT-OWNER', 'field': 'history.gates', 'statement': '守门人关闭了城门。',
                 'quote': '他关上了城门。', 'reason': '正文明确写出关门动作。', **overrides}
 
+    def test_quarantined_chapter_cannot_produce_facts(self):
+        source = load_structure(self.root)
+        source['chapters'][0].update(status='quarantined', quarantineReason='sensitive material',
+                                      quarantineCategory='content_boundary')
+        write_json(self.root / '.govel/structure.json', source)
+        with self.assertRaises(StructureError) as caught:
+            preview_chapter_facts(self.root, requestId='facts-quarantined', chapterId=self.cid,
+                                   facts=[self.fact()])
+        self.assertEqual(caught.exception.code, 'CHAPTER_QUARANTINED')
+        self.assertEqual(caught.exception.details['category'], 'content_boundary')
+
     def prepare(self, facts=None, request='facts-1'):
         return preview_chapter_facts(self.root, requestId=request, chapterId=self.cid,
                                      facts=[self.fact()] if facts is None else facts)

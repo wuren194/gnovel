@@ -83,6 +83,21 @@ class ScanReportTests(unittest.TestCase):
         with self.assertRaises(StructureError):
             scan_prose_report(self.root, terms=['x'], maxBytes=10 ** 9)
 
+    def test_default_scan_excludes_quarantined_and_never_claims_whole_project_complete(self):
+        from scripts.core.source_candidate_scan import scan_prose_candidates
+        quarantined = next(row for row in self.source['chapters'] if row['chapterId'] == 'chapter-SCAN-B')
+        quarantined.update(status='quarantined', quarantineReason='content_boundary',
+                           quarantineCategory='content_boundary')
+        write_json(self.root / '.govel/structure.json', self.source)
+        report = scan_prose_report(self.root, terms=['城门'])
+        self.assertNotIn('chapter-SCAN-B', {row['chapterId'] for row in report['chapters']})
+        self.assertEqual(report['coverage']['excludedQuarantinedChapterIds'], ['chapter-SCAN-B'])
+        self.assertFalse(report['coverage']['completeForRequestedScope'])
+        self.assertGreater(report['coverage']['excludedQuarantinedCount'], 0)
+        explicit = scan_prose_candidates(self.root, terms=['城门'], chapterIds=['chapter-SCAN-B'])
+        self.assertEqual(explicit['coverage']['requestedChapterCount'], 1)
+        self.assertEqual(explicit['coverage']['scannedChapterCount'], 1)
+
     def test_cli_report(self):
         proc = subprocess.run([sys.executable, str(ROOT / 'scripts/novelctl.py'), 'project',
                                'source', 'scan-report', '--project-root', str(self.root),

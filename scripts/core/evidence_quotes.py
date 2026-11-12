@@ -4,6 +4,15 @@ from __future__ import annotations
 from .structure_store import StructureError
 
 
+def _occurrences(text: str, value: str) -> list[dict]:
+    rows = []
+    start = text.find(value)
+    while start >= 0:
+        rows.append({'occurrence': len(rows) + 1, 'start': start, 'end': start + len(value)})
+        start = text.find(value, start + 1)
+    return rows
+
+
 def quote_span(text: str, quote: dict) -> dict:
     if not isinstance(quote, dict) or set(quote) - {'text', 'start', 'end', 'page'}:
         raise StructureError('EVIDENCE_QUOTE_INVALID', 'quote requires text and optional exact bounds')
@@ -22,7 +31,17 @@ def quote_span(text: str, quote: dict) -> dict:
         window = text[start:end]
         if page['chunkHash'] != sha256_json({'text': window, 'start': start, 'end': end}):
             raise StructureError('EVIDENCE_QUOTE_MISMATCH', 'page differs from bound text')
-        local = quote_span(window, {'text': value})
+        try:
+            local = quote_span(window, {'text': value})
+        except StructureError as exc:
+            if exc.code == 'EVIDENCE_QUOTE_AMBIGUOUS':
+                occurrences = [{**row, 'start': row['start'] + start, 'end': row['end'] + start}
+                               for row in _occurrences(window, value)]
+                raise StructureError(exc.code, str(exc), {
+                    'occurrences': occurrences,
+                    'coordinateBasis': 'chapter_characters',
+                }) from exc
+            raise
         return {'start': start + local['start'], 'end': start + local['end'], 'text': value}
     if 'start' in quote or 'end' in quote:
         start, end = quote.get('start'), quote.get('end')
@@ -32,7 +51,11 @@ def quote_span(text: str, quote: dict) -> dict:
         start = text.find(value)
         if start < 0:
             raise StructureError('EVIDENCE_QUOTE_MISSING', 'quote is absent from the bound text')
-        if text.find(value, start + 1) >= 0:
-            raise StructureError('EVIDENCE_QUOTE_AMBIGUOUS', 'quote occurs more than once; provide exact bounds')
+        occurrences = _occurrences(text, value)
+        if len(occurrences) > 1:
+            raise StructureError('EVIDENCE_QUOTE_AMBIGUOUS', 'quote occurs more than once; provide exact bounds', {
+                'occurrences': occurrences,
+                'coordinateBasis': 'chapter_characters',
+            })
         end = start + len(value)
     return {'start': start, 'end': end, 'text': value}

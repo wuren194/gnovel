@@ -46,6 +46,11 @@ def _bounded_report(root, report):
 
 def _formal_chapter(root, source, chapter_id):
     chapter = next((row for row in source['chapters'] if row['chapterId'] == chapter_id), None)
+    from .structure_store import is_quarantined
+    if chapter is not None and is_quarantined(chapter):
+        raise StructureError('CHAPTER_QUARANTINED', 'quarantined chapters cannot produce source facts',
+                             {'chapterId': chapter_id, 'reason': chapter.get('quarantineReason'),
+                              'category': chapter.get('quarantineCategory')})
     if chapter is None or chapter.get('status') != 'stable':
         raise StructureError('CHAPTER_FACTS_STAGE_REQUIRED',
             'new chapter facts require committed prose and completed continuity',

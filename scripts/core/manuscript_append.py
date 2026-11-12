@@ -99,7 +99,7 @@ def _scan(source: Path, *, encoding: str, split: str, boundaries: list[dict]) ->
         files.append({'sourcePath': relative, 'absolutePath': str(path), 'sourceObject': state,
                       'sourceHash': digest(raw), 'bytes': len(raw), 'lineCount': len(text.splitlines())})
         contents[relative] = raw
-        sections, notes = _splits(text, relative, split, boundaries)
+        sections, notes, _ = _splits(text, relative, split, boundaries)
         chapters.extend(sections)
         warnings.extend({'sourcePath': relative, 'message': note} for note in notes)
     unknown = {row['sourcePath'] for row in boundaries} - set(contents)
@@ -235,7 +235,7 @@ def validate_append_plan(root: Path, current: dict, plan: dict) -> list[dict]:
                                  if metadata['sourceIsDirectory'] else Path(row['absolutePath']).name)
             if row['sourcePath'] != expected_relative:
                 raise StructureError('APPEND_PLAN_INVALID', 'manuscript source identity differs')
-            part, notes = _splits(text, row['sourcePath'], metadata['split'], metadata['boundaries'])
+            part, notes, _ = _splits(text, row['sourcePath'], metadata['split'], metadata['boundaries'])
             sections.extend(part)
             warnings.extend({'sourcePath': row['sourcePath'], 'message': note} for note in notes)
         chapters = metadata['chapters']

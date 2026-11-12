@@ -122,16 +122,19 @@ def efficiency_operations():
                       audiences=('editor', 'router'), tasks=('editor', 'repair'),
                       examples=({'chapterId': 'chapter-EXAMPLE'},)),
         OperationSpec('structure.batch-preview', 'preview_structure_batch',
-                      '把有序的章节移动、章节归档、实体登记与实体修改合成一个结构计划；预览不写真源，'
+                      '把有序的章节移动、章节归档、实体／卷／弧登记和 ordinal 区间重连合成一个结构计划；预览不写真源，'
                       '一次 structure commit 提交、一次 structure undo 撤销。章节字段接受稳定 ID 或显示编号 CH001，'
-                      '按预览前的编号解析。不新增权限：single-source 下修改既有实体仍须走受审提案。',
+                      '按预览前的编号解析。新建卷弧使用批次内 ref，relink-range 的首尾序号均包含在内。'
+                      '不新增权限：single-source 下修改既有实体仍须走受审提案。',
                       _schema({'steps': {'type': 'array', 'minItems': 1, 'items': structure_batch_step(ENTITY_TYPES),
                                          'description': '有序步骤 JSON 数组；长列表可写入文件后用 @路径 传入'}},
                               ['steps']),
                       'plan-write', lambda root, a: preview_structure_batch(root, steps=a['steps'], actor='author'),
                       ('structure', 'batch-preview'), category='author',
-                      examples=({'steps': [{'op': 'move-chapter', 'chapterId': 'CH003', 'beforeChapterId': 'CH001'},
-                                           {'op': 'create-entity', 'entityType': 'location', 'name': '藏书楼'}]},)),
+                      examples=({'steps': [{'op': 'create-volume', 'ref': '$v2', 'title': '第二卷'},
+                                           {'op': 'create-arc', 'ref': '$a2', 'title': '第二卷主线', 'volumeRefs': ['$v2']},
+                                           {'op': 'relink-range', 'volumeRef': '$v2', 'primaryArcRef': '$a2',
+                                            'fromOrdinal': 63, 'toOrdinal': 124}]},)),
         OperationSpec('task.read-batch', 'read_task_references',
                       '按当前任务读取显式选定且 hash 绑定的文件范围，去重并分页；不执行裸源查询。',
                       _schema({**task, 'requests': {'type': 'array', 'minItems': 1, 'items': READ_REQUEST},

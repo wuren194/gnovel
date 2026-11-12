@@ -33,7 +33,7 @@ def _with_word_counts(root: Path, chapters: list[dict]) -> list[dict]:
     low, high = chapter_length_bounds()
     rows = []
     for chapter in chapters:
-        count = _han_count(root, chapter.get("filePath", ""))
+        count = None if chapter.get('status') == 'quarantined' else _han_count(root, chapter.get("filePath", ""))
         length_status = None
         if count is not None and chapter.get("status") in {"draft", "review", "stable"}:
             if count < low:
@@ -331,6 +331,9 @@ def chapter_prose(root: Path, chapter_id: str) -> dict:
     chapter = next((item for item in structure["chapters"] if item["chapterId"] == chapter_id), None)
     if chapter is None:
         raise StructureError("CHAPTER_NOT_FOUND", f"unknown chapter: {chapter_id}")
+    if chapter.get('status') == 'quarantined':
+        raise StructureError('CHAPTER_QUARANTINED', 'quarantined chapter prose is unavailable to normal reading',
+                             {'chapterId': chapter_id, 'reason': chapter.get('quarantineReason')})
     relative = str(chapter.get("filePath", "")).strip()
     try:
         path = safe_project_path(root, relative)

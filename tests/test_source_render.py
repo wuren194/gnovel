@@ -132,7 +132,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         self.choice = {'knowledgeMode': 'perspective', 'perspectiveIds': ['character-ALPHA']}
         self.source['bookName'] = 'SECRET-book'
         next(r for r in self.source['entities'] if r['entityId'] == 'character-BETA')['name'] = 'SECRET-person'
-        next(r for r in self.source['entities'] if r['entityId'] == 'character-BETA')['aliases'] = ['SECRET-alias']
+        next(r for r in self.source['entities'] if r['entityId'] == 'character-BETA')['aliases'] = ['SECRET alias']
         next(r for r in self.source['entities'] if r['entityId'] == 'time-START')['name'] = 'SECRET-time'
         self.source['fieldDefinitions'][0]['label'] = 'SECRET-field'
         self.save()
@@ -180,7 +180,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         self.assertEqual(found['items'][0]['ownerLabel'], 'character-BETA')
         self.assertNotIn('SECRET', json.dumps(found, ensure_ascii=False))
         with self.assertRaises(StructureError) as caught:
-            search_source(self.root, terms=['钥匙'], selection=self.choice, ownerSelectors=['SECRET-alias'])
+            search_source(self.root, terms=['钥匙'], selection=self.choice, ownerSelectors=['SECRET alias'])
         self.assertEqual(caught.exception.code, 'SOURCE_SEARCH_OWNER_NOT_FOUND')
 
     def test_visible_metadata_is_exposed_only_for_selected_owners_and_denials_win(self):
@@ -192,7 +192,7 @@ class PerspectiveMetadataTests(unittest.TestCase):
         self.assertEqual(query_source(self.root, selection=self.choice)['items'][0]['label'], 'character-BETA')
         beta['visibleTo'] = ['character-ALPHA']; self.save()
         self.assertEqual(query_source(self.root, selection=self.choice)['items'][0]['label'], 'SECRET-person')
-        found = search_source(self.root, terms=['钥匙'], selection=self.choice, ownerSelectors=['SECRET-alias'])
+        found = search_source(self.root, terms=['钥匙'], selection=self.choice, ownerSelectors=['SECRET alias'])
         self.assertEqual(found['items'][0]['ownerLabel'], 'SECRET-person')
         self.assertEqual(len(query_source(self.root, selection=self.choice)['items']), 1)
         # Author reads keep their explicit complete metadata inventory.

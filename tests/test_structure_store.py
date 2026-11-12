@@ -47,15 +47,18 @@ class StructureValidationTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "STRUCTURE_INVALID")
         self.assertIn("PRIMARY_ARC_REQUIRED", {item["code"] for item in caught.exception.details["errors"]})
 
-    def test_entity_names_and_aliases_are_global(self) -> None:
+    def test_entity_names_and_aliases_may_repeat_but_ids_must_be_unique(self) -> None:
         data = self._valid()
         data["entities"] = [
             {"entityId": "character-ALPHA", "entityType": "character", "name": "沈砚", "aliases": ["阿砚"], "status": "active"},
-            {"entityId": "prop-KEY", "entityType": "prop", "name": "钥匙", "aliases": ["阿砚"], "status": "active"},
+            {"entityId": "character-BETA", "entityType": "character", "name": "沈砚", "aliases": ["阿砚"], "status": "active"},
+            {"entityId": "prop-KEY", "entityType": "prop", "name": "沈砚", "aliases": ["阿砚"], "status": "active"},
         ]
+        validate_structure(data)
+        data['entities'].append(dict(data['entities'][0]))
         with self.assertRaises(StructureError) as caught:
             validate_structure(data)
-        self.assertIn("ENTITY_NAME_COLLISION", {item["code"] for item in caught.exception.details["errors"]})
+        self.assertIn("DUPLICATE_ID", {item["code"] for item in caught.exception.details["errors"]})
 
     def test_relations_must_resolve(self) -> None:
         data = self._valid()

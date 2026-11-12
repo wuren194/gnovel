@@ -29,20 +29,27 @@ def selected_owners(result, source, selectors):
         return None
     if not isinstance(selectors, list) or not selectors or any(not isinstance(x, str) or not x for x in selectors):
         raise StructureError('SOURCE_SEARCH_OWNER_INVALID', 'ownerSelectors must be a nonempty string list')
+    from .entity_registry import match_labels, require_resolution_budget
     from .source_model import SourceIndex
     from .source_selection import metadata_visible
     index = SourceIndex.build(source)
-    visible = {row['id'] for row in result['owners']}
+    visible = {row['id']: row for row in result['owners']}
+    labels = {}
+    for rid, owner in visible.items():
+        record = index.objects[rid]
+        labels[rid] = [owner['label']]
+        if metadata_visible(record, result['selection']):
+            labels[rid].extend(record.get('aliases', []))
     found = set()
     for selector in selectors:
-        matches = [selector] if selector in visible else [rid for rid in visible
-            if metadata_visible(index.objects[rid], result['selection'])
-            and selector in [index.objects[rid].get('name'), index.objects[rid].get('title'), result['referenceLabels'].get(rid),
-                             *index.objects[rid].get('aliases', [])]]
+        matches = match_labels(selector, labels)
         if len(matches) != 1:
+            details = {'selector': selector, 'candidateIds': matches,
+                       'candidates': [visible[rid] for rid in matches]}
+            require_resolution_budget(details)
             raise StructureError('SOURCE_SEARCH_OWNER_AMBIGUOUS' if matches else 'SOURCE_SEARCH_OWNER_NOT_FOUND',
                                  'resolve an owner within the current selection; the scope is not widened',
-                                 {'selector': selector, 'candidateIds': sorted(matches)})
+                                 details)
         found.add(matches[0])
     return found
 

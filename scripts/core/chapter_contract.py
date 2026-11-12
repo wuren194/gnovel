@@ -94,7 +94,8 @@ def validate_contract(value):
 
 def source_contract(source, chapter_id):
     from .writing_checks import outline_requirements
-    from .outline_links import _table_rows, _label_index
+    from .outline_links import _table_rows
+    from .entity_registry import entity_candidates, entity_matches, require_resolution_budget
     from .source_plan import chapter_plan
     from .project import chapter_length_bounds
     local = sorted((f for f in source.get('fragments', []) if f['ownerId'] == chapter_id
@@ -138,11 +139,15 @@ def source_contract(source, chapter_id):
         requirements['requirements'] = [{'id': f'R{i:02}', 'text': v} for i, v in enumerate(explicit['requirements'], 1)]
     if 'quotedTargets' in explicit:
         requirements['quotedTargets'] = explicit['quotedTargets']
-    labels = _label_index(source)
     pov = explicit.get('pov', fields.get('POV'))
-    pov = labels.get(str(pov).casefold(), pov)
-    if pov not in {e['entityId'] for e in source.get('entities', []) if e['entityType'] == 'character'}:
-        pov = None
+    matches = entity_matches(source, pov, entity_type='character', include_archived=False) if pov else []
+    pov_resolution = {'selector': pov,
+                      'status': 'resolved' if len(matches) == 1 else 'ambiguous' if matches else 'not_found',
+                      'matches': entity_candidates(source, matches)}
+    require_resolution_budget(pov_resolution)
+    if pov and len(matches) != 1:
+        issues.append('CHAPTER_CONTRACT_POV_AMBIGUOUS' if matches else 'CHAPTER_CONTRACT_POV_UNKNOWN')
+    pov = matches[0]['entityId'] if len(matches) == 1 else None
     mode = explicit.get('mode', fields.get('模式'))
     if mode not in MODES:
         mode = None
@@ -155,7 +160,7 @@ def source_contract(source, chapter_id):
             'contractSource': 'chapterContract' if contracts else 'explicit_plan_text',
             'targetRange': interval, 'policyRange': list(chapter_length_bounds()),
             'evaluationStatus': 'ready' if interval and not issues else 'not_evaluated',
-            'beats': beats, 'beatBudgetSum': total, 'pov': pov, 'mode': mode,
+            'beats': beats, 'beatBudgetSum': total, 'pov': pov, 'povResolution': pov_resolution, 'mode': mode,
             'intensityLevel': dirty if type(dirty) is int else None,
             'relationshipCausality': deepcopy(explicit.get('relationshipCausality', [])),
             'behaviorCoverage': deepcopy(explicit.get('behaviorCoverage', {'relationship': 'unassessed', 'living': 'unassessed'})),

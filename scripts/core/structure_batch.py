@@ -18,7 +18,7 @@ from pathlib import Path
 from .chapter_refs import resolve_chapter_reference
 from .structure_store import StructureError, load_structure, validate_structure
 
-STEP_OPS = ("move-chapter", "archive-chapter", "create-entity")
+STEP_OPS = ("move-chapter", "archive-chapter", "create-entity", "create-volume", "create-arc", "relink-range")
 
 
 def _chapter(base: dict, step: dict, key: str, index: int) -> str | None:
@@ -28,8 +28,40 @@ def _chapter(base: dict, step: dict, key: str, index: int) -> str | None:
     return resolve_chapter_reference(base, value, field=f"steps[{index}].{key}")
 
 
-def _apply(base: dict, proposed: dict, step: dict, index: int) -> dict:
-    from .catalog_commands import apply_create_entity
+def _ref(refs: dict[str, str], value: str, field: str) -> str:
+    if value in refs:
+        return refs[value]
+    if value.startswith("$"):
+        raise StructureError("STRUCTURE_BATCH_REFERENCE_NOT_FOUND", "local reference must name an earlier create step",
+                             {"ref": value, "fieldPath": field})
+    return value
+
+
+def _bind_ref(refs: dict[str, str], value: str, identity: str) -> None:
+    if not isinstance(value, str) or not value.startswith("$") or value in refs:
+        raise StructureError("STRUCTURE_BATCH_REFERENCE_INVALID", "create refs must be unique $local names",
+                             {"ref": value, "existingRefs": sorted(refs)})
+    refs[value] = identity
+
+
+def _range_chapters(base: dict, start: int, end: int) -> list[str]:
+    if start > end:
+        raise StructureError("STRUCTURE_BATCH_RANGE_INVALID", "fromOrdinal must not exceed toOrdinal",
+                             {"fromOrdinal": start, "toOrdinal": end})
+    active = sorted((chapter for chapter in base["chapters"] if chapter.get("status") != "archived"),
+                    key=lambda chapter: chapter["displayOrdinal"])
+    if end > len(active):
+        raise StructureError("STRUCTURE_BATCH_RANGE_INVALID", "toOrdinal exceeds the active chapter count",
+                             {"fromOrdinal": start, "toOrdinal": end, "chapterCount": len(active)})
+    selected = [chapter["chapterId"] for chapter in active if start <= chapter["displayOrdinal"] <= end]
+    if not selected:
+        raise StructureError("STRUCTURE_BATCH_RANGE_EMPTY", "ordinal range contains no active chapters",
+                             {"fromOrdinal": start, "toOrdinal": end, "chapterCount": len(active)})
+    return selected
+
+
+def _apply(base: dict, proposed: dict, step: dict, index: int, refs: dict[str, str]) -> dict:
+    from .catalog_commands import apply_create_arc, apply_create_entity, apply_create_volume, apply_relink_chapter
     from .structure_commands import apply_archive_chapter, apply_move_chapter
     op = step["op"]
     if op == "move-chapter":
@@ -46,6 +78,35 @@ def _apply(base: dict, proposed: dict, step: dict, index: int) -> dict:
                                         aliases=step.get("aliases"), summary=step.get("summary", ""))
         return {"op": op, "entityId": entity_id, "entityType": step["entityType"], "name": step["name"].strip(),
                 "impact": {"staleCandidates": [], "approvalInvalidations": []}}
+    if op == "create-volume":
+        volume_id = apply_create_volume(proposed, title=step["title"])
+        _bind_ref(refs, step["ref"], volume_id)
+        return {"op": op, "ref": step["ref"], "volumeId": volume_id, "title": step["title"].strip(),
+                "impact": {"staleCandidates": [], "approvalInvalidations": []}}
+    if op == "create-arc":
+        volume_ids = [_ref(refs, value, f"steps[{index}].volumeRefs") for value in step["volumeRefs"]]
+        parent = step.get("parentArcRef")
+        parent_id = _ref(refs, parent, f"steps[{index}].parentArcRef") if parent else None
+        arc_id = apply_create_arc(proposed, title=step["title"], volume_ids=volume_ids,
+                                  kind=step.get("kind", "main"), parent_arc_id=parent_id,
+                                  promise=step.get("promise", ""))
+        _bind_ref(refs, step["ref"], arc_id)
+        return {"op": op, "ref": step["ref"], "arcId": arc_id, "title": step["title"].strip(),
+                "volumeIds": volume_ids, "impact": {"staleCandidates": [], "approvalInvalidations": []}}
+    if op == "relink-range":
+        volume_id = _ref(refs, step["volumeRef"], f"steps[{index}].volumeRef")
+        primary_arc_id = _ref(refs, step["primaryArcRef"], f"steps[{index}].primaryArcRef")
+        secondary = [_ref(refs, value, f"steps[{index}].secondaryArcRefs")
+                     for value in step.get("secondaryArcRefs", [])]
+        chapter_ids = _range_chapters(base, step["fromOrdinal"], step["toOrdinal"])
+        impacts = [apply_relink_chapter(proposed, chapter_id=chapter_id, primary_arc_id=primary_arc_id,
+                                        volume_id=volume_id, secondary_arc_ids=secondary)
+                   for chapter_id in chapter_ids]
+        return {"op": op, "volumeId": volume_id, "primaryArcId": primary_arc_id,
+                "secondaryArcIds": secondary, "fromOrdinal": step["fromOrdinal"],
+                "toOrdinal": step["toOrdinal"], "chapterIds": chapter_ids,
+                "impact": {"staleCandidates": [cid for row in impacts for cid in row["staleCandidates"]],
+                            "approvalInvalidations": [cid for row in impacts for cid in row["approvalInvalidations"]]}}
     raise StructureError("STRUCTURE_BATCH_OPERATION_INVALID", "unsupported structure batch step", {"op": op})
 
 
@@ -73,9 +134,10 @@ def preview_structure_batch(root: Path, *, steps: list[dict], actor: str = "huma
                              {"maxSteps": limit, "received": len(steps) if isinstance(steps, list) else None})
     proposed = deepcopy(structure)
     applied = []
+    refs = {}
     for index, step in enumerate(steps):
         try:
-            applied.append(_apply(structure, proposed, step, index))
+            applied.append(_apply(structure, proposed, step, index, refs))
         except (StructureError, ValueError) as exc:
             code = getattr(exc, "code", "STEP_INVALID")
             raise StructureError("STRUCTURE_BATCH_STEP_FAILED", f"steps[{index}] ({step.get('op')}) failed: {exc}",
@@ -97,6 +159,11 @@ def preview_structure_batch(root: Path, *, steps: list[dict], actor: str = "huma
         "archivedChapterIds": [row["chapterId"] for row in applied if row["op"] == "archive-chapter"],
         "createdEntities": [{"entityId": row["entityId"], "entityType": row["entityType"], "name": row["name"]}
                             for row in applied if row["op"] == "create-entity"],
+        "createdVolumes": [{"volumeId": row["volumeId"], "title": row["title"]}
+                           for row in applied if row["op"] == "create-volume"],
+        "createdArcs": [{"arcId": row["arcId"], "title": row["title"]}
+                        for row in applied if row["op"] == "create-arc"],
+        "relinkedChapterCount": sum(len(row.get("chapterIds", [])) for row in applied if row["op"] == "relink-range"),
     }
     impact = {"renumberedChapters": renumbered, "staleCandidates": stale, "approvalInvalidations": invalidations,
               "manualReview": "脚本只可重建带 `> GENERATED:` 标记的文件；不带标记的文件永不写入，须人工整理。"}

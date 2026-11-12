@@ -556,6 +556,8 @@ python3 scripts/novelctl.py project structure commit --project-root /path/to/书
 
 支持人物、道具、地点、事件、势力、规则、秘密、伏笔和软限制。时间锚继续使用 `anchor-preview`，不绕过绝对时间要求。创建后按该稳定 ID 登记属性与片段，阅读卡片由查询生成。
 
+允许同名人物、跨类型同名和共享别名，每个对象分别保留永久 ID。输入完整 ID 时按原值精确匹配；名称与别名去首尾空白后按 `casefold` 比较。ID 形状的输入不会退回名称匹配。`source canon-resolve` 可用 `--entity-type` 或 `--chapter-id` 缩小范围，返回的候选带身份、摘要摘录及已登记章节；歧义时按候选完整 ID 重新调用，再取得修改绑定。归档候选须用 `--include-archived` 查询，且不签发可写会话。详细规则见[稳定身份与内容类型](SINGLE-SOURCE.md#稳定身份与内容类型)。
+
 既有实体的事实更新先用 source canon-resolve 定位，再提供旧值、目标字段、当前事实引文和明确批准声明，交 canon-proposal-preview；查看差异后提交。没有可绕过 Canon 门的通用实体字段覆盖或合并入口。
 
 纯显示名、别名及归档／恢复使用后文的受限重构入口，不能夹带摘要或世界事实变化。实体时间事实也须受审源提案，不另设通用实体时间挂载写入口。归档保留身份与引用；影响清单用于人工复核，不等于自动重写推演或重新批准章节。
@@ -585,11 +587,14 @@ python3 scripts/novelctl.py project structure commit --project-root /path/to/书
 
 ```json
 [
-  {"op": "move-chapter", "chapterId": "CH004", "beforeChapterId": "CH001"},
-  {"op": "archive-chapter", "chapterId": "CH007", "reason": "并入第六章"},
+  {"op": "create-volume", "ref": "$vol2", "title": "第二卷"},
+  {"op": "create-arc", "ref": "$arc2", "title": "第二卷主线", "volumeRefs": ["$vol2"]},
+  {"op": "relink-range", "volumeRef": "$vol2", "primaryArcRef": "$arc2", "fromOrdinal": 63, "toOrdinal": 124},
   {"op": "create-entity", "entityType": "location", "name": "藏书楼", "aliases": ["书库"]}
 ]
 ```
+
+新建卷、弧的 `$ref` 在同一批次中唯一，且只能由后续步骤引用。`relink-range` 的起止序号均包含在内，依据预览开始时的活动章节编号；无效引用、反向区间和超过章节数的区间会拒绝整份计划。
 
 - 步骤里的显示编号一律按**预览前**的结构解析，与调用者看到的编号一致；前一步造成的重新编号不影响后一步的引用。
 - 任一步失败时整批不生成计划，`STRUCTURE_BATCH_STEP_FAILED` 给出 `stepIndex`、原错误码 `stepCode` 与原细节。结果与当前结构相同返回 `STRUCTURE_BATCH_NOOP`。
@@ -783,9 +788,11 @@ python3 scripts/release_audit.py --zip dist/x.zip --terms /path/to/local-review/
 python3 scripts/novelctl.py project import preview --source ~/Downloads/山城旧事.txt --project-root ~/govel-books/山城旧事 --book-name 山城旧事
 ```
 
-预览返回 `planId`、`planHash`、分章数量和分页章列表，每项包含源文件相对路径、标题、起止行号以及原文读取动作。沿 `readAction` 调用 `import.inspect` 看完后续章；每章的 `import.read` 动作读取冻结原文，返回字符偏移、起始行及下一页动作，长行也不会截断丢失。标题匹配只是分章候选；目录、重复标题、卷首内容应由作者或模型核对。
+预览返回 `planId`、`planHash`、分章数量、页内异常和按类型汇总的异常计数。每个章节候选包含源文件相对路径、标题、起止行号以及原文读取动作。沿 `readAction` 调用 `import.inspect` 查看后续页；可传 `anomaliesOnly=true` 只看异常章，`search` 可按标题／文件名片段或源行号缩小结果。用 `import.export-plan` 和 `exportPath` 导出完整 CSV／JSONL 清单，目标必须是新文件。每章的 `import.read` 动作读取冻结原文，返回字符偏移、起始行及下一页动作，长行也不会截断丢失。
 
-默认识别中文“第…章／回／节”、英文 `Chapter`／`CH`、`（一）`、`（1）`、`(1)`、`【一】`、`一、` 等序数标题。括号和序数也可能是正文列表或目录，因此只作为待核对的候选。目录输入按文件名自然顺序排列（2 在 10 之前），无章标题时整文件一章。首章前非空内容单独保留并提示核对；空白随第一章保留。需要整文件一章可选 `--split file`。默认严格 UTF-8（可带 BOM），其他编码显式传 `--encoding gb18030` 或 `--encoding utf-16`，解码失败报错，不替换损坏字符。
+默认识别中文“第…章／回／节”、英文 `Chapter`／`CH`、`（一）`、`（1）`、`(1)`、`【一】`、`一、` 等序数标题，以及引子、楔子、序章、尾声、后记、番外。`headingPatterns` 可追加自定义前缀。`dedupeHeadingWindow` 默认 5 行；窗口内正文规范化后相同的标题仅产生一个边界，异常汇总合并数量和示例行号，第二行原文仍保留在章节正文中。`ignoreHeadingPattern` 是 Python 正则，只从标题识别中排除匹配行，不删除或改写原文。
+
+缺“第”或疑似“章／掌”误写会作为疑似标题候选列出行号与建议，并参与候选分章供作者在预览中确认；短章、重复的非相邻标题和编号跳跃／倒退也进入异常清单。首章前非空卷首在预览异常和章节候选中显示行范围与短摘录；全部原文仍按连续范围保留。目录输入按文件名自然顺序排列（2 在 10 之前），无章标题时整文件一章。空白卷首随第一章保留。需要整文件一章可选 `--split file`。默认严格 UTF-8（可带 BOM），其他编码显式传 `--encoding gb18030` 或 `--encoding utf-16`，解码失败报错，不替换损坏字符。
 
 调整分章时重新预览。`boundaries` 只描述需调整文件的各章起始行和标题，不含 ID、hash 或项目字段。边界依原文顺序递增；首项可以晚于第 1 行，之前的非空内容自动保留为卷首、纯空白随第一章保留，最后一章延伸到文件末尾。以下例子将原稿分为两章，第二章从第 120 行开始：
 
@@ -806,6 +813,10 @@ python3 scripts/novelctl.py project import commit --project-root ~/govel-books/�
 ```bash
 python3 scripts/novelctl.py project export --project-root ~/govel-books/山城旧事 --status planning_required --output ~/govel-backups/山城旧事-导入阅读稿.txt
 ```
+
+组织采用 `acceptHistory=true` 时，每章可省略 `adopt`（默认 true）；有 unresolved 的章节不能采用。单章隔离则在 chapter 项中传 `adopt=false`、非空 `quarantineReason` 和 `quarantineCategory`，类别为 `content_boundary`、`underage_explicit_content` 或 `other`。隔离时不填写正文语义梗概／引文，工具会在事务回执中清除该章的梗概、审阅文本和引文，只保存固定的隔离说明、类别与源范围。一个批次可同时采用无未决项的章节并隔离其他章节；隔离章不进入 `importReviews`。
+
+`quarantined` 章保留身份、顺序和原文以便审计；project overview、doctor、回执和显式 inspect 保持可见。普通正文读取、写作准备、事实／连续性入口、默认源扫描和稿件导出会排除或拒绝隔离章。摘要输入、plotLine、最近章节上下文和串行前置检查也跳过隔离章。若既有摘要的排除清单与当前结构不同，旧摘要不会进入续写上下文；`summary.prepare` 会要求完整重述并移除隔离章衍生条目。作者完成复核后用 `project structure chapter-quarantine-release-preview` 提交复核说明；操作保留 chapterId 和正文，移除隔离元数据并返回 `planning_required`，随后重新读取和组织，不沿用旧回溯采用。
 
 预览保存在目标父目录的 `.govel-import-…` 中，包含私人原文，应随个人资料管理，不放入公开源码。提交在其中准备完整项目，再以平台的内核独占目录改名发布；已有目标不会被接管或覆盖。macOS 使用 `renameatx_np(RENAME_EXCL)`，Linux 使用 `renameat2(RENAME_NOREPLACE)`；能力不可用时报 `SAFE_PUBLICATION_UNAVAILABLE`。普通失败清理本次暂存项目，进程中断可能留下计划目录内的 `build-…`，原计划可重新执行。发布后丢失响应，同计划重试读取原导入回执，不覆盖当前项目；该历史回执不证明项目此刻未被后续编辑。项目及来源证据确认保存后，用户可自行删除对应预览目录。
 
@@ -844,12 +855,12 @@ prepare 返回本批 `prepareRef`、`fields` 与 `readAction`。AI 先沿 `impor
 | content 内容 | 模型填写 | 工具完成 |
 | --- | --- | --- |
 | chapters | 稳定章 ID、synopsis、quotes、facts/relationships/continuity/structure 四项实际审阅、unresolved、existingRecordIds | 登记回溯事实与当前依赖，不伪造写前计划 |
-| entities | `$` 局部 ref、entityType、name、summary、chapterId、quote | 分配正式 ID，验证引文 |
+| entities | `$` 局部 ref、entityType、name、summary、chapterId、quote；可选 aliases、matchBy、entityId、createIfMissing | 复用当前真源中同类型的唯一精确名称／别名身份，返回 ref→entityId；歧义返回候选并拒绝预览；不存在且允许创建时分配新 ID |
 | facts | ownerRef、text、chapterId、quote | 登记 topic 事实及原文引证 |
 | relations | fromRef、toRef、kind、chapterId、quote、reason | 将实际关系写入 relations，保留引证 |
 | acceptHistory | 是否提请作者采用本批已写原稿及事实盘点 | 未决项拒绝采用；批准提交后记录回溯历史，不产生 A/B 或新章授权 |
 
-同批新实体可用 `$` 引用，既有实体用稳定 ID；不猜 `SE-` 等前缀。重复名字要求先解析，既有事实修订继续走原受审提案。相同回溯梗概可复用；changed source／引用失效时重新 prepare。每批提交后重新选择剩余章，不把旧 offset 用在缩短后的待办列表。
+同批新实体可用 `$` 引用；既有实体可提供 `entityId`，或按同一 `entityType` 的精确 name/alias 配置 `matchBy`。同名只有一个精确命中时复用其稳定 ID；多命中返回候选并要求显式 `entityId`，不自动合并。未命中时 `createIfMissing=false` 报定位错误，否则创建新实体。预览返回 `entityReferences` 中完整 ref→entityId 映射，后续批次应使用稳定 ID；不猜 `SE-` 等前缀。既有事实修订继续走受审提案。相同回溯梗概可复用；changed source／引用失效时重新 prepare。每批提交后重新选择剩余章，不把旧 offset 用在缩短后的待办列表。
 
 预览经明确作者批准后沿返回 `source.commit` 提交，结构、引文和回溯审阅索引复用同一事务。既有授权涵盖本批时可继续执行，不重复询问。有效回溯采用将原稿标为 stable 并满足前章历史条件；它依赖匹配的已提交事务、原稿摘要和归属代次、章节结构及实际资料摘要。改文、改相关资料、删证据或撤销采用都会使相应资格失效，不能改旧回执来恢复。
 

@@ -98,6 +98,20 @@ class ImportOrganizationTests(unittest.TestCase):
         report = project_doctor(self.root)
         self.assertFalse([row for row in report['issues'] if row['domain'] == 'workflow' and row['severity'] == 'blocking'], report['issues'])
 
+    def test_import_status_excludes_quarantine_from_review_denominator(self):
+        source = load_structure(self.root)
+        chapter = next(row for row in source['chapters'] if row['chapterId'] == self.ids[0])
+        chapter.update(status='quarantined', quarantineReason='content_boundary',
+                       quarantineCategory='content_boundary')
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', source)
+        status = self.call('import.organization-status')
+        self.assertEqual(status['importedChapters'], 1)
+        self.assertEqual(status['quarantinedChapterCount'], 1)
+        self.assertEqual(status['quarantinedChapterIds'], [self.ids[0]])
+        review_task = next(row for row in status['tasks'] if row['id'] == 'manuscript_review')
+        self.assertIn('0/1', review_task['message'])
+
     def test_unresolved_or_false_quotes_cannot_be_accepted(self):
         prep = self.prepare(); body = self.content(prep)
         body['chapters'][0]['unresolved'] = ['钥匙来源仍需作者确认']
@@ -107,6 +121,167 @@ class ImportOrganizationTests(unittest.TestCase):
         body['facts'][0]['quote'] = {'text': '不存在的原句'}
         with self.assertRaises(StructureError): self.preview(prep, body)
         self.assertEqual(self.workflow()['approvals'], {})
+
+    def test_organization_size_error_reports_limits_and_chapter_split(self):
+        from scripts.core.project import canon_proposal_batch_max_items
+        prep = self.prepare(); body = self.content(prep)
+        body['facts'] = [{'ownerRef': '$missing', 'text': 'fact', 'chapterId': self.ids[0],
+                          'quote': {'text': '林舟是守门人。'}}] * canon_proposal_batch_max_items()
+        with self.assertRaises(StructureError) as exc:
+            self.preview(prep, body)
+        self.assertEqual(exc.exception.code, 'IMPORT_ORGANIZATION_TOO_LARGE')
+        self.assertEqual(exc.exception.details['limit'], canon_proposal_batch_max_items())
+        self.assertEqual(exc.exception.details['current'], sum(len(body[key]) for key in ('chapters', 'entities', 'facts', 'relations')))
+        self.assertIn('maxBytes', exc.exception.details)
+        self.assertEqual(exc.exception.details['suggestion']['strategy'], 'split_by_chapter')
+        self.assertGreaterEqual(exc.exception.details['suggestion']['maxChapters'], 1)
+        suggested = exc.exception.details['suggestion']['chapterBatches']
+        self.assertEqual([chapter for batch in suggested for chapter in batch], prep['selectedChapterIds'])
+
+    def test_unknown_owner_reports_field_path_and_chapter(self):
+        prep = self.prepare(); body = self.content(prep)
+        body['facts'][0]['ownerRef'] = '$unknown-character'
+        with self.assertRaises(StructureError) as exc:
+            self.preview(prep, body)
+        self.assertEqual(exc.exception.code, 'IMPORT_ORGANIZATION_OWNER')
+        self.assertEqual(exc.exception.details['ref'], '$unknown-character')
+        self.assertEqual(exc.exception.details['fieldPath'], 'facts[0].ownerRef')
+        self.assertEqual(exc.exception.details['chapterId'], self.ids[0])
+
+    def test_duplicate_relation_reports_conflicting_identity(self):
+        prep = self.prepare(); body = self.content(prep)
+        body['relations'].append(deepcopy(body['relations'][0]))
+        with self.assertRaises(StructureError) as exc:
+            self.preview(prep, body)
+        self.assertEqual(exc.exception.code, 'IMPORT_ORGANIZATION_DUPLICATE')
+        self.assertTrue(exc.exception.details['sourceId'])
+        self.assertTrue(exc.exception.details['targetId'])
+        self.assertEqual(exc.exception.details['kind'], '兄弟')
+        self.assertTrue(exc.exception.details['relationId'])
+
+    def test_ambiguous_quote_reports_chapter_character_occurrences(self):
+        from scripts.core.import_organization_model import assemble
+        with self.assertRaises(StructureError) as exc:
+            source = load_structure(self.root)
+            prep = self.prepare()
+            materials = {row['chapterId']: row for row in self.call('import.organization-read', prepareRef=prep['prepareRef'])['materials']}
+            materials[self.ids[0]]['text'] = '重复句。重复句。'
+            body = self.content(prep)
+            body['chapters'][0]['quotes'] = [{'text': '重复句。'}]
+            assemble(source, body, materials)
+        self.assertEqual(exc.exception.code, 'EVIDENCE_QUOTE_AMBIGUOUS')
+        self.assertEqual(exc.exception.details['coordinateBasis'], 'chapter_characters')
+        self.assertEqual(exc.exception.details['chapterId'], self.ids[0])
+        self.assertEqual(exc.exception.details['occurrences'], [
+            {'occurrence': 1, 'start': 0, 'end': 4},
+            {'occurrence': 2, 'start': 4, 'end': 8},
+        ])
+
+    def test_same_name_entities_keep_separate_quoted_identities(self):
+        self.root = self.base / 'same-name-book'
+        self.source.write_text('（一）交班\n东门守卫林舟递出钥匙。西门守卫林舟接过钥匙。\n')
+        preview = self.call('import.preview', source=str(self.source))
+        self.call('import.commit', planId=preview['planId'], planHash=preview['planHash'], approve=True)
+        self.ids = [row['chapterId'] for row in load_structure(self.root)['chapters']]
+        prep = self.prepare()
+        body = deepcopy(prep['fields'])
+        cid = self.ids[0]
+        quote = '东门守卫林舟递出钥匙。西门守卫林舟接过钥匙。'
+        body['chapters'][0].update(synopsis='东门与西门的两位同名守卫交接钥匙。', quotes=[{'text': quote}],
+            review={'facts': '两个人由各自守卫的城门区分。', 'relationships': '原文只记录本次交接。',
+                    'continuity': '钥匙由东门守卫交给西门守卫。', 'structure': '本章完整记录一次交班。'})
+        body['entities'] = [{'ref': ref, 'entityType': 'character', 'name': '林舟',
+                             'summary': text, 'chapterId': cid, 'quote': {'text': text}}
+                            for ref, text in (('$east', '东门守卫林舟递出钥匙。'), ('$west', '西门守卫林舟接过钥匙。'))]
+        body['facts'] = [{'ownerRef': '$west', 'text': '西门守卫林舟接过钥匙。', 'chapterId': cid,
+                          'quote': {'text': '西门守卫林舟接过钥匙。'}}]
+        body['relations'] = [{'fromRef': '$east', 'toRef': '$west', 'kind': '交班', 'chapterId': cid,
+                             'quote': {'text': quote}, 'reason': '原稿记录双方交接。'}]
+        self.commit(self.preview(prep, body))
+        source = load_structure(self.root)
+        east, west = source['entities']
+        self.assertNotEqual(east['entityId'], west['entityId'])
+        self.assertEqual(east['name'], west['name'])
+        self.assertEqual((source['relations'][0]['fromEntity'], source['relations'][0]['toEntity']),
+                         (east['entityId'], west['entityId']))
+        self.assertTrue(any(row['ownerId'] == west['entityId'] for row in source['fragments']))
+
+    def test_canonical_entity_match_reuses_only_one_exact_typed_identity(self):
+        from scripts.core.catalog_commands import preview_create_entity
+        entity = preview_create_entity(self.root, entity_type='character', name='林舟', summary='守门人。')
+        entity_id = entity['parameters']['entityId']
+        self.commit(entity)
+        prep = self.prepare(chapterIds=[self.ids[0]])
+        body = self.content(prep)
+        body['entities'] = [{'ref': '$gatekeeper', 'entityType': 'character', 'name': '林舟',
+            'summary': '原稿又称林舟是守门人。', 'chapterId': self.ids[0],
+            'quote': {'text': '林舟是守门人。'}, 'matchBy': ['name'], 'createIfMissing': False}]
+        body['facts'] = []; body['relations'] = []
+        preview = self.preview(prep, body, 'canonical-entity-reference')
+        stored_path, _, _ = __import__('scripts.core.structure_commands', fromlist=['_operation_paths'])._operation_paths(
+            self.root, preview['operationId'])
+        stored = json.loads(stored_path.read_text())
+        self.assertEqual(stored['parameters']['entityReferences']['$gatekeeper'], entity_id)
+        self.assertIn(entity_id, [record['entityId'] for record in stored['proposedStructure']['entities']])
+        self.assertEqual(len([record for record in stored['proposedStructure']['entities'] if record['name'] == '林舟']), 1)
+        self.assertEqual(preview['entityReferenceCount'], 1)
+        self.assertEqual(preview['entityReferences'], [{'ref': '$gatekeeper', 'entityId': entity_id, 'created': False}])
+        entities = self.call('import.organization-plan-inspect', operationId=preview['operationId'],
+                             planHash=preview['planHash'])
+        self.assertEqual(entities['items'], [{'ref': '$gatekeeper', 'entityId': entity_id, 'created': False}])
+
+    def test_canonical_entity_ambiguity_returns_candidates(self):
+        source = load_structure(self.root)
+        from scripts.core.catalog_commands import apply_create_entity
+        apply_create_entity(source, entity_type='character', name='林舟', summary='守门人。')
+        apply_create_entity(source, entity_type='character', name='林舟', summary='旅人。')
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', source)
+        prep = self.prepare(chapterIds=[self.ids[0]])
+        body = self.content(prep)
+        body['entities'] = [{'ref': '$linzhou', 'entityType': 'character', 'name': '林舟',
+            'summary': '同名人物。', 'chapterId': self.ids[0], 'quote': {'text': '林舟是守门人。'}}]
+        body['facts'] = []; body['relations'] = []
+        with self.assertRaises(StructureError) as caught:
+            self.preview(prep, body, 'ambiguous-canonical-entity')
+        self.assertEqual(caught.exception.code, 'IMPORT_ENTITY_AMBIGUOUS')
+        self.assertEqual(len(caught.exception.details['candidates']), 2)
+
+    def test_canonical_entity_matching_excludes_archived_identities(self):
+        source = load_structure(self.root)
+        from scripts.core.catalog_commands import apply_create_entity
+        entity_id = apply_create_entity(source, entity_type='character', name='林舟', summary='已归档守门人。')
+        archived = next(row for row in source['entities'] if row['entityId'] == entity_id)
+        archived['status'] = 'archived'
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', source)
+        prep = self.prepare(chapterIds=[self.ids[0]])
+        body = self.content(prep)
+        body['entities'] = [{'ref': '$linzhou', 'entityType': 'character', 'name': '林舟',
+            'summary': '重新出现的守门人。', 'chapterId': self.ids[0], 'quote': {'text': '林舟是守门人。'},
+            'matchBy': ['name'], 'createIfMissing': False}]
+        body['facts'] = []; body['relations'] = []
+        with self.assertRaises(StructureError) as caught:
+            self.preview(prep, body, 'archived-canonical-match')
+        self.assertEqual(caught.exception.code, 'IMPORT_ORGANIZATION_OWNER')
+
+    def test_explicit_canonical_entity_id_rejects_archived_target(self):
+        source = load_structure(self.root)
+        from scripts.core.catalog_commands import apply_create_entity
+        entity_id = apply_create_entity(source, entity_type='character', name='林舟', summary='已归档守门人。')
+        archived = next(row for row in source['entities'] if row['entityId'] == entity_id)
+        archived['status'] = 'archived'
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', source)
+        prep = self.prepare(chapterIds=[self.ids[0]])
+        body = self.content(prep)
+        body['entities'] = [{'ref': '$linzhou', 'entityType': 'character', 'name': '林舟',
+            'summary': '复核资料。', 'chapterId': self.ids[0], 'quote': {'text': '林舟是守门人。'},
+            'entityId': archived['entityId']}]
+        body['facts'] = []; body['relations'] = []
+        with self.assertRaises(StructureError) as caught:
+            self.preview(prep, body, 'explicit-archived-canonical')
+        self.assertEqual(caught.exception.code, 'ARCHIVED_TARGET')
 
     def test_missing_origin_refuses_generic_current_project(self):
         (self.root / '.govel/import-receipt.json').unlink()
@@ -160,6 +335,52 @@ class ImportOrganizationTests(unittest.TestCase):
         self.commit(self.preview(second, self.content(second), 'batch-2'))
         source = load_structure(self.root)
         self.assertTrue(all(history_status(self.root, source, self.workflow(), c)['complete'] for c in source['chapters']))
+
+    def test_chapter_quarantine_is_excluded_while_other_selected_chapters_are_accepted(self):
+        prep = self.prepare(); body = self.content(prep)
+        quarantined = body['chapters'][0]
+        quarantined.update(adopt=False, quarantineReason='正文中存在越界插入，待人工核对。',
+                           quarantineCategory='underage_explicit_content', quotes=[])
+        body['chapters'][1]['adopt'] = True
+        body['entities'] = []; body['facts'] = []; body['relations'] = []
+        plan = self.preview(prep, body, 'quarantine-one')
+        from scripts.core.structure_commands import _operation_paths
+        plan_path, _, _ = _operation_paths(self.root, plan['operationId'])
+        stored = json.loads(plan_path.read_text())
+        self.assertEqual(stored['impact']['acceptedImportChapterIds'], [self.ids[1]])
+        self.assertEqual(stored['impact']['quarantinedChapterIds'], [self.ids[0]])
+        quarantined_review = stored['parameters']['importOrganization']['content']['chapters'][0]
+        self.assertEqual(quarantined_review['quotes'], [])
+        self.assertNotIn('越界插入', json.dumps(quarantined_review, ensure_ascii=False))
+        self.commit(plan)
+        source = load_structure(self.root)
+        by_id = {chapter['chapterId']: chapter for chapter in source['chapters']}
+        self.assertEqual(by_id[self.ids[0]]['status'], 'quarantined')
+        self.assertEqual(by_id[self.ids[0]]['quarantineCategory'], 'underage_explicit_content')
+        self.assertEqual(by_id[self.ids[1]]['status'], 'stable')
+        self.assertNotIn(self.ids[0], self.workflow()['importReviews'])
+        self.assertIn(self.ids[1], self.workflow()['importReviews'])
+        from scripts.core.summary_inputs import summary_inputs
+        snapshot = summary_inputs(self.root, source)
+        self.assertNotIn(self.ids[0], snapshot['chapterOrder'])
+        self.assertIn(self.ids[0], snapshot['excludedChapterIds'])
+        from scripts.core.manuscript_export import export_manuscript
+        output = self.base / 'not-quarantined.txt'
+        export_manuscript(self.root, output=output)
+        exported = output.read_text()
+        self.assertNotIn('林舟是守门人。', exported)
+        with self.assertRaises(StructureError) as caught:
+            export_manuscript(self.root, statuses=('stable', 'quarantined'), output=self.base / 'rejected.txt')
+        self.assertEqual(caught.exception.code, 'INVALID_EXPORT_STATUS')
+
+    def test_quarantine_requires_reason_and_supported_category(self):
+        prep = self.prepare(); body = self.content(prep)
+        body['chapters'][0].update(adopt=False, quarantineCategory='other', quotes=[])
+        body['entities'] = []; body['facts'] = []; body['relations'] = []
+        with self.assertRaises(StructureError) as caught:
+            self.preview(prep, body, 'missing-quarantine-reason')
+        self.assertEqual(caught.exception.code, 'IMPORT_ORGANIZATION_INVALID')
+        self.assertEqual(caught.exception.details['fieldPath'], 'chapters[0].quarantineReason')
 
     def test_commit_fault_restores_all_semantic_outputs_and_allows_retry(self):
         prep = self.prepare(); plan = self.preview(prep, self.content(prep))

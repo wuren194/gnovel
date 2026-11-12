@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .source_plan import chapter_plan
 from .source_review import fingerprint, source_snapshot
-from .structure_store import StructureError, ordered_chapters
+from .structure_store import StructureError, usable_chapters
 from .write_sets import safe_project_path
 from .paths import ProjectPathError
 
@@ -19,7 +19,7 @@ def preheat_metadata(source: dict, after_chapter_id: str, *,
     and never any future plot. The Builder may pass the plan it just computed
     from this same source snapshot; it is never a persisted preheat cache.
     """
-    chapters = ordered_chapters(source)
+    chapters = usable_chapters(source)
     position = next((index for index, row in enumerate(chapters)
                      if row['chapterId'] == after_chapter_id), None)
     if position is None:

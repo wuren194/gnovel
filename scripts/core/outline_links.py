@@ -44,23 +44,3 @@ def _table_rows(text: str, *, section: str | None = None):
         cells = [cell.strip().replace(r"\|", "|") for cell in re.split(r"(?<!\\)\|", stripped[1:-1])]
         if len(cells) == 2 and not all(_SEPARATOR.fullmatch(cell) for cell in cells):
             yield cells
-
-
-
-
-def _label_index(structure: dict) -> dict[str, str]:
-    """标签（稳定 ID／名称／别名）→ 实体 ID；重复标签不猜，留给调用方报告。"""
-    index: dict[str, str] = {}
-    ambiguous: set[str] = set()
-    for entity in structure.get("entities") or []:
-        entity_id = str(entity.get("entityId"))
-        for label in [entity_id, entity.get("name", ""), *(entity.get("aliases") or [])]:
-            key = str(label).strip().casefold()
-            if not key:
-                continue
-            if index.get(key, entity_id) != entity_id:
-                ambiguous.add(key)
-            index[key] = entity_id
-    for key in ambiguous:
-        index.pop(key, None)
-    return index

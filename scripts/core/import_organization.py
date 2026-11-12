@@ -13,6 +13,29 @@ from .structure_store import StructureError, load_structure
 from .write_sets import GUARD_KEYS, json_bytes, safe_project_path, validate_guards
 
 WORKFLOW = '.govel/workflow.json'
+QUARANTINE_REASON = {
+    'content_boundary': '内容边界待人工复核',
+    'underage_explicit_content': '涉及未成年角色的露骨内容，隔离待人工复核',
+    'other': '隔离内容待人工复核',
+}
+
+
+def _privacy_safe_content(content):
+    if not isinstance(content, dict) or not isinstance(content.get('chapters'), list):
+        return content
+    safe = deepcopy(content)
+    for index, chapter in enumerate(safe.get('chapters', [])):
+        if not isinstance(chapter, dict) or chapter.get('quarantineReason') is None:
+            continue
+        category = chapter.get('quarantineCategory')
+        if category not in QUARANTINE_REASON:
+            continue
+        chapter.update(synopsis='隔离章节不提炼回溯梗概。', quotes=[],
+                       review={key: '隔离状态下不记录正文语义。'
+                               for key in ('facts', 'relationships', 'continuity', 'structure')},
+                       unresolved=[], existingRecordIds=[],
+                       quarantineReason=QUARANTINE_REASON[category], adopt=False)
+    return safe
 
 
 def _observed(root, relative):
@@ -33,7 +56,7 @@ def imported_materials(root, source, chapter_ids):
     materials, guards = {}, [guard]
     for cid in chapter_ids:
         chapter, origin = chapters.get(cid), imported.get(cid)
-        if chapter is None or origin is None or chapter['status'] not in {'planning_required', 'stable', 'stale'}:
+        if chapter is None or origin is None or chapter['status'] not in {'planning_required', 'stable', 'stale', 'quarantined'}:
             raise StructureError('IMPORT_ORGANIZATION_SCOPE', 'select unchanged imported chapters', {'chapterId': cid})
         require_observation(root, source, chapter, (OWNED_CLEAN,), action='import organization')
         prose_guard, raw = _observed(root, chapter['filePath'])
@@ -66,7 +89,7 @@ def prepare_organization(root: Path, *, chapterIds=None, offset=0, limit=None):
     except (ValueError, KeyError, TypeError) as exc:
         raise StructureError('IMPORT_ORIGIN_REQUIRED', 'organization requires the actual import receipt') from exc
     ids = chapterIds if chapterIds is not None else [row['chapterId'] for row in sorted(source['chapters'], key=lambda r: r['displayOrdinal'])
-        if row['chapterId'] in imported_ids and row.get('status') != 'archived' and not (history_entry(workflow, row['chapterId']) and
+        if row['chapterId'] in imported_ids and row.get('status') not in {'archived', 'quarantined'} and not (history_entry(workflow, row['chapterId']) and
                                                   history_status(root, source, workflow, row)['complete'])]
     if (not isinstance(ids, list) or any(not isinstance(cid, str) for cid in ids) or len(set(ids)) != len(ids)
             or chapterIds is not None and not ids or offset > len(ids)):
@@ -125,6 +148,44 @@ def read_organization(root: Path, *, prepareRef, cursor=None, limit=None):
                      binding=sha256_json({'limit': count}), source=snapshot['sourceHash'])
 
 
+def inspect_organization_entities(root: Path, *, operationId, planHash, offset=0, limit=None):
+    from .jsonio import read_json
+    from .structure_commands import _operation_paths, _plan_hash
+    from .command_help import cli_action
+    root = root.expanduser().resolve()
+    count = query_policy()['defaultLimit'] if limit is None else limit
+    if type(offset) is not int or offset < 0 or type(count) is not int or not 1 <= count <= query_policy()['maxLimit']:
+        raise StructureError('ARGUMENTS_INVALID', 'invalid entity-reference page')
+    path, _, _ = _operation_paths(root, operationId)
+    if not path.is_file():
+        raise StructureError('PLAN_NOT_FOUND', 'organization plan does not exist', {'operationId': operationId})
+    plan = read_json(path)
+    if plan.get('operation') != 'import_organization':
+        raise StructureError('IMPORT_ORGANIZATION_PLAN_INVALID', 'operation is not an organization preview')
+    if plan.get('planHash') != planHash or _plan_hash({key: value for key, value in plan.items() if key != 'planHash'}) != planHash:
+        raise StructureError('PLAN_HASH_MISMATCH', 'organization preview changed; use the original preview')
+    parameters = plan.get('parameters', {})
+    references = parameters.get('entityReferences', {})
+    identities = parameters.get('identityMap', {})
+    if not isinstance(references, dict) or not isinstance(identities, dict):
+        raise StructureError('IMPORT_ORGANIZATION_PLAN_INVALID', 'entity reference map is invalid')
+    entity_handles = set(parameters.get('entityRefs', []))
+    rows = [{'ref': ref, 'entityId': references[ref], 'created': ref in identities}
+            for ref in sorted(entity_handles) if ref in references]
+    if offset > len(rows):
+        raise StructureError('ARGUMENTS_INVALID', 'offset exceeds the entity-reference count')
+    items = rows[offset:offset + count]
+    next_offset = offset + len(items)
+    result = {'ok': True, 'code': 'IMPORT_ORGANIZATION_ENTITIES', 'operationId': operationId,
+              'planHash': planHash, 'total': len(rows), 'offset': offset, 'items': items,
+              'nextOffset': next_offset if next_offset < len(rows) else None}
+    if next_offset < len(rows):
+        result['readAction'] = cli_action('import.organization-plan-inspect', {
+            'projectRoot': str(root), 'operationId': operationId, 'planHash': planHash,
+            'offset': next_offset, 'limit': count})
+    return result
+
+
 def preview_organization(root: Path, *, prepareRef, requestId, content):
     from .import_organization_model import assemble
     from .source_requests import request_identity, resume_request
@@ -141,11 +202,23 @@ def preview_organization(root: Path, *, prepareRef, requestId, content):
                 require_committed_operation(root, operation_id)
             return resumed
         source, snapshot = _snapshot(root, prepareRef)
-        if isinstance(content, dict) and sum(len(content.get(key, [])) for key in ('chapters', 'entities', 'facts', 'relations')
-                                            if isinstance(content.get(key, []), list)) > canon_proposal_batch_max_items():
-            raise StructureError('IMPORT_ORGANIZATION_TOO_LARGE', 'split observations into smaller batches')
-        if len(json_bytes(content)) > query_policy()['maxBytes']['schema'] * canon_proposal_batch_max_items():
-            raise StructureError('IMPORT_ORGANIZATION_TOO_LARGE', 'split extraction into smaller batches')
+        limit = canon_proposal_batch_max_items()
+        max_bytes = query_policy()['maxBytes']['schema'] * limit
+        current = sum(len(content.get(key, [])) for key in ('chapters', 'entities', 'facts', 'relations')
+                      if isinstance(content, dict) and isinstance(content.get(key, []), list))
+        current_bytes = len(json_bytes(content))
+        if current > limit or current_bytes > max_bytes:
+            chapter_count = len(content.get('chapters', [])) if isinstance(content, dict) and isinstance(content.get('chapters'), list) else 0
+            item_ratio = limit / max(current, 1)
+            byte_ratio = max_bytes / max(current_bytes, 1)
+            max_chapters = max(1, min(chapter_count or 1, int((chapter_count or 1) * min(item_ratio, byte_ratio))))
+            chapter_ids = snapshot['chapterIds']
+            details = {'limit': limit, 'current': current, 'maxBytes': max_bytes, 'currentBytes': current_bytes,
+                       'suggestion': {'strategy': 'split_by_chapter', 'maxChapters': max_chapters,
+                                      'chapterBatches': [chapter_ids[index:index + max_chapters]
+                                                         for index in range(0, len(chapter_ids), max_chapters)]}}
+            reason = 'split observations into smaller batches' if current > limit else 'split extraction into smaller chapter batches'
+            raise StructureError('IMPORT_ORGANIZATION_TOO_LARGE', reason, details)
         materials = {row['chapterId']: row for row in snapshot['materials']}
         from .import_history import history_entry, history_status
         _, workflow_raw = _observed(root, WORKFLOW)
@@ -154,15 +227,51 @@ def preview_organization(root: Path, *, prepareRef, requestId, content):
                and history_status(root, source, workflow, row)['complete']
                for row in source['chapters'] if row['chapterId'] in materials):
             raise StructureError('IMPORT_ALREADY_ACCEPTED', 'current history is already accepted; revise facts through reviewed source proposals')
-        proposed, identities, citations, reviews = assemble(source, content, materials)
-        binding = {'content': deepcopy(content), 'chapterIds': snapshot['chapterIds'], 'guards': snapshot['guards'],
-                   'citations': citations, 'reviews': reviews}
+        safe_content = _privacy_safe_content(content)
+        proposed, identities, references, citations, reviews = assemble(source, safe_content, materials)
+        accepted_reviews = {cid: review for cid, review in reviews.items()
+                            if safe_content.get('acceptHistory') and review.get('adopt')
+                            and review.get('quarantineReason') is None}
+        quarantined_ids = [cid for cid, review in reviews.items() if review.get('quarantineReason') is not None]
+        binding = {'content': safe_content, 'chapterIds': snapshot['chapterIds'], 'guards': snapshot['guards'],
+                   'citations': citations, 'reviews': reviews, 'references': references, 'accepted': accepted_reviews,
+                   'quarantinedChapterIds': quarantined_ids}
         plan = _base_plan(source, operation='import_organization', actor='app', proposed=proposed,
-                         parameters={'importOrganization': binding, 'identityMap': identities},
-                         impact={'acceptedImportChapterIds': snapshot['chapterIds'] if content.get('acceptHistory') else [],
+                         parameters={'importOrganization': binding, 'identityMap': identities,
+                                     'entityReferences': references,
+                                     'entityRefs': [row['ref'] for row in safe_content.get('entities', [])]},
+                         impact={'acceptedImportChapterIds': sorted(accepted_reviews),
+                                 'quarantinedChapterIds': quarantined_ids,
                                  'historicalStageAClaimed': False, 'retrospectiveReview': True})
         plan.update(operationId=operation_id, requestId=requestId, requestFingerprint=fingerprint)
-        return _write_plan_locked(root, plan)
+        report = _write_plan_locked(root, plan)
+        from .query import _size
+        policy = query_policy()
+        entity_refs = plan['parameters']['entityRefs']
+        refs = [(ref, references[ref]) for ref in entity_refs]
+        budget = policy['maxBytes']['list']
+        pages = []
+        for index, (ref, entity_id) in enumerate(refs):
+            candidate = {'ref': ref, 'entityId': entity_id, 'created': ref in identities}
+            pages.append(candidate)
+            projected = {**report, 'entityReferences': pages}
+            if _size(projected) > budget:
+                pages.pop()
+                break
+        report['entityReferences'] = pages
+        report['entityReferenceCount'] = len(refs)
+        if len(pages) < len(refs):
+            report['entityReferencesTruncated'] = True
+            report['entityReferencesAction'] = {'operation': 'import.organization-plan-inspect',
+                'arguments': {'projectRoot': str(root), 'operationId': operation_id,
+                              'planHash': report['planHash'], 'offset': len(pages),
+                              'limit': policy['defaultLimit']}}
+        else:
+            report['entityReferencesAction'] = {'operation': 'import.organization-plan-inspect',
+                'arguments': {'projectRoot': str(root), 'operationId': operation_id,
+                              'planHash': report['planHash'], 'offset': 0,
+                              'limit': policy['defaultLimit']}}
+        return report
 
 
 def organization_outputs(root, current, plan, extras):
@@ -178,7 +287,22 @@ def organization_outputs(root, current, plan, extras):
     workflow_guard, raw = _observed(root, WORKFLOW)
     if binding['guards'] != [*original_guards, workflow_guard]:
         raise StructureError('IMPORT_ORGANIZATION_STALE', 'original read guards differ')
-    expected, identities, citations, reviews = assemble(current, binding['content'], materials, plan['parameters']['identityMap'])
+    safe_content = _privacy_safe_content(binding['content'])
+    if safe_content != binding['content']:
+        raise StructureError('IMPORT_ORGANIZATION_INVALID', 'quarantined review payload contains semantic content')
+    expected, identities, references, citations, reviews = assemble(
+        current, safe_content, materials, plan['parameters']['identityMap'])
+    accepted = {cid: review for cid, review in reviews.items()
+                if binding['content'].get('acceptHistory') and review.get('adopt')
+                and review.get('quarantineReason') is None}
+    quarantined = sorted(cid for cid, review in reviews.items()
+                         if review.get('quarantineReason') is not None)
+    if (plan['parameters'].get('entityReferences') != references
+            or binding.get('references') != references
+            or binding.get('accepted') != accepted or binding.get('quarantinedChapterIds') != quarantined
+            or plan['impact'].get('acceptedImportChapterIds') != sorted(accepted)
+            or plan['impact'].get('quarantinedChapterIds') != quarantined):
+        raise StructureError('IMPORT_ORGANIZATION_INVALID', 'chapter adoption and quarantine scope differs from reviewed input')
     ignored = {'revision', 'updatedAt', 'lastOperation'}
     if ({k: v for k, v in expected.items() if k not in ignored} !=
             {k: v for k, v in plan['proposedStructure'].items() if k not in ignored}
@@ -194,12 +318,13 @@ def organization_outputs(root, current, plan, extras):
             rows.append({k: deepcopy(v) for k, v in row.items() if k != 'chapterId'} | {
                 'evidenceId': batch_id + '-' + str(n),
                 'targetHashes': {rid: inputs.fingerprint(rid) for rid in row['targetIds']}})
+        if not rows:
+            continue
         chapter = next(row for row in proposed['chapters'] if row['chapterId'] == cid)
         evidence['batches'][batch_id] = {'batchId': batch_id, 'chapterId': cid, 'path': chapter['filePath'],
             'fileHash': materials[cid]['proseHash'], 'sourceHash': snapshot_hash(proposed),
             'requestHash': sha256_json(rows), 'actor': 'import_organization', 'citations': rows}
     result = {**extras, EVIDENCE_PATH: json_bytes(evidence)}
-    accepted = reviews if binding['content'].get('acceptHistory') else {}
     if accepted:
         workflow = json.loads(extras.get(WORKFLOW) or raw or b'{}')
         for cid, review in accepted.items():

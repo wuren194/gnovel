@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .artifacts import sha256_json
 from .source_model import BASE_COLLECTIONS
-from .structure_store import ordered_chapters
+from .structure_store import is_quarantined, usable_chapters
 from .write_sets import guard_observation, safe_project_path
 
 
@@ -16,7 +16,7 @@ def summary_inputs(root: Path, source: dict) -> dict:
     review_inputs = ReviewInputs(source)
     index = review_inputs.index
     citations = list(read_evidence(root)['batches'].values())
-    for chapter in ordered_chapters(source):
+    for chapter in usable_chapters(source):
         cid = chapter['chapterId']
         path = chapter.get('filePath') or f'正文/{cid}.md'
         state, _ = guard_observation(safe_project_path(root, path))
@@ -50,9 +50,13 @@ def summary_inputs(root: Path, source: dict) -> dict:
     indexed = set(BASE_COLLECTIONS) | {'units', 'fieldDefinitions', 'attributes', 'fragments', 'presentations', 'relations'}
     ignored = {'revision', 'updatedAt', 'createdAt', 'schemaVersion', 'chapters', 'chapterArcLinks', 'references'}
     extra = {k: v for k, v in source.items() if k not in indexed | ignored}
-    return {'version': 1, 'chapterOrder': list(rows), 'chapters': rows,
+    chapter_ids = {chapter['chapterId'] for chapter in source['chapters']}
+    return {'version': 1, 'chapterOrder': list(rows),
+            'excludedChapterIds': [chapter['chapterId'] for chapter in source['chapters']
+                                  if is_quarantined(chapter)],
+            'chapters': rows,
             'records': {rid: {'hash': sha256_json(row), 'kind': index.owner_types.get(rid)}
-                        for rid, row in index.records.items() if rid not in rows},
+                        for rid, row in index.records.items() if rid not in chapter_ids},
             'globalHash': sha256_json(extra)}
 
 
@@ -64,11 +68,12 @@ def summary_delta(prior: dict | None, current: dict, covered: list[str]) -> dict
             or not isinstance(prior.get('globalHash'), str)):
         return {'affectedChapterIds': order, 'fullRefresh': True, 'reason': 'dependency_snapshot_missing'}
     old_order = prior['chapterOrder']
+    excluded_changed = prior.get('excludedChapterIds', []) != current['excludedChapterIds']
     retained = [cid for cid in order if cid in old_order]
     # Appending new chapters is safe. Insertions, deletion and reordering change
     # causal context and require a full semantic reconciliation with the prior.
     topology_changed = retained != old_order or order[:len(old_order)] != old_order
-    full = topology_changed or prior['globalHash'] != current['globalHash']
+    full = topology_changed or prior['globalHash'] != current['globalHash'] or excluded_changed
     affected = {cid for cid in order if cid not in covered or prior['chapters'].get(cid) != current['chapters'][cid]}
     old_records, records = prior['records'], current['records']
     changed = {rid for rid in old_records.keys() | records.keys() if old_records.get(rid) != records.get(rid)}
@@ -85,4 +90,4 @@ def summary_delta(prior: dict | None, current: dict, covered: list[str]) -> dict
             full = True
     return {'affectedChapterIds': order if full else [cid for cid in order if cid in affected],
             'fullRefresh': full, 'reason': 'scope_uncertain_or_order_changed' if full else 'bound_inputs_compared',
-            'changedRecordIds': sorted(changed)}
+            'changedRecordIds': sorted(changed), 'excludedChapterIdsChanged': excluded_changed}

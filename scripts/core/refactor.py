@@ -754,7 +754,6 @@ def preview_rename_entity(root: Path, *, selector: str, new_name: str, keep_old_
     if aliases != list(entity.get('aliases', [])):
         changes.append(_change('entity', entity['entityId'], 'aliases', list(entity.get('aliases', [])), aliases))
     proposed = deepcopy(structure)
-    resolve_entity(proposed, entity['entityId'])
     from .entity_registry import replace_entity_fields
     replace_entity_fields(proposed, entity['entityId'], {'name': name, 'aliases': aliases})
     validate_structure(proposed)

@@ -32,7 +32,7 @@ from pathlib import Path
 from .artifacts import file_sha256, sha256_json
 from .paths import ProjectPathError, safe_project_path
 from .project import continuation_policy
-from .structure_store import ordered_chapters
+from .structure_store import is_quarantined, ordered_chapters, usable_chapters
 
 try:  # state_cache/text_utils live at scripts/ level, not under core/
     from scripts import state_cache
@@ -167,7 +167,7 @@ def _relations(state: dict) -> list[dict]:
 
 
 def _plot_line(state: dict) -> list[dict]:
-    chapters = ordered_chapters(state)
+    chapters = usable_chapters(state)
     return [
         {
             "chapterId": item.get("chapterId"),
@@ -190,7 +190,7 @@ def _recent_chapters(store, state: dict, chapter_id: str, recent: int) -> list[d
     target = _chapter_ordinal(state, chapter_id)
     chapters = sorted(
         (item for item in state.get("chapters", [])
-         if item.get("status") != "archived"
+         if item.get("status") != "archived" and not is_quarantined(item)
          and isinstance(item.get("displayOrdinal"), int) and item.get("displayOrdinal") <= target),
         key=lambda item: item.get("displayOrdinal", 0),
     )
@@ -582,6 +582,9 @@ def build_station_context(
         raise ContextBuilderError("view 必须是 full 或 station")
     root = Path(project_root).expanduser().resolve()
     store, state, design = _load_commit_data(root, read_only=read_only)
+    target_chapter = _chapter_record(state, chapter_id)
+    if is_quarantined(target_chapter):
+        raise ContextBuilderError(f"CHAPTER_QUARANTINED: {chapter_id}")
     from .project import resolve_knowledge_mode, knowledge_policy
     selected_knowledge_mode = resolve_knowledge_mode(knowledge_mode, project_root=root)
     target = _chapter_ordinal(state, chapter_id)
@@ -606,10 +609,10 @@ def build_station_context(
         "projectId": state.get("projectId"),
         "task": task_type,
         "targetChapter": chapter_id,
-        "targetDisplayCode": _chapter_record(state, chapter_id).get("displayCode"),
+        "targetDisplayCode": target_chapter.get("displayCode"),
         "targetOrdinal": target,
-        "targetPlacement": _chapter_placement(_chapter_record(state, chapter_id)),
-        "targetVolumeId": _chapter_volume(_chapter_record(state, chapter_id)),
+        "targetPlacement": _chapter_placement(target_chapter),
+        "targetVolumeId": _chapter_volume(target_chapter),
         "targetArcLinks": [link for link in state.get("chapterArcLinks", []) if link.get("chapterId") == chapter_id],
         "volumes": state.get("volumes", []),
         "arcs": state.get("arcs", []),
@@ -673,7 +676,7 @@ def build_station_context(
     # Preheat contract: the fingerprint a preheat run after the immediate predecessor
     # would produce for this chapter. Lets a caller verify a prior preheat is still
     # valid for the context it is about to build without caching any future context.
-    chapters_in_order = ordered_chapters(source)
+    chapters_in_order = usable_chapters(source)
     position = next((index for index, row in enumerate(chapters_in_order)
                      if row["chapterId"] == chapter_id), None)
     preheat_hash = None
@@ -771,6 +774,11 @@ def build_station_context(
 
     # 注入 LLM 语义摘要（存在才注入；缺失则 plotLine 停留标题聚合）
     summary = _load_story_summary(store)
+    from .summary_inputs import summary_inputs
+    if summary is not None:
+        current_excluded = summary_inputs(root, source)['excludedChapterIds']
+        if summary.get('excludedChapterIds', []) != current_excluded:
+            summary = None
     if summary is not None:
         summary_visible = not pov_character or _explicitly_visible(summary, pov_character)
         if summary_visible:

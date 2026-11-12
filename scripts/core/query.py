@@ -206,12 +206,6 @@ def query_project(root: Path, dimension: str, **arguments) -> dict:
                 'snapshot': {'structureRevision': structure['revision'], 'sourceFingerprint': source},
                 'filters': {k: v for k, v in args.items() if k not in ('cursor', 'limit', 'maxBytes', 'view')},
                 'coverage': coverage, 'warnings': [], 'links': []}
-    selected_id = None
-    if args.get('selector'):
-        if args['selector'] in records:
-            selected_id = args['selector']
-        else:
-            selected_id = resolve_entity(structure, args['selector'])['entityId']
     candidates = list(records.values())
     if dimension == 'logic':
         candidates = [r for r in candidates if r['type'] == 'rule']
@@ -219,8 +213,6 @@ def query_project(root: Path, dimension: str, **arguments) -> dict:
         candidates = [r for r in candidates if r['type'] in schema['kinds']]
     elif dimension == 'timeline':
         candidates = [r for r in candidates if r['type'] not in ('volume', 'arc')]
-    if selected_id:
-        candidates = [r for r in candidates if r['id'] == selected_id]
     def span(row):
         item = row['record']
         if row['type'] == 'time_anchor':
@@ -236,7 +228,6 @@ def query_project(root: Path, dimension: str, **arguments) -> dict:
     if low is not None and high is not None and low > high:
         raise StructureError('TIME_RANGE_INVALID', 'fromAnchor must not follow toAnchor')
     matched = []
-    unknown_time = 0
     for row in candidates:
         fields, item = row['fields'], row['record']
         refs = [e for e in incoming[row['id']] if e['kind'] == 'reference']
@@ -258,16 +249,13 @@ def query_project(root: Path, dimension: str, **arguments) -> dict:
         if args.get('unmapped') and (start or end): continue
         numeric_start, numeric_end = number(start), number(end or start)
         unknown = numeric_start is None or numeric_end is None
-        if low is not None or high is not None:
-            if unknown:
-                unknown_time += 1
-            elif (low is not None and max(numeric_start, numeric_end) < low) or (high is not None and min(numeric_start, numeric_end) > high):
-                continue
+        if not unknown and ((low is not None and max(numeric_start, numeric_end) < low)
+                            or (high is not None and min(numeric_start, numeric_end) > high)):
+            continue
         row = {**row, 'referenceCount': len(refs), 'timeMountCount': len(mounts),
                'recordedUseCount': len({e['sourceId'] for e in refs + mounts}),
                'startAnchorId': start, 'endAnchorId': end or start, 'timeComparable': not unknown}
         matched.append(row)
-    matched.sort(key=lambda r: (r['type'], number(r['id']) if number(r['id']) is not None else float('inf'), r['name'], r['id']))
     if dimension == 'timeline':
         from .commands import story_timeline
         timeline = story_timeline(root, structure=structure)
@@ -275,6 +263,13 @@ def query_project(root: Path, dimension: str, **arguments) -> dict:
         if args.get('problems'):
             affected = {p.get('chapterId') or p.get('entityId') or p.get('anchorId') for p in problems}
             matched = [r for r in matched if r['id'] in affected]
+    if args.get('selector'):
+        selected_id = args['selector']
+        if selected_id not in records:
+            scoped = {**structure, 'entities': [row['record'] for row in matched if 'entityId' in row['record']]}
+            selected_id = resolve_entity(scoped, selected_id)['entityId']
+        matched = [row for row in matched if row['id'] == selected_id]
+    matched.sort(key=lambda r: (r['type'], number(r['id']) if number(r['id']) is not None else float('inf'), r['name'], r['id']))
     if view == 'overview':
         summary = {'count': len(matched), 'byType': dict(Counter(r['type'] for r in matched)),
                    'byStatus': dict(Counter(r['status'] if r['status'] is not None else 'unspecified' for r in matched)),
@@ -283,6 +278,8 @@ def query_project(root: Path, dimension: str, **arguments) -> dict:
                    'isolatedNodes': sum(not incident[r['id']] for r in matched)}
         if dimension == 'timeline':
             ids = {r['id'] for r in matched}
+            unknown_time = (sum(not row['timeComparable'] for row in matched)
+                            if low is not None or high is not None else 0)
             summary.update({'unmappedChapters': sum(r['type'] == 'chapter' and not (r['startAnchorId'] or r['endAnchorId']) for r in matched),
                             'unusedAnchors': sum(r['type'] == 'time_anchor' and not r['recordedUseCount'] for r in matched),
                             'unknownTimeCount': unknown_time,

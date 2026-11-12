@@ -110,8 +110,9 @@ def _new_operations() -> list[OperationSpec]:
     from .canon_proposals import resolve_canon_target, preview_canon_change
     result.extend([
         OperationSpec('source.canon-resolve', 'resolve_source_canon_target',
-                      '按当前真源精确解析实体；歧义只返回候选，不给可写 sessionRef。',
-                      _schema({'selector': STRING, 'entityType': STRING, 'chapterId': STRING,
+                      '范围内完整 ID 按原值优先；同名或共享别名返回候选，歧义和归档对象不给可写 sessionRef。',
+                      _schema({'selector': {**STRING, 'description': '完整永久 ID 区分大小写，不去空白；名称与别名去首尾空白后 casefold。ID 形状的输入不退回名称匹配。'},
+                               'entityType': STRING, 'chapterId': STRING,
                                'includeArchived': BOOLEAN}, ['selector']),
                       'read', lambda root, a: resolve_canon_target(root, **a),
                       ('source', 'canon-resolve'), category='author'),
@@ -200,7 +201,7 @@ def _new_operations() -> list[OperationSpec]:
         OperationSpec('source.search', 'search_source_fragments',
                       '按字面词的任一、全部或近邻匹配检索片段；可按对象名称筛选。保留 POV 与上下文，命中不等于冲突。',
                       _schema({'terms': STRINGS, 'selection': source_selection(), 'contextCharacters': INTEGER,
-                               'ownerSelectors': {**STRINGS, 'description': '当前选择范围内的对象稳定 ID、名称或唯一别名；歧义拒绝，不扩大 selection。'},
+                               'ownerSelectors': {**STRINGS, 'description': 'selection 内完整 ID 按原值优先；可见名称、别名或视角称呼去首尾空白后 casefold。歧义返回可见候选，不扩大范围。'},
                                'matchMode': {'type': 'string', 'enum': ['any', 'all', 'near']},
                                'nearCharacters': {**INTEGER, 'description': 'near 必填：同一片段内包含全部词的窗口总字符数上限。'},
                                'literalTerms': {**BOOLEAN, 'description': '显式按字面查找形如 JSON 数组的词；否则提示疑似 CLI 数组误传。'},
@@ -248,7 +249,7 @@ def _new_operations() -> list[OperationSpec]:
     from .source_relation_proposals import resolve_relation_target, preview_relation_change
     result.extend([
         OperationSpec('source.relation-resolve', 'resolve_source_relation_target',
-                      '按关系 ID 或端点与类型解析已登记 Canon 关系；歧义不返回可写会话。',
+                      '按完整关系 ID 或两端实体的完整 ID 与关系类型解析；端点不接受姓名，歧义不返回可写会话。',
                       _schema({'relationId': STRING, 'fromEntity': STRING, 'toEntity': STRING,
                                'kind': STRING, 'chapterId': STRING}),
                       'read', lambda root, a: resolve_relation_target(root, **a),
@@ -560,7 +561,7 @@ def _new_operations() -> list[OperationSpec]:
     ])
     for dimension in DIMENSIONS:
         result.append(OperationSpec('query.' + dimension, 'query_' + dimension,
-                                   '有界查询 ' + dimension + '：默认概览；selector 为精确匹配，query 为关键词。',
+                                   '有界查询 ' + dimension + '：默认概览；selector 在筛选范围内优先匹配完整 ID，名称歧义须按候选 ID 选择；query 为关键词。',
                                    QUERY_SCHEMA, 'read', lambda root, a, d=dimension: query_project(root, d, **a), ('query', dimension), category='author'))
     def catalog(root, a):
         from .tool_catalog import list_capabilities

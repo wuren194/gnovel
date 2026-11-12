@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from scripts.core.import_commit import commit_import
 from scripts.core.manuscript_import import preview_import, inspect_import, read_import_text, plan_directory
+from scripts.core.operations import call_operation
 from scripts.core.prose_binding import observe_chapter
 from scripts.core.structure_store import StructureError, load_structure
 from scripts.core.project import query_policy
@@ -34,6 +35,9 @@ class ManuscriptImportTests(unittest.TestCase):
     def preview(self, **kwargs):
         return preview_import(self.root, source=str(self.source), **kwargs)
 
+    def call(self, operation, **arguments):
+        return call_operation(operation, self.root, arguments)
+
     def commit(self, preview):
         return commit_import(self.root, planId=preview['planId'], planHash=preview['planHash'], approve=True)
 
@@ -46,7 +50,7 @@ class ManuscriptImportTests(unittest.TestCase):
         preview = self.preview()
         self.assertFalse(self.root.exists())
         self.assertEqual(preview['chapterCount'], 3)
-        self.assertTrue(preview['chapters'][0]['warnings'])
+        self.assertTrue(preview['warnings'])
         result = self.commit(preview)
         source = load_structure(self.root)
         self.assertEqual(b''.join((self.root / c['filePath']).read_bytes() for c in source['chapters']), self.raw)
@@ -84,6 +88,71 @@ class ManuscriptImportTests(unittest.TestCase):
         self.assertEqual([c['title'] for c in source['chapters']], ['开场与交班', '夜路'])
         self.assertEqual(b''.join((self.root / c['filePath']).read_bytes() for c in source['chapters']), self.raw)
         self.assertEqual(boundaries, original)
+
+    def test_duplicate_heading_window_and_free_marker_pattern_merge_boundary(self):
+        self.source.write_text('第一章 交班\n第一章 交班（本章免费）\n正文内容足够长，记录了完整的交班过程。\n第二章 夜路\n雨停后，他走出了门。\n')
+        preview = self.preview()
+        self.assertEqual(preview['chapterCount'], 2)
+        self.assertEqual([row['title'] for row in preview['chapters']], ['第一章 交班', '第二章 夜路'])
+        merged = [row for row in preview['anomalies'] if row['code'] == 'duplicate_heading_merged']
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]['count'], 1)
+        self.assertTrue(all(not row.get('warnings') for row in preview['chapters']))
+        ignored = self.preview(ignoreHeadingPattern=r'（本章免费）$')
+        self.assertEqual(ignored['chapterCount'], 2)
+        filtered = inspect_import(self.root, planId=preview['planId'], planHash=preview['planHash'], anomaliesOnly=True)
+        self.assertEqual(filtered['chapterCount'], 2)
+        self.assertTrue(filtered['anomaliesOnly'])
+        self.assertTrue(any(row['code'] == 'duplicate_heading_merged' for row in filtered['anomalies']))
+        self.assertEqual(filtered['listedChapterCount'], 2)
+
+    def test_special_headings_custom_prefixes_ocr_and_sequence_anomalies(self):
+        self.source.write_text('引子 穿越\n引子正文展开，包含足够多的内容。\n一百零一章 初遇\n人物继续推进故事并留下清楚线索。\n第五百三十九掌 误字\n这一段正文也有足够内容。\n第二百三十六章 大结局\n终章正文完整结束。\n附录 资料\n附录正文。\n')
+        preview = self.preview(headingPatterns=['附录'])
+        self.assertEqual(preview['chapterCount'], 5)
+        suspected = [row for row in preview['anomalies'] if row['code'] == 'suspected_heading']
+        self.assertEqual([row['line'] for row in suspected], [3, 5])
+        self.assertEqual(suspected[1]['suggestion'], '第五百三十九章 误字')
+        sequence = [row for row in preview['anomalies'] if row['code'] == 'chapter_number_sequence']
+        self.assertEqual(sequence[-1]['actual'], 236)
+        self.assertTrue(any(row['title'].startswith('引子') for row in preview['chapters']))
+
+    def test_empty_chapter_is_reported_as_an_anomaly(self):
+        self.source.write_text('第一章 空章\n\n第二章 正常\n正文有内容。\n')
+        preview = self.preview()
+        empty = [row for row in preview['anomalies'] if row['code'] == 'short_chapter']
+        self.assertGreaterEqual(len(empty), 1)
+        self.assertEqual(empty[0]['chapterOrdinal'], 1)
+
+    def test_inspect_exports_csv_or_jsonl_plan_without_overwriting(self):
+        preview = self.preview()
+        output = self.base / 'plan.jsonl'
+        inspected = self.call('import.export-plan', planId=preview['planId'], planHash=preview['planHash'], exportPath=str(output))
+        self.assertEqual(inspected['exportedPlan']['rowCount'], 3)
+        self.assertEqual(len(output.read_text().splitlines()), 3)
+        self.assert_code('IMPORT_EXPORT_EXISTS', self.call,
+                         'import.export-plan',
+                         planId=preview['planId'], planHash=preview['planHash'], exportPath=str(output))
+
+    def test_inspect_searches_by_title_or_line_and_reports_anomaly_summary(self):
+        self.source.write_text('第一章 交班\n正文有足够长度，写清楚两个人交班。\n第二章 夜路\n雨停后，他走出了门。\n')
+        preview = self.preview()
+        title_match = self.call('import.inspect', planId=preview['planId'], planHash=preview['planHash'], search='夜路')
+        self.assertEqual([row['title'] for row in title_match['chapters']], ['第二章 夜路'])
+        line_match = self.call('import.inspect', planId=preview['planId'], planHash=preview['planHash'], search='3')
+        self.assertEqual([row['title'] for row in line_match['chapters']], ['第二章 夜路'])
+        self.assertEqual(title_match['anomalySummary'], {'short_chapter': 2})
+
+    def test_project_read_rejects_quarantined_chapter_with_reason(self):
+        preview = self.preview()
+        self.commit(preview)
+        from scripts.core.commands import chapter_prose
+        structure = load_structure(self.root)
+        chapter = structure['chapters'][0]
+        chapter.update(status='quarantined', quarantineReason='content_boundary', quarantineCategory='content_boundary')
+        from scripts.core.jsonio import write_json
+        write_json(self.root / '.govel/structure.json', structure)
+        self.assert_code('CHAPTER_QUARANTINED', chapter_prose, self.root, chapter['chapterId'])
 
     def test_invalid_boundaries_fail_before_writes(self):
         for starts in ([1, 1], [3, 1], [1, 99]):
@@ -132,7 +201,8 @@ class ManuscriptImportTests(unittest.TestCase):
             (source / name).write_text('独立原稿 ' + name)
         result = preview_import(self.root, source=str(source))
         self.assertEqual([r['sourcePath'] for r in result['chapters']], ['1.txt', '2.md', '10.txt'])
-        self.assertTrue(all(r['warnings'] for r in result['chapters']))
+        self.assertTrue(result['warnings'])
+        self.assertTrue(all(not r.get('warnings') for r in result['chapters']))
         self.commit(result)
 
     def test_unreadable_subdirectory_cannot_be_silently_omitted(self):

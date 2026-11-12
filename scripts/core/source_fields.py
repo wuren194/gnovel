@@ -77,7 +77,7 @@ def query_settings_source(root, source, *, selector=None, kind=None, fields=None
     entities = source['entities']
     if selector is not None:
         try:
-            entities = [resolve_entity(source, selector)]
+            entities = [resolve_entity(source, selector, entity_type=kind)]
         except StructureError as exc:
             if exc.code != 'ENTITY_NOT_FOUND': raise
             entities = []

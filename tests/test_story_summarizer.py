@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts import state_cache
 from scripts.continuation_context import build_continuation_context
 from scripts.story_summarizer import StorySummarizerError, _commit_summary, _prepare_context
 from tests.fixtures_current import create_current_project
@@ -38,6 +39,42 @@ class StorySummarizerTests(unittest.TestCase):
             self.assertEqual(ctx["chapters"][0]["chapterId"], fixture["chapterIds"][0])
             self.assertEqual(ctx["structureRevision"], fixture["structure"]["revision"])
             self.assertEqual(ctx["coveredChapterIds"], fixture["chapterIds"])
+
+    def test_prepare_excludes_quarantined_chapters_from_summary_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixture = create_current_project(root)
+            structure = fixture['structure']
+            structure['chapters'][0].update(status='quarantined', quarantineReason='待复核内容边界',
+                                             quarantineCategory='content_boundary')
+            from scripts.core.structure_store import save_structure
+            save_structure(root, structure)
+            state_cache.rebuild(root)
+            ctx = _prepare_context(root)
+            self.assertEqual(ctx['coveredChapterIds'], [fixture['chapterIds'][1]])
+            self.assertEqual([row['chapterId'] for row in ctx['chapters']], [fixture['chapterIds'][1]])
+            self.assertEqual(ctx['asOfChapterId'], fixture['chapterIds'][1])
+
+    def test_quarantine_change_withholds_stale_summary_until_refreshed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixture = create_current_project(root)
+            original = fake_summary(root, fixture)
+            source = root / 'summary.json'
+            source.write_text(json.dumps(original, ensure_ascii=False), encoding='utf-8')
+            _commit_summary(root, str(source))
+            structure = fixture['structure']
+            structure['chapters'][0].update(status='quarantined', quarantineReason='隔离边界',
+                                             quarantineCategory='content_boundary')
+            from scripts.core.structure_store import save_structure
+            save_structure(root, structure)
+            state_cache.rebuild(root)
+            target = fixture['chapterIds'][-1]
+            context = build_continuation_context(root, target)
+            self.assertNotIn('storySummary', context)
+            prepared = _prepare_context(root)
+            self.assertEqual(prepared['excludedChapterIds'], [fixture['chapterIds'][0]])
+            self.assertTrue(prepared['refresh']['fullRefresh'])
 
     def test_commit_and_context_injection(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

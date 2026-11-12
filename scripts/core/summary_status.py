@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .project import continuation_policy
-from .structure_store import ordered_chapters
+from .structure_store import usable_chapters
 
 _UNLOADED = object()
 
@@ -20,7 +20,7 @@ def summary_freshness(
 ) -> dict[str, Any]:
     """Return summary freshness without generating or mutating an artifact."""
     threshold = int(continuation_policy()["staleSummaryThreshold"])
-    chapters = ordered_chapters(structure)
+    chapters = usable_chapters(structure)
     target = target_chapter_id or (chapters[-1].get("chapterId") if chapters else None)
     ordinals = {item.get("chapterId"): item.get("displayOrdinal") for item in chapters}
     from .summary_contract import load_summary

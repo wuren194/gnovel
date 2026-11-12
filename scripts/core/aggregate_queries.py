@@ -172,8 +172,9 @@ def _decision_rows(source, decision_id):
     for rid, decision in decisions.items():
         for parent in decision['dependsOn']:
             reverse[parent].add(rid)
+    from .structure_store import is_quarantined
     plans = {row['chapterId']: chapter_plan(source, row['chapterId'], _inputs=inputs)
-             for row in source['chapters'] if row.get('status') != 'archived'}
+             for row in source['chapters'] if row.get('status') != 'archived' and not is_quarantined(row)}
     # Applicability is shared with the effective plan; status/credit remains an
     # explicit projection so historical or draft scope does not become approval.
     applicable = {cid: chapter_decision_scope(source, cid, plan) for cid, plan in plans.items()}
@@ -232,7 +233,9 @@ def query_aggregates(root: Path, *, kind, view='summary', chapterId=None, charac
         if kind in {'setting-impact', 'decision-plans'} and selection is not None:
             raise StructureError('AGGREGATE_AUTHOR_SCOPE_REQUIRED', 'historical impacts and author decisions are author-only metadata, not POV material')
         if kind == 'chapter-issues':
+            from .structure_store import is_quarantined
             chapters = [row for row in source['chapters'] if row.get('status') != 'archived'
+                        and not is_quarantined(row)
                         and (chapterId is None or row['chapterId'] == chapterId)]
             if chapterId is not None and not chapters:
                 raise StructureError('CHAPTER_NOT_FOUND', 'unknown active chapterId')

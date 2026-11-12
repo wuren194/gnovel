@@ -50,8 +50,11 @@ def scan_prose_candidates(root: Path, *, terms: list[str], chapterIds: list[str]
                                                        for term in terms)):
         raise StructureError('SOURCE_SCAN_INVALID', 'terms must be a nonempty string list')
     terms = sorted(set(terms))
+    excluded_quarantined = []
     if chapterIds is None:
-        chapters = sorted(rid for rid, kind in index.owner_types.items() if kind == 'chapter')
+        from .structure_store import is_quarantined, usable_chapters
+        excluded_quarantined = sorted(row['chapterId'] for row in source['chapters'] if is_quarantined(row))
+        chapters = sorted(row['chapterId'] for row in usable_chapters(source))
         explicit_scope = False
     else:
         if (not isinstance(chapterIds, list) or any(not isinstance(cid, str)
@@ -75,8 +78,11 @@ def scan_prose_candidates(root: Path, *, terms: list[str], chapterIds: list[str]
                                   'missingChapterCount': len(missing), 'missingChapterIds': missing[:sample_limit],
                                   'missingChapterIdsTruncated': len(missing) > sample_limit,
                                   'completeForRequestedScope': complete,
-                                  'wholeProjectComplete': complete and len(chapters) == sum(
+                        'wholeProjectComplete': complete and not excluded_quarantined and len(chapters) == sum(
                                       kind == 'chapter' for kind in index.owner_types.values()),
+                                  'excludedQuarantinedCount': len(excluded_quarantined),
+                                  'excludedQuarantinedIds': excluded_quarantined[:sample_limit],
+                                  'excludedQuarantinedIdsTruncated': len(excluded_quarantined) > sample_limit,
                                   'absenceMeaning': ('no literal match in every requested current manuscript'
                                                      if complete else 'scan incomplete; absence is not proof'),
                                   'semanticJudgmentMade': False})

@@ -207,6 +207,21 @@ class TaskPrepareTests(unittest.TestCase):
         self.assertNotIn("CONTINUITY_REQUIRED", codes)
         self.assertTrue(report["readiness"]["authorizationReady"])
 
+    def test_quarantined_target_is_blocked_and_predecessor_is_skipped(self):
+        fixture = review_ready_project(self.root, chapter_count=2)
+        first, second = fixture['chapterIds']
+        source = load_structure(self.root)
+        next(row for row in source['chapters'] if row['chapterId'] == first).update(
+            status='quarantined', quarantineReason='sensitive material',
+            quarantineCategory='content_boundary')
+        save_structure(self.root, source)
+        with self.assertRaises(Exception) as caught:
+            prepare_task(self.root, 'planner', chapter_id=first)
+        self.assertEqual(getattr(caught.exception, 'code', None), 'CHAPTER_QUARANTINED')
+        self.assertEqual(caught.exception.details['category'], 'content_boundary')
+        report, codes = self.codes('planner', chapter_id=second)
+        self.assertNotIn('PREDECESSOR_UNSTABLE', codes)
+
     def test_pov_hard_constraints_are_reported_as_task_gap(self):
         from scripts.core import context_builder
 

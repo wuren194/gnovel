@@ -38,6 +38,21 @@ class ChapterReceiptTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 chapter_receipt(root, "chapter-GHOST")
 
+    def test_quarantined_chapter_remains_visible_without_finalization_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixture = create_current_project(root, chapter_count=1)
+            structure = read_json(root / '.govel/structure.json')
+            structure['chapters'][0].update(status='quarantined', quarantineReason='content_boundary',
+                                             quarantineCategory='content_boundary')
+            write_json(root / '.govel/structure.json', structure)
+            receipt = chapter_receipt(root, fixture['chapterIds'][0])
+            self.assertEqual(receipt['chapter']['status'], 'quarantined')
+            self.assertEqual(receipt['chapter']['quarantineReason'], 'content_boundary')
+            self.assertFalse(receipt['readyForContinuation'])
+            self.assertEqual(receipt['blockers'], [])
+            self.assertIsNone(receipt['finalizeAction'])
+
 
 if __name__ == "__main__":
     unittest.main()

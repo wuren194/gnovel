@@ -18,7 +18,7 @@ from .continuity import ContinuityError, continuity_status, pending_continuity, 
 from .jsonio import read_json
 from .paths import ProjectPathError, safe_project_path, stored_project_path
 from .prompt_plan import PromptPlanError, resolve_prompt_plan
-from .structure_store import StructureError, load_structure, ordered_chapters
+from .structure_store import StructureError, load_structure, ordered_chapters, usable_chapters, is_quarantined
 from .workflow import default_workflow
 
 TASK_STATIONS = {
@@ -77,19 +77,25 @@ def _chapter_entities(structure: dict, chapter_id: str | None) -> tuple[list[str
     return sorted(set(found)), sorted(set(unresolved))
 
 
-def _resolve_selectors(structure: dict, selectors: list[str]) -> tuple[list[str], list[str]]:
-    by_name = {}
-    for row in structure.get("entities", []):
-        for key in (row.get("entityId"), row.get("name"), *row.get("aliases", [])):
-            if key:
-                by_name[str(key)] = row["entityId"]
-    for row in structure.get("arcs", []):
-        by_name.setdefault(str(row.get("arcId")), row["arcId"])
-        by_name.setdefault(str(row.get("title")), row["arcId"])
-    resolved, unknown = [], []
+def _resolve_selectors(structure: dict, selectors: list[str]) -> tuple[list[str], list[dict]]:
+    from .entity_registry import entity_candidates, match_labels, require_resolution_budget
+    entities = {row['entityId']: row for row in structure.get('entities', [])}
+    arcs = {row['arcId']: row for row in structure.get('arcs', [])}
+    labels = {rid: [row['name'], *row.get('aliases', [])] for rid, row in entities.items()}
+    labels.update({rid: [row['title']] for rid, row in arcs.items()})
+    resolved, problems = [], []
     for selector in selectors:
-        (resolved if selector in by_name else unknown).append(by_name.get(selector, selector))
-    return sorted(set(resolved)), sorted(set(unknown))
+        matches = match_labels(selector, labels)
+        if len(matches) == 1:
+            resolved.extend(matches)
+            continue
+        candidates = entity_candidates(structure, [entities[rid] for rid in matches if rid in entities])
+        candidates.extend({'id': rid, 'type': 'arc', 'name': arcs[rid]['title']} for rid in matches if rid in arcs)
+        problems.append({'code': 'ENTITY_AMBIGUOUS' if matches else 'ENTITY_UNKNOWN',
+                         'message': '选择器必须唯一定位对象；请按候选稳定 ID 重新选择', 'blocking': True,
+                         'details': {'selector': selector, 'candidates': candidates}})
+    require_resolution_budget({'issues': problems})
+    return sorted(set(resolved)), problems
 
 
 def _upstream(workflow: dict, chapter_id: str | None) -> dict:
@@ -285,6 +291,10 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
     if structure is not None and chapter_id is not None:
         chapter = next((row for row in structure["chapters"] if row["chapterId"] == chapter_id), None)
         require(chapter is not None, "CHAPTER_NOT_FOUND", "结构中没有这个章节稳定 ID", chapterId=chapter_id)
+        if chapter is not None and is_quarantined(chapter):
+            raise TaskPrepareError('CHAPTER_QUARANTINED', 'quarantined chapters cannot be prepared for authoring',
+                                   {'chapterId': chapter_id, 'reason': chapter.get('quarantineReason'),
+                                    'category': chapter.get('quarantineCategory')})
     ready_flags = {"structureHealthy": structure is not None and not transactions}
     source_plan = None
     if structure is not None and chapter is not None:
@@ -302,7 +312,7 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
                           'sourceHash': source_plan['snapshot']['sourceHash'], 'required': True,
                           'reason': '真源中的章节与上层计划，以及登记的依赖输入；按页读取'})
     if task == 'planner' and chapter is not None and structure is not None and pov_character is None:
-        preceding = [row for row in ordered_chapters(structure) if row['displayOrdinal'] < chapter['displayOrdinal']]
+        preceding = [row for row in usable_chapters(structure) if row['displayOrdinal'] < chapter['displayOrdinal']]
         if preceding:
             prior = preceding[-1]
             read_list.append({'kind': 'source-query', 'tool': 'query_source_chapter_plan',
@@ -322,9 +332,8 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
     # 下方另并入 source_plan 的登记依赖闭包与本次显式选择器。
     # 阅读导出中的定位表或人物名称不会建立实体引用，也不提供计划权威。
     referenced = sorted(set(referenced))
-    resolved, unknown = _resolve_selectors(structure, entities or []) if structure is not None else ([], list(entities or []))
-    for selector in unknown:
-        missing.append({"code": "ENTITY_UNKNOWN", "message": "无法把选择器解析为稳定 ID", "blocking": True, "details": {"selector": selector}})
+    resolved, resolution_issues = _resolve_selectors(structure or {}, entities or [])
+    missing.extend(resolution_issues)
     scope = sorted(set(referenced) | set(resolved))
     if source_plan is not None:
         from .source_model import SourceIndex
@@ -395,7 +404,7 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
                     "已批准阶段 A 未绑定当前推演；推演改动后须重新审查", chapterId=chapter_id)
         if task in {"editor", "repair", "titler"}:
             require(upstream["candidate_prose"]["registered"], "CANDIDATE_PROSE_MISSING", "候选正文尚未登记", chapterId=chapter_id)
-        previous = [row for row in ordered_chapters(structure) if row["displayOrdinal"] < chapter["displayOrdinal"]
+        previous = [row for row in usable_chapters(structure) if row["displayOrdinal"] < chapter["displayOrdinal"]
                     and row.get("status") == "stable"]
         if task in {"planner", "writer"}:
             if previous:
@@ -415,11 +424,16 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
 
     from .outline_facts import inspect_outline
     outline_facts = inspect_outline(root, chapterId=chapter_id, structure=structure) if chapter_id and chapter and structure else None
-    if pov_character is None and outline_facts and outline_facts.get('pov'):
-        pov_character = outline_facts['pov']
-    context = _context(root, task, chapter_id, pov_character, chapter_goal, knowledge_mode)
+    resolution = (outline_facts or {}).get('povResolution', {})
+    if pov_character is None and resolution.get('selector') and resolution['status'] != 'resolved':
+        context = {'applicable': True, 'ready': False,
+                   'code': 'CHAPTER_CONTRACT_POV_AMBIGUOUS' if resolution['matches'] else 'CHAPTER_CONTRACT_POV_UNKNOWN',
+                   'message': '章节视角尚未唯一定位；请按候选稳定 ID 明确选择', 'details': resolution}
+    else:
+        pov_character = pov_character or (outline_facts or {}).get('pov')
+        context = _context(root, task, chapter_id, pov_character, chapter_goal, knowledge_mode)
     if context.get("applicable") and context.get("ready") is False:
-        missing.append({"code": context.get("code") or "CONTEXT_NOT_READY", "message": context.get("message") or "上下文就绪检查未通过", "blocking": True, "details": {}})
+        missing.append({"code": context.get("code") or "CONTEXT_NOT_READY", "message": context.get("message") or "上下文就绪检查未通过", "blocking": True, "details": context.get('details', {})})
     # 知识检索唯一发生在统一 Context Builder 内；准备清单只消费其结果，杜绝二次 route
     # 得到与 context.read/context.health 不一致的 knowledge。
     knowledge_route = context.get("knowledgeRoute")
@@ -459,8 +473,8 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
     # 范围为空时单列可读标志；--entity 仅补充本次读取范围。
     # 持久计划输入由所属 plan 片段的 dependsOn 声明，经源预览／提交登记；
     # dependsOn 只展开显式输入闭包，不把实体 ID 当作整套事实的隐式引用。
-    scope_ready = bool(scope)
-    if not scope_ready and structure is not None and chapter is not None and task in {"planner", "writer", "editor", "repair"}:
+    scope_ready = bool(scope) and not resolution_issues
+    if not scope and structure is not None and chapter is not None and task in {"planner", "writer", "editor", "repair"}:
         missing.append({"code": "CHAPTER_ENTITY_LINK_MISSING", "blocking": False,
                         "message": "本章尚未定位到相关源对象；可用 --entity 补充本次读取范围，该参数不登记依赖或授予批准。持久计划依赖须查询当前源取得所需属性／片段的稳定 ID，在本章所属 plan 片段的 dependsOn 中声明，并经 source change-preview → source commit 登记；dependsOn 只取显式输入闭包，阅读快照不建立实体引用。",
                         "details": {"chapterId": chapter_id, "scope": scope[:10]}})
@@ -526,7 +540,7 @@ def _prepare_task(root: Path, task: str, *, chapter_id: str | None = None, pov_c
             'nextOperation': 'project.structure.insert-preview', 'grantsApproval': False}
         result['notes'].append('空项目先按 govel-composer/SKILL.md 形成设计；本报告的章节范围缺失不禁止创意讨论。设计获批后建章并登记源计划，再准备写作。')
     if route is not None and chapter is not None:
-        following = next((row for row in ordered_chapters(structure) if row['displayOrdinal'] > chapter['displayOrdinal']), None)
+        following = next((row for row in usable_chapters(structure) if row['displayOrdinal'] > chapter['displayOrdinal']), None)
         result['nextChapterPlanning'] = ({'chapterId': following['chapterId'], 'status': following['status'],
             'operation': 'task.prepare', 'arguments': {'chapterId': following['chapterId'], 'task': 'planner'},
             'grantsWritingApproval': False} if following else {

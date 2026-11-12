@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 
-from .structure_store import load_structure
+from .structure_store import is_quarantined, load_structure, usable_chapters
 from .write_sets import safe_project_path
 
 
@@ -12,7 +12,11 @@ def status_from_source(root, source, workflow):
     from .summary_status import summary_freshness
     receipt = import_receipt(root, source)
     origin = {row['chapterId'] for row in receipt['chapters']}
-    chapters = [row for row in source['chapters'] if row['chapterId'] in origin and row.get('status') != 'archived']
+    quarantine_ids = sorted(row['chapterId'] for row in source['chapters']
+                            if row['chapterId'] in origin and is_quarantined(row))
+    usable_ids = {row['chapterId'] for row in usable_chapters(source)}
+    chapters = [row for row in source['chapters'] if row['chapterId'] in origin
+                and row['chapterId'] in usable_ids]
     accepted = sum(bool(history_entry(workflow, c['chapterId']) and history_status(root, source, workflow, c)['complete']) for c in chapters)
     def item(key, status, message, op, **args):
         from .command_help import cli_action
@@ -30,6 +34,7 @@ def status_from_source(root, source, workflow):
         item('continuation_authorization', 'independent', '原稿采用不扩大续写范围；新章按正常计划与作者授权推进。', 'task.prepare', task='continue', view='model'),
     ]
     return {'ok': True, 'code': 'IMPORT_FOLLOWUP', 'acceptedChapters': accepted, 'importedChapters': len(chapters),
+            'quarantinedChapterIds': quarantine_ids, 'quarantinedChapterCount': len(quarantine_ids),
             'tasks': tasks, 'verifyAction': {'operation': 'import.verify', 'arguments': {'projectRoot': str(root)}},
             'planningMarkdownRequired': False, 'dataCountsProveSemanticCompleteness': False}
 

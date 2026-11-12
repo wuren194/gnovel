@@ -191,6 +191,9 @@ def export_manuscript(root: Path, *, statuses: tuple[str, ...] = ('stable',), fm
                       expected_file_hash: str | None = None) -> dict:
     if fmt not in {'txt', 'md'}:
         raise StructureError('INVALID_EXPORT_FORMAT', f'format must be txt or md: {fmt}')
+    if 'quarantined' in statuses:
+        raise StructureError('INVALID_EXPORT_STATUS', 'quarantined chapters cannot be exported',
+                             {'status': 'quarantined'})
     unknown = [item for item in statuses if item not in EXPORT_STATUSES]
     if unknown:
         raise StructureError('INVALID_EXPORT_STATUS', 'unsupported chapter status', {'supported': list(EXPORT_STATUSES)})
@@ -220,6 +223,9 @@ def _export_locked(root: Path, *, statuses: tuple[str, ...], fmt: str, output: P
     parts, chapters_meta, skipped, missing = [], [], [], []
     for chapter in ordered_chapters(structure):
         identity = {'chapterId': chapter['chapterId'], 'displayCode': chapter.get('displayCode', '')}
+        if chapter.get('status') == 'quarantined':
+            skipped.append({**identity, 'reason': 'quarantined'})
+            continue
         if chapter.get('status') not in statuses:
             skipped.append({**identity, 'reason': f"status={chapter.get('status')}"})
             continue

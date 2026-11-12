@@ -110,6 +110,8 @@ class TransportSmokeTests(unittest.TestCase):
             "preview_update_arc": {"arcId": arc, "changes": {"promise": "新承诺"}},
             "preview_archive_arc": {"arcId": "arc-SPARE-ID"},
             "preview_relink_chapter": {"chapterId": self.fixture["chapterIds"][0], "volumeId": volume, "primaryArcId": arc},
+            "preview_release_quarantined_chapter": {"chapterId": self.fixture["chapterIds"][0],
+                "reason": "作者复核边界后解除隔离"},
             "preview_rename_book": {"newName": "烟波引"},
             "preview_rename_chapter": {"chapterId": self.fixture["chapterIds"][0], "newTitle": "第一章改名"},
             "preview_relocate_chapter_paths": {"chapterId": self.fixture["chapterIds"][1], "filePath": "正文/改名.md"},
@@ -129,6 +131,16 @@ class TransportSmokeTests(unittest.TestCase):
             if spec["name"] in self.UNIT_SPECS:
                 continue
             with self.subTest(operation=spec["name"]):
+                expected_structure = original
+                if spec["name"] == "preview_release_quarantined_chapter":
+                    from scripts.core.jsonio import write_json
+                    quarantined = json.loads(json.dumps(original))
+                    chapter = next(row for row in quarantined['chapters']
+                                   if row['chapterId'] == self.fixture['chapterIds'][0])
+                    chapter.update(status='quarantined', quarantineReason='smoke quarantine',
+                                   quarantineCategory='content_boundary')
+                    write_json(self.root / '.govel/structure.json', quarantined)
+                    expected_structure = quarantined
                 arguments = self.arguments(spec["name"])
                 cli = self.cli(spec["cli"], arguments)
                 mcp = self.mcp(spec["name"], arguments)
@@ -143,11 +155,14 @@ class TransportSmokeTests(unittest.TestCase):
                     if not plan["operation"] in (expected_operation, f"refactor_{expected_operation}"):
                         self.fail(f'{plan["operation"]} != {expected_operation}')
                     self.assertTrue((self.root / f".govel/plans/{plan['operationId']}.json").is_file())
-                self.assertEqual(load_structure(self.root), original)
+                self.assertEqual(load_structure(self.root), expected_structure)
                 denied, payload = self.http(spec["route"], arguments, authorized=False)
                 # 机制版本 104：无凭据统一 401 SESSION_REQUIRED（旧契约 403）。
                 self.assertEqual(denied, 401, payload)
                 self.assertEqual(payload["code"], "SESSION_REQUIRED")
+                if spec["name"] == "preview_release_quarantined_chapter":
+                    from scripts.core.jsonio import write_json
+                    write_json(self.root / '.govel/structure.json', original)
 
     def test_pending_plan_keeps_identical_id_and_hash_in_cli_stdio_and_http(self):
         preview = self.cli('book-rename-preview', {'newName': '冻结预览'})

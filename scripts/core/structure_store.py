@@ -19,7 +19,7 @@ PROJECT_SCHEMA_VERSION = current_schema_version()
 WORKFLOW_VERSION = str(toolbox_manifest()["workflowVersion"])
 ENTITY_TYPES = set(source_model_policy()['entityPrefixes'])
 ARC_ROLES = {"primary", "secondary", "intersection"}
-LIFECYCLE_STATUSES = {"planned", "planning_required", "draft", "review", "stable", "stale", "archived"}
+LIFECYCLE_STATUSES = {"planned", "planning_required", "draft", "review", "stable", "stale", "quarantined", "archived"}
 ID_PATTERNS = {kind: identity_pattern(kind) for kind in ('volume', 'arc', 'chapter', 'entity', 'relation')}
 
 
@@ -52,6 +52,16 @@ def structure_hash(data: dict) -> str:
     # （机制 36 审查的缺陷 10）；并发冲突由 expected_revision 单独把关。
     copy.pop("revision", None)
     return hashlib.sha256(canonical_json(copy).encode("utf-8")).hexdigest()
+
+
+def is_quarantined(chapter: dict) -> bool:
+    return chapter.get("status") == "quarantined"
+
+
+def usable_chapters(data: dict) -> list[dict]:
+    """Active story chapters eligible for summaries, continuity and writing context."""
+    return [chapter for chapter in ordered_chapters(data)
+            if chapter.get("status") != "archived" and not is_quarantined(chapter)]
 
 
 def empty_structure(project_id: str, book_name: str) -> dict:
@@ -204,6 +214,14 @@ def validate_structure(data: dict) -> None:
                 errors.append({"code": "DANGLING_VOLUME", "chapterId": chapter_id, "volumeId": volume_id})
         if chapter.get("status") not in LIFECYCLE_STATUSES:
             errors.append({"code": "INVALID_STATUS", "chapterId": chapter_id})
+        if chapter.get("status") == "quarantined":
+            reason = chapter.get("quarantineReason")
+            if not isinstance(reason, str) or not reason.strip():
+                errors.append({"code": "QUARANTINE_REASON_REQUIRED", "chapterId": chapter_id})
+            if chapter.get('quarantineCategory') not in {'content_boundary', 'underage_explicit_content', 'other'}:
+                errors.append({"code": "QUARANTINE_CATEGORY_INVALID", "chapterId": chapter_id})
+        elif "quarantineReason" in chapter or "quarantineCategory" in chapter:
+            errors.append({"code": "QUARANTINE_REASON_FORBIDDEN", "chapterId": chapter_id})
         if not str(chapter.get("filePath", "")).strip():
             errors.append({"code": "MISSING_FILE_PATH", "chapterId": chapter_id})
 
@@ -227,7 +245,6 @@ def validate_structure(data: dict) -> None:
         if count != 1:
             errors.append({"code": "PRIMARY_ARC_REQUIRED", "chapterId": chapter_id, "count": count})
 
-    names: dict[str, str] = {}
     for entity in data.get("entities", []):
         entity_id = entity.get("entityId")
         if entity.get("entityType") not in ENTITY_TYPES:
@@ -238,13 +255,6 @@ def validate_structure(data: dict) -> None:
         ordinal = entity.get("timeOrdinal")
         if ordinal is not None and not is_time_ordinal(ordinal):
             errors.append({"code": "INVALID_TIME_ORDINAL", "entityId": entity_id, "value": ordinal})
-        for label in [entity.get("name", ""), *entity.get("aliases", [])]:
-            normalized = str(label).strip().casefold()
-            if not normalized:
-                continue
-            if normalized in names and names[normalized] != entity_id:
-                errors.append({"code": "ENTITY_NAME_COLLISION", "name": label, "entities": [names[normalized], entity_id]})
-            names[normalized] = entity_id
 
     from .planning_candidates import validate_candidates
     errors.extend(validate_candidates(data))

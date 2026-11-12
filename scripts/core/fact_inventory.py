@@ -149,6 +149,11 @@ def _request_binding_evidence(report, chapter, identity, required, text):
 
 def inventory_status(root, source, workflow, chapter_id):
     from .import_history import history_entry, history_status
+    from .structure_store import is_quarantined
+    chapter = next((row for row in source['chapters'] if row['chapterId'] == chapter_id), None)
+    if chapter is not None and is_quarantined(chapter):
+        return {'assessed': False, 'complete': False, 'status': 'quarantined', 'items': [],
+                'blockers': [], 'reason': chapter.get('quarantineReason')}
     if history_entry(workflow, chapter_id) is not None and chapter_id not in workflow.get('continuity', {}):
         chapter = next((row for row in source['chapters'] if row['chapterId'] == chapter_id), None)
         if chapter is not None:
@@ -232,8 +237,9 @@ def inventory_status(root, source, workflow, chapter_id):
 
 def require_predecessor_facts(root, source, workflow, *, before_ordinal=None):
     from .continuity import ContinuityError
+    from .structure_store import usable_chapters
     pending = []
-    for chapter in source['chapters']:
+    for chapter in usable_chapters(source):
         if chapter.get('status') != 'stable' or before_ordinal is not None and chapter['displayOrdinal'] >= before_ordinal:
             continue
         inventory = inventory_status(root, source, workflow, chapter['chapterId'])

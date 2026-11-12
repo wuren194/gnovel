@@ -116,22 +116,69 @@ def _validate_catalog(structure: dict) -> None:
 def preview_create_volume(root: Path, *, title: str, actor: str = "human_ui") -> dict:
     structure = load_structure(root)
     proposed = deepcopy(structure)
-    item_id = new_id("volume")
-    ordinal = max((v.get("ordinal", 0) for v in structure["volumes"]), default=0) + 1
-    proposed["volumes"].append({"volumeId": item_id, "ordinal": ordinal, "title": _text(title, "title"), "status": "planned"})
-    _validate_catalog(proposed)
+    item_id = apply_create_volume(proposed, title=title)
     return _plan(root, structure, proposed, "create_volume", {"volumeId": item_id, "title": title}, "volume", item_id, actor)
 
 
 def preview_create_arc(root: Path, *, title: str, volume_ids: list[str], kind: str = "main", parent_arc_id: str | None = None, promise: str = "", actor: str = "human_ui") -> dict:
     structure = load_structure(root)
     proposed = deepcopy(structure)
+    item_id = apply_create_arc(proposed, title=title, volume_ids=volume_ids, kind=kind,
+                               parent_arc_id=parent_arc_id, promise=promise)
+    return _plan(root, structure, proposed, "create_arc", {"arcId": item_id, "title": title, "volumeIds": volume_ids}, "arc", item_id, actor)
+
+
+def apply_create_volume(proposed: dict, *, title: str) -> str:
+    item_id = new_id("volume")
+    ordinal = max((volume.get("ordinal", 0) for volume in proposed["volumes"]), default=0) + 1
+    proposed["volumes"].append({"volumeId": item_id, "ordinal": ordinal,
+                                "title": _text(title, "title"), "status": "planned"})
+    _validate_catalog(proposed)
+    return item_id
+
+
+def apply_create_arc(proposed: dict, *, title: str, volume_ids: list[str], kind: str = "main",
+                     parent_arc_id: str | None = None, promise: str = "") -> str:
     item_id = new_id("arc")
     proposed["arcs"].append({"arcId": item_id, "title": _text(title, "title"), "kind": _text(kind, "kind"),
-                             "status": "planned", "volumeIds": _strings(volume_ids, "volumeIds"), "parentArcId": parent_arc_id,
-                             "promise": _text(promise, "promise", empty=True), "resolutionTargetChapterId": None})
+                             "status": "planned", "volumeIds": _strings(volume_ids, "volumeIds"),
+                             "parentArcId": parent_arc_id, "promise": _text(promise, "promise", empty=True),
+                             "resolutionTargetChapterId": None})
     _validate_catalog(proposed)
-    return _plan(root, structure, proposed, "create_arc", {"arcId": item_id, "title": title, "volumeIds": volume_ids}, "arc", item_id, actor)
+    return item_id
+
+
+def apply_relink_chapter(proposed: dict, *, chapter_id: str, primary_arc_id: str,
+                         volume_id: str | None = None, placement: dict | None = None,
+                         secondary_arc_ids: list[str] | None = None) -> dict:
+    from .source_placement import placement_error, placement_from_volume, placement_volume_id
+    from .structure_store import is_quarantined
+    resolved = placement if placement is not None else placement_from_volume(volume_id)
+    reason = placement_error(resolved)
+    if reason is not None:
+        raise StructureError("PLACEMENT_INVALID", f"chapter placement is not a legal shape: {reason}")
+    chapter = _find(proposed, "chapter", chapter_id, active=True)
+    if is_quarantined(chapter):
+        raise StructureError("CHAPTER_QUARANTINED", "quarantined chapters cannot be relinked", {
+            "chapterId": chapter_id, "reason": chapter.get("quarantineReason"),
+            "category": chapter.get("quarantineCategory")})
+    secondary = _strings(secondary_arc_ids if secondary_arc_ids is not None else [], "secondaryArcIds")
+    if primary_arc_id in secondary:
+        raise StructureError("ARC_ROLE_CONFLICT", "primary arc cannot also be secondary")
+    chapter.pop("volumeId", None)
+    chapter.pop("unitId", None)
+    chapter["placement"] = deepcopy(resolved)
+    proposed["chapterArcLinks"] = [link for link in proposed["chapterArcLinks"]
+                                   if link["chapterId"] != chapter_id]
+    for arc_id in [primary_arc_id, *secondary]:
+        primary = arc_id == primary_arc_id
+        proposed["chapterArcLinks"].append({"chapterId": chapter_id, "arcId": arc_id,
+            "role": "primary" if primary else "secondary", "weight": 1.0 if primary else 0.5,
+            "phaseId": None, "notes": ""})
+    _validate_catalog(proposed)
+    return {"chapterId": chapter_id, "volumeId": placement_volume_id(resolved), "primaryArcId": primary_arc_id,
+            "secondaryArcIds": secondary,
+            "staleCandidates": [chapter_id], "approvalInvalidations": [chapter_id]}
 
 
 def _update_catalog(root: Path, kind: str, item_id: str, changes: dict, actor: str, *, archive: bool = False) -> dict:
@@ -171,31 +218,50 @@ def preview_archive_arc(root: Path, *, arc_id: str, actor: str = "human_ui") -> 
 
 def preview_relink_chapter(root: Path, *, chapter_id: str, primary_arc_id: str, volume_id: str | None = None, placement: dict | None = None, secondary_arc_ids: list[str] | None = None, actor: str = "human_ui") -> dict:
     from .source_model import require_current_source
-    from .source_placement import placement_error, placement_from_volume
     structure = load_structure(root)
     require_current_source(structure)
     if (placement is None) == (volume_id is None):
         raise StructureError("PLACEMENT_ARGUMENT_INVALID", "provide exactly one of volumeId (compat) or placement")
-    resolved = placement if placement is not None else placement_from_volume(volume_id)
-    reason = placement_error(resolved)
-    if reason is not None:
-        raise StructureError("PLACEMENT_INVALID", f"chapter placement is not a legal shape: {reason}")
-    proposed = deepcopy(structure)
-    chapter = _find(proposed, "chapter", chapter_id, active=True)
+    resolved = placement
+    if placement is not None:
+        from .source_placement import placement_error, placement_volume_id
+        reason = placement_error(placement)
+        if reason is not None:
+            raise StructureError("PLACEMENT_INVALID", f"chapter placement is not a legal shape: {reason}")
+        resolved_volume = placement_volume_id(placement)
+        volume_id = resolved_volume
+    chapter = _find(structure, "chapter", chapter_id, active=True)
     secondary = _strings(secondary_arc_ids if secondary_arc_ids is not None else [], "secondaryArcIds")
-    if primary_arc_id in secondary:
-        raise StructureError("ARC_ROLE_CONFLICT", "primary arc cannot also be secondary")
-    chapter.pop("volumeId", None)
-    chapter.pop("unitId", None)
-    chapter["placement"] = deepcopy(resolved)
-    proposed["chapterArcLinks"] = [x for x in proposed["chapterArcLinks"] if x["chapterId"] != chapter_id]
-    for arc_id in [primary_arc_id, *secondary]:
-        primary = arc_id == primary_arc_id
-        proposed["chapterArcLinks"].append({"chapterId": chapter_id, "arcId": arc_id, "role": "primary" if primary else "secondary", "weight": 1.0 if primary else 0.5, "phaseId": None, "notes": ""})
-    _validate_catalog(proposed)
-    parameters = {"chapterId": chapter_id, "placement": chapter.get("placement", chapter.get("volumeId")),
+    proposed = deepcopy(structure)
+    apply_relink_chapter(proposed, chapter_id=chapter_id, primary_arc_id=primary_arc_id,
+                         volume_id=volume_id, placement=resolved, secondary_arc_ids=secondary)
+    relinked = _find(proposed, "chapter", chapter_id, active=True)
+    parameters = {"chapterId": chapter_id, "placement": relinked.get("placement", relinked.get("volumeId")),
                   "primaryArcId": primary_arc_id, "secondaryArcIds": secondary}
     return _plan(root, structure, proposed, "relink_chapter", parameters, "chapter", chapter_id, actor)
+
+
+def preview_release_quarantined_chapter(root: Path, *, chapter_id: str, reason: str,
+                                        actor: str = "human_ui") -> dict:
+    from .source_model import require_current_source
+    structure = load_structure(root)
+    require_current_source(structure)
+    chapter = _find(structure, "chapter", chapter_id)
+    if chapter.get("status") != "quarantined":
+        raise StructureError("CHAPTER_NOT_QUARANTINED", "chapter is not quarantined", {"chapterId": chapter_id})
+    if not isinstance(reason, str) or not reason.strip():
+        raise StructureError("QUARANTINE_RELEASE_REASON_REQUIRED", "provide the author's quarantine review decision",
+                             {"chapterId": chapter_id})
+    proposed = deepcopy(structure)
+    target = _find(proposed, "chapter", chapter_id)
+    previous = {'reason': target.pop('quarantineReason'), 'category': target.pop('quarantineCategory')}
+    target['status'] = 'planning_required'
+    impact = {'chapterId': chapter_id, 'releasedQuarantine': previous,
+              'reviewDecision': reason.strip(), 'adoptionRevoked': True,
+              'staleCandidates': [], 'approvalInvalidations': []}
+    return _plan(root, structure, proposed, 'release_quarantined_chapter',
+                 {'chapterId': chapter_id, 'reason': reason.strip(), 'previousQuarantine': previous},
+                 'chapter', chapter_id, actor, impact=impact)
 
 
 VISIBILITY_IDENTITIES = {
